@@ -7,6 +7,7 @@ export type TenderInput = {
   modality?: string | null;
   noticeNumber?: string | null;
   processNumber?: string | null;
+  executionTerm?: string | null;
   municipality?: string;
   state?: string | null;
   agency?: string | null;
@@ -62,6 +63,7 @@ const clean = (data: TenderInput, referenceValue?: number | Prisma.Decimal | nul
     ...(data.modality !== undefined ? { modality: data.modality || null } : {}),
     ...(data.noticeNumber !== undefined ? { noticeNumber: data.noticeNumber || null } : {}),
     ...(data.processNumber !== undefined ? { processNumber: data.processNumber || null } : {}),
+    ...(data.executionTerm !== undefined ? { executionTerm: data.executionTerm || null } : {}),
     ...(data.platformLink !== undefined ? { platformLink: data.platformLink || null } : {}),
     ...(data.seobraLink !== undefined ? { seobraLink: data.seobraLink || null } : {}),
     ...(requiresGuaranteeOnePercent !== undefined

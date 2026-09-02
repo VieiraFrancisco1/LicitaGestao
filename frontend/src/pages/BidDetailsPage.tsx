@@ -1,10 +1,10 @@
-import { ArrowLeft, CalendarClock, CheckCircle2, Download, ExternalLink, File as FileIcon, FilePlus2, Pencil, Trash2 } from 'lucide-react';
+import { ArrowLeft, CalendarClock, CheckCircle2, Download, ExternalLink, File as FileIcon, FilePlus2, FileText, Percent, Pencil, Trash2, Unlink } from 'lucide-react';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { CompanyConvocationsPanel } from '../components/CompanyConvocationsPanel';
 import { api, errorMessage } from '../services/api';
-import type { ApiResponse, Bid, BidDocument, DeadlineAlert, DocumentCategory } from '../types';
+import type { ApiResponse, Bid, BidDocument, DeadlineAlert, DiscountCalculation, DocumentCategory, ProposalLetterContext } from '../types';
 import {
   documentCategoryOptions,
   formatBytes,
@@ -16,10 +16,11 @@ import {
   situationOptions
 } from '../utils/bid';
 
-type Tab = 'summary' | 'data' | 'documents' | 'convocations' | 'deadlines' | 'history';
+type Tab = 'summary' | 'data' | 'discount' | 'proposal' | 'documents' | 'convocations' | 'deadlines' | 'history';
 
 export function BidDetailsPage() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const [bid, setBid] = useState<Bid | null>(null);
@@ -29,12 +30,13 @@ export function BidDetailsPage() {
   const [deadlineError, setDeadlineError] = useState('');
   const requestedTab = searchParams.get('tab');
   const [tab, setTab] = useState<Tab>(
-    requestedTab && ['summary', 'data', 'documents', 'convocations', 'deadlines', 'history'].includes(requestedTab)
+    requestedTab && ['summary', 'data', 'discount', 'proposal', 'documents', 'convocations', 'deadlines', 'history'].includes(requestedTab)
       ? (requestedTab as Tab)
       : 'summary'
   );
   const [loading, setLoading] = useState(true);
   const [markingAttached, setMarkingAttached] = useState(false);
+  const [removingAssociation, setRemovingAssociation] = useState(false);
   const [error, setError] = useState('');
 
   const loadBid = useCallback(async () => {
@@ -110,6 +112,19 @@ export function BidDetailsPage() {
     }
   };
 
+  const removeAssociation = async () => {
+    if (!window.confirm('Desassociar esta licitação da empresa? A licitação geral continuará cadastrada, mas esta participação, sua baixa e os vínculos de documentos desta participação serão removidos.')) return;
+    setRemovingAssociation(true);
+    setError('');
+    try {
+      await api.delete(`/bids/${bid.id}`);
+      navigate(`/empresas/${bid.companyId}?tab=bids`);
+    } catch (err) {
+      setError(errorMessage(err));
+      setRemovingAssociation(false);
+    }
+  };
+
   return (
     <div className="page-stack">
       <div className="details-header bid-details-header">
@@ -169,6 +184,16 @@ export function BidDetailsPage() {
             </button>
           )}
           {canEdit && (
+            <button
+              className="secondary-button compact-header-action danger-outline"
+              disabled={removingAssociation}
+              onClick={() => void removeAssociation()}
+            >
+              <Unlink size={15} />
+              {removingAssociation ? 'Desassociando...' : 'Desassociar'}
+            </button>
+          )}
+          {canEdit && (
             <Link className="primary-button compact-header-action" to={`/participacoes/${bid.id}/editar`}>
               <Pencil size={15} />
               Editar
@@ -183,6 +208,8 @@ export function BidDetailsPage() {
           [
             ['summary', 'Resumo'],
             ['data', 'Dados'],
+            ['discount', 'Baixa'],
+            ['proposal', 'Carta Proposta'],
             ['documents', `Documentos (${bid._count?.documents ?? documents.length})`],
             ['convocations', 'Convocações'],
             ['deadlines', 'Prazos'],
@@ -229,6 +256,10 @@ export function BidDetailsPage() {
             <div>
               <dt>Processo administrativo</dt>
               <dd>{bid.tender.processNumber || '—'}</dd>
+            </div>
+            <div>
+              <dt>Prazo de execução</dt>
+              <dd>{bid.tender.executionTerm || '—'}</dd>
             </div>
             <div>
               <dt>Planilha</dt>
@@ -281,6 +312,8 @@ export function BidDetailsPage() {
           </dl>
         </section>
       )}
+      {tab === 'discount' && <DiscountPanel bid={bid} canEdit={canEdit} />}
+      {tab === 'proposal' && <ProposalLetterPanel bid={bid} canEdit={canEdit} userRole={user?.role} />}
       {tab === 'documents' && (
         <DocumentsPanel
           bidId={bid.id}
@@ -304,6 +337,184 @@ export function BidDetailsPage() {
     </div>
   );
 }
+
+function DiscountPanel({ bid, canEdit }: { bid: Bid; canEdit: boolean }) {
+  const [item, setItem] = useState<DiscountCalculation | null>(null);
+  const [value, setValue] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const response = await api.get<ApiResponse<DiscountCalculation[]>>(`/companies/${bid.companyId}/discounts`);
+      const current = response.data.data.find((row) => row.tenderId === bid.tenderId) ?? null;
+      setItem(current);
+      setValue(current?.discountedValue ?? '');
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  }, [bid.companyId, bid.tenderId]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => void load(), 0);
+    return () => window.clearTimeout(timer);
+  }, [load]);
+
+  const save = async () => {
+    if (!value) return setError('Informe o valor final da proposta após a baixa.');
+    setSaving(true);
+    setError('');
+    try {
+      let discountId = item?.id;
+      if (!discountId) {
+        const created = await api.post<ApiResponse<DiscountCalculation>>(`/companies/${bid.companyId}/discounts`, {
+          tenderId: bid.tenderId
+        });
+        discountId = created.data.data.id;
+      }
+      await api.put(`/companies/${bid.companyId}/discounts/${discountId}`, { discountedValue: value });
+      await load();
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const percentage = item?.discountPercentage ? Number(item.discountPercentage) : null;
+  return (
+    <section className="detail-panel bid-discount-panel">
+      <div className="section-heading-inline commercial-heading">
+        <div>
+          <span className="eyebrow">Proposta da empresa</span>
+          <strong>Baixa desta licitação</strong>
+          <small>O valor salvo aqui será usado automaticamente na Carta Proposta.</small>
+        </div>
+        <Percent size={24} />
+      </div>
+      {error && <div className="alert alert-error">{error}</div>}
+      {loading ? (
+        <div className="table-message"><span className="spinner" />Carregando baixa...</div>
+      ) : (
+        <div className="bid-discount-grid">
+          <div><small>Valor global</small><strong>{formatCurrency(bid.tender.estimatedValue)}</strong></div>
+          <label>
+            Valor final após a baixa
+            <input type="number" min="0" step="0.01" max={bid.tender.estimatedValue ?? undefined} value={value} onChange={(event) => setValue(event.target.value)} disabled={!canEdit} placeholder="0,00" />
+          </label>
+          <div><small>Percentual de baixa</small><strong>{percentage === null ? '—' : `${percentage.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`}</strong></div>
+          {canEdit && <button className="primary-button" onClick={() => void save()} disabled={saving || !value}>{saving ? 'Salvando...' : item ? 'Atualizar baixa' : 'Salvar baixa'}</button>}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function ProposalLetterPanel({ bid, canEdit, userRole }: { bid: Bid; canEdit: boolean; userRole?: string }) {
+  const [context, setContext] = useState<ProposalLetterContext | null>(null);
+  const [templateBody, setTemplateBody] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [savingTemplate, setSavingTemplate] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const [error, setError] = useState('');
+  const canEditTemplate = userRole === 'ADMIN' || userRole === 'FUNCIONARIO';
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const response = await api.get<ApiResponse<ProposalLetterContext>>(`/bids/${bid.id}/proposal-letter`);
+      setContext(response.data.data);
+      setTemplateBody(response.data.data.template.bodyTemplate);
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  }, [bid.id]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => void load(), 0);
+    return () => window.clearTimeout(timer);
+  }, [load]);
+
+  const saveTemplate = async () => {
+    setSavingTemplate(true);
+    setError('');
+    try {
+      await api.put('/proposal-letters/template', {
+        municipality: bid.tender.municipality,
+        state: bid.tender.state,
+        bodyTemplate: templateBody
+      });
+      await load();
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setSavingTemplate(false);
+    }
+  };
+
+  const downloadPdf = async () => {
+    if (!context?.canGenerate) return setError(`Preencha antes de gerar: ${context?.missing.join(', ') || 'dados obrigatórios'}`);
+    setDownloading(true);
+    setError('');
+    try {
+      const response = await api.get(`/bids/${bid.id}/proposal-letter/pdf`, { responseType: 'blob' });
+      const url = URL.createObjectURL(response.data as Blob);
+      const link = window.document.createElement('a');
+      link.href = url;
+      link.download = `carta-proposta-${bid.tender.municipality}-${bid.tender.noticeNumber || 'licitacao'}.pdf`.replace(/[\\/:*?"<>|]+/g, '-');
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  if (loading) return <section className="detail-panel"><div className="table-message"><span className="spinner" />Preparando Carta Proposta...</div></section>;
+
+  return (
+    <section className="detail-panel proposal-letter-panel">
+      <div className="section-heading-inline commercial-heading">
+        <div>
+          <span className="eyebrow">Documento automático</span>
+          <strong>Carta Proposta · {bid.tender.municipality}</strong>
+          <small>O valor global é puxado da Baixa desta empresa. O modelo fica salvo por município.</small>
+        </div>
+        <FileText size={25} />
+      </div>
+      {error && <div className="alert alert-error">{error}</div>}
+      {context && context.missing.length > 0 && (
+        <div className="proposal-missing"><strong>Faltam dados para gerar o PDF:</strong><span>{context.missing.join(' · ')}</span></div>
+      )}
+      <div className="proposal-summary-grid">
+        <div><small>Número</small><strong>{bid.tender.noticeNumber || '—'}</strong></div>
+        <div><small>Valor da baixa</small><strong>{context?.discountedValue ? formatCurrency(context.discountedValue) : '—'}</strong></div>
+        <div><small>Prazo de execução</small><strong>{bid.tender.executionTerm || '—'}</strong></div>
+        <div><small>Modelo</small><strong>{context?.template.custom ? 'Modelo salvo da cidade' : 'Modelo padrão inicial'}</strong></div>
+      </div>
+      <label className="proposal-template-editor">
+        Modelo da Carta Proposta
+        <textarea rows={16} value={templateBody} onChange={(event) => setTemplateBody(event.target.value)} disabled={!canEditTemplate} />
+        <small>Campos disponíveis: {'{{numero_licitacao}}'}, {'{{processo_administrativo}}'}, {'{{objeto}}'}, {'{{valor_global}}'}, {'{{prazo_execucao}}'}, {'{{validade_proposta}}'}, {'{{empresa_razao_social}}'}, {'{{cnpj}}'}, {'{{representante}}'}, {'{{municipio}}'}.</small>
+      </label>
+      <div className="proposal-actions">
+        {canEditTemplate && <button className="secondary-button" onClick={() => void saveTemplate()} disabled={savingTemplate}>{savingTemplate ? 'Salvando modelo...' : 'Salvar modelo desta cidade'}</button>}
+        {canEdit && <button className="primary-button" onClick={() => void downloadPdf()} disabled={downloading || !context?.canGenerate}><Download size={16} />{downloading ? 'Gerando PDF...' : 'Gerar Carta Proposta em PDF'}</button>}
+      </div>
+      {context && <div className="proposal-preview"><span className="eyebrow">Prévia</span><pre>{context.generatedText}</pre></div>}
+    </section>
+  );
+}
+
 function formatDeadlineDate(date: string) {
   const [year, month, day] = date.split('-');
   return `${day}/${month}/${year}`;

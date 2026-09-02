@@ -18,6 +18,7 @@ export const tenderBody = z.object({
   modality: z.string().trim().max(80).optional(),
   noticeNumber: z.string().trim().max(120).optional(),
   processNumber: z.string().trim().max(120).optional(),
+  executionTerm: z.string().trim().max(120).optional(),
   municipality: z.string().trim().min(2).max(120),
   sessionDate: date,
   object: z.string().trim().min(5).max(10000),

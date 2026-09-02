@@ -149,5 +149,9 @@ export const listBids = async (query: BidQuery, auth: AuthScope) => {
 export const deleteBid = async (id: string, auth: AuthScope) => {
   const bid = await getBid(id, auth);
   await assertCompanyWriteAccess(bid.companyId, auth);
-  await prisma.bid.delete({ where: { id: bid.id } });
+  await prisma.$transaction([
+    prisma.discountCalculation.deleteMany({ where: { companyId: bid.companyId, tenderId: bid.tenderId } }),
+    prisma.bid.delete({ where: { id: bid.id } })
+  ]);
+  return bid;
 };

@@ -8,6 +8,7 @@ type TenderForm = {
   modality: string;
   noticeNumber: string;
   processNumber: string;
+  executionTerm: string;
   municipality: string;
   sessionDate: string;
   object: string;
@@ -23,6 +24,7 @@ const emptyForm: TenderForm = {
   modality: '',
   noticeNumber: '',
   processNumber: '',
+  executionTerm: '',
   municipality: '',
   sessionDate: '',
   object: '',
@@ -60,6 +62,7 @@ export function BidFormPage() {
           modality: tender.modality ?? '',
           noticeNumber: tender.noticeNumber ?? '',
           processNumber: tender.processNumber ?? '',
+          executionTerm: tender.executionTerm ?? '',
           municipality: tender.municipality,
           sessionDate: tender.sessionDate.slice(0, 10),
           object: tender.object,
@@ -157,6 +160,15 @@ export function BidFormPage() {
               onChange={(event) => field('processNumber', event.target.value)}
             />
             <small className="field-help">Informe exatamente como aparece nos avisos da plataforma.</small>
+          </label>
+          <label>
+            Prazo de execução
+            <input
+              placeholder="Ex.: 8 meses ou 240 dias"
+              value={form.executionTerm}
+              onChange={(event) => field('executionTerm', event.target.value)}
+            />
+            <small className="field-help">Usado automaticamente na Carta Proposta.</small>
           </label>
           <label>
             Data da licitação

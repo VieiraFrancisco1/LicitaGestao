@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { createBid, getBid, listBids, updateBid } from '../services/bid.service.js';
+import { createBid, deleteBid, getBid, listBids, updateBid } from '../services/bid.service.js';
 import { AuditActions, recordAudit } from '../services/audit.service.js';
 import { relinkPotentialConvocationsForTender } from '../services/gmail.service.js';
 
@@ -56,4 +56,17 @@ export const update = async (req: Request, res: Response) => {
     metadata: { changedFields: Object.keys(req.body), tenderId: bid.tenderId, companyId: bid.companyId }
   });
   res.json({ success: true, message: 'Participação atualizada', data: bid });
+};
+
+export const remove = async (req: Request, res: Response) => {
+  const bid = await deleteBid(req.params.id as string, req.auth!);
+  await recordAudit(req.auth!, {
+    action: AuditActions.DELETE,
+    entityType: 'BID',
+    entityId: bid.id,
+    entityLabel: `${bid.company.tradeName || bid.company.legalName} · ${bid.tender.municipality}`,
+    description: 'Licitação desassociada da empresa',
+    metadata: { tenderId: bid.tenderId, companyId: bid.companyId }
+  });
+  res.json({ success: true, message: 'Licitação desassociada da empresa' });
 };

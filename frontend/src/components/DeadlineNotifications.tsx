@@ -99,6 +99,7 @@ export function DeadlineNotifications() {
       deadlineData.items
         .filter(
           (item) =>
+            item.type === 'SESSION' &&
             !item.read &&
             (item.severity === 'OVERDUE' || item.severity === 'TODAY' || item.severity === 'URGENT')
         )

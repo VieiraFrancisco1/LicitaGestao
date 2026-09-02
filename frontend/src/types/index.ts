@@ -82,6 +82,7 @@ export type Tender = {
   modality: string | null;
   noticeNumber: string | null;
   processNumber: string | null;
+  executionTerm: string | null;
   municipality: string;
   state: string | null;
   agency: string | null;
@@ -287,4 +288,65 @@ export type GmailConvocationAlert = {
 export type GmailConvocationAlertData = {
   items: GmailConvocationAlert[];
   unread: number;
+};
+
+export type ProposalLetterContext = {
+  bidId: string;
+  companyId: string;
+  tenderId: string;
+  template: {
+    municipality: string;
+    state: string | null;
+    bodyTemplate: string;
+    custom: boolean;
+    updatedAt: string | null;
+  };
+  values: Record<string, string>;
+  missing: string[];
+  canGenerate: boolean;
+  generatedText: string;
+  discountedValue: string | null;
+  discountPercentage: number | null;
+};
+
+export type DashboardData = {
+  scope: { companyId: string | null; companyName: string | null };
+  companies: CompanySummary[];
+  metrics: {
+    activeBids: number;
+    upcomingSessions: number;
+    pendingConvocations: number;
+    criticalDeadlines: number;
+  };
+  attention: Array<{
+    key: string;
+    type: 'CONVOCATION' | 'SESSION' | 'PROPOSAL_EXPIRATION';
+    title: string;
+    subtitle: string;
+    bidId: string | null;
+    companyId: string;
+    date: string;
+    days?: number;
+    severity: 'INFO' | 'OVERDUE' | 'URGENT' | 'WARNING';
+  }>;
+  upcomingBids: Array<{
+    id: string;
+    companyId: string;
+    companyName: string;
+    municipality: string;
+    noticeNumber: string | null;
+    sessionDate: string;
+    platformName: string | null;
+    situation: BidSituation;
+    progress: BidProgress;
+  }>;
+  recentConvocations: GmailConvocationAlert[];
+  statusBreakdown: Array<{ situation: BidSituation; count: number }>;
+  companyCards: Array<{
+    id: string;
+    name: string;
+    activeBids: number;
+    upcomingSessions: number;
+    pendingConvocations: number;
+  }>;
 };
