@@ -59,6 +59,12 @@ enum AuditAction {
   UPLOAD
 }
 
+enum EmailProcessingStatus {
+  PENDENTE
+  PROCESSADO
+  ERRO
+}
+
 enum DocumentCategory {
   EDITAL
   ANEXO
@@ -118,6 +124,8 @@ model Company {
   staffLinks   CompanyUser[]
   bids         Bid[]
   discounts    DiscountCalculation[]
+  emailIntegration EmailIntegration?
+  emailMessages EmailMessage[]
   createdAt    DateTime              @default(now()) @map("created_at")
   updatedAt    DateTime              @updatedAt @map("updated_at")
 
@@ -259,6 +267,47 @@ model DiscountCalculation {
   @@index([companyId])
   @@index([tenderId])
   @@map("discount_calculations")
+}
+
+model EmailIntegration {
+  id                    String   @id @default(uuid()) @db.Uuid
+  companyId             String   @unique @map("company_id") @db.Uuid
+  company               Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  googleEmail           String   @map("google_email") @db.VarChar(180)
+  refreshTokenEncrypted String   @map("refresh_token_encrypted") @db.Text
+  connectedAt           DateTime @default(now()) @map("connected_at")
+  lastSyncedAt          DateTime? @map("last_synced_at")
+  lastSuccessfulSyncAt  DateTime? @map("last_successful_sync_at")
+  lastError             String?  @map("last_error") @db.VarChar(500)
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  @@index([lastSyncedAt])
+  @@map("email_integrations")
+}
+
+model EmailMessage {
+  id                    String                @id @default(uuid()) @db.Uuid
+  companyId             String                @map("company_id") @db.Uuid
+  company               Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  gmailMessageId        String                @map("gmail_message_id") @db.VarChar(180)
+  threadId              String                @map("thread_id") @db.VarChar(180)
+  sender                String                @db.VarChar(500)
+  subject               String?               @db.VarChar(500)
+  receivedAt            DateTime              @map("received_at")
+  snippet               String?               @db.Text
+  textContent           String?               @map("text_content") @db.Text
+  processingStatus      EmailProcessingStatus @default(PENDENTE) @map("processing_status")
+  isPotentialConvocation Boolean               @default(false) @map("is_potential_convocation")
+  convocationReason     String?               @map("convocation_reason") @db.VarChar(255)
+  createdAt             DateTime              @default(now()) @map("created_at")
+  updatedAt             DateTime              @updatedAt @map("updated_at")
+
+  @@unique([companyId, gmailMessageId])
+  @@index([companyId, receivedAt])
+  @@index([companyId, isPotentialConvocation, receivedAt])
+  @@index([processingStatus])
+  @@map("email_messages")
 }
 
 model RefreshToken {

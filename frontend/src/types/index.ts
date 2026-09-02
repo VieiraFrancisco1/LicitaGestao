@@ -230,3 +230,49 @@ export type MegaBrowseData = {
   scopeLabel: string;
   items: MegaItem[];
 };
+
+export type GmailIntegrationStatus = {
+  configured: boolean;
+  connected: boolean;
+  email: string | null;
+  connectedAt: string | null;
+  lastSyncedAt: string | null;
+  lastSuccessfulSyncAt: string | null;
+  lastError: string | null;
+  pollingIntervalSeconds: number;
+};
+
+export type EmailProcessingStatus = 'PENDENTE' | 'PROCESSADO' | 'ERRO';
+
+export type EmailMessage = {
+  id: string;
+  companyId: string;
+  gmailMessageId: string;
+  threadId: string;
+  sender: string;
+  subject: string | null;
+  receivedAt: string;
+  snippet: string | null;
+  textContent: string | null;
+  processingStatus: EmailProcessingStatus;
+  isPotentialConvocation: boolean;
+  convocationReason: string | null;
+  createdAt: string;
+};
+
+export type GmailConvocationAlert = {
+  key: string;
+  messageId: string;
+  companyId: string;
+  companyName: string;
+  sender: string;
+  subject: string | null;
+  receivedAt: string;
+  snippet: string | null;
+  read: boolean;
+};
+
+export type GmailConvocationAlertData = {
+  items: GmailConvocationAlert[];
+  unread: number;
+};

@@ -15,7 +15,13 @@ const envSchema = z.object({
   MEGA_EMAIL: z.string().email().optional(),
   MEGA_PASSWORD: z.string().min(1).optional(),
   MEGA_ROOT_FOLDER: z.string().trim().default(''),
-  MEGA_TENDERS_FOLDER: z.string().trim().min(1).default('LICITAÇÕES')
+  MEGA_TENDERS_FOLDER: z.string().trim().min(1).default('LICITAÇÕES'),
+  GOOGLE_CLIENT_ID: z.string().trim().min(1).optional(),
+  GOOGLE_CLIENT_SECRET: z.string().trim().min(1).optional(),
+  GOOGLE_REDIRECT_URI: z.string().url().optional(),
+  GOOGLE_OAUTH_STATE_SECRET: z.string().min(32).optional(),
+  GOOGLE_TOKEN_ENCRYPTION_KEY: z.string().min(32).optional(),
+  GMAIL_POLL_INTERVAL_MS: z.coerce.number().int().min(60_000).max(120_000).default(90_000)
 });
 
 const parsed = envSchema.safeParse(process.env);

@@ -17,6 +17,7 @@ import { ParticipationFormPage } from './pages/ParticipationFormPage';
 import { DeadlinesPage } from './pages/DeadlinesPage';
 import { AuditPage } from './pages/AuditPage';
 import { DocumentsPage } from './pages/DocumentsPage';
+import { ConvocationsPage } from './pages/ConvocationsPage';
 
 export default function App() {
   return (
@@ -37,7 +38,7 @@ export default function App() {
                 <Route index element={<CompaniesPage />} />
               </Route>
               <Route path="empresas/:id" element={<CompanyDetailsPage />} />
-              <Route path="convocacoes" element={<PlaceholderPage title="Convocações" phase="a Fase 6" />} />
+              <Route path="convocacoes" element={<ConvocationsPage />} />
               <Route path="prazos" element={<DeadlinesPage />} />
               <Route path="documentos" element={<DocumentsPage />} />
               <Route path="plataformas" element={<PlatformsPage />} />

@@ -114,8 +114,8 @@ export function AppLayout() {
           ))}
         </nav>
         <div className="sidebar-footer">
-          <span>Fase 4</span>
-          <strong>Documentos em nuvem</strong>
+          <span>Fase 5</span>
+          <strong>Gmail e convocações</strong>
         </div>
       </aside>
       <div className="app-main">

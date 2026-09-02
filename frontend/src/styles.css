@@ -2599,3 +2599,343 @@ td small {
     flex: 1 1 145px;
   }
 }
+
+/* Fase 5 — Gmail e convocações */
+.gmail-integration-panel {
+  display: grid;
+  gap: 16px;
+}
+.integration-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.integration-heading > div {
+  min-width: 0;
+  flex: 1;
+}
+.integration-heading strong,
+.integration-heading small {
+  display: block;
+}
+.integration-heading small {
+  color: var(--muted);
+  margin-top: 3px;
+}
+.integration-icon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  background: #edf4ff;
+  color: #316dd9;
+  flex: 0 0 auto;
+}
+.integration-state {
+  border-radius: 999px;
+  padding: 7px 10px;
+  font-size: 11px;
+  font-weight: 800;
+}
+.integration-state.connected {
+  color: #18794e;
+  background: #eaf8f0;
+}
+.integration-state.disconnected {
+  color: #7a8495;
+  background: #f1f3f6;
+}
+.integration-empty {
+  min-height: 210px;
+  border: 1px dashed #d9e0ea;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-align: center;
+  padding: 24px;
+  color: #718096;
+}
+.integration-empty strong {
+  color: #263449;
+  display: block;
+  margin-bottom: 4px;
+}
+.integration-empty p {
+  max-width: 620px;
+  margin: 0 0 4px;
+  line-height: 1.5;
+}
+.integration-connected {
+  display: grid;
+  gap: 14px;
+}
+.integration-account {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 14px;
+  border: 1px solid #d7eadf;
+  background: #f4fbf7;
+  border-radius: 11px;
+  color: #18794e;
+}
+.integration-account small,
+.integration-account strong {
+  display: block;
+}
+.integration-account small {
+  color: #648574;
+  margin-bottom: 2px;
+}
+.integration-account strong {
+  color: #1f5139;
+}
+.integration-data {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+.integration-data > div {
+  padding: 12px 14px;
+  background: #f8fafc;
+  border: 1px solid #e7ebf0;
+  border-radius: 10px;
+}
+.integration-data dt {
+  color: #7a8495;
+  font-size: 11px;
+  margin-bottom: 4px;
+}
+.integration-data dd {
+  margin: 0;
+  color: #27354a;
+  font-size: 13px;
+  font-weight: 700;
+}
+.integration-warning {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 13px 14px;
+  background: #fff8e8;
+  color: #865e16;
+  border: 1px solid #f4dfaa;
+  border-radius: 10px;
+}
+.integration-warning strong,
+.integration-warning p {
+  display: block;
+  margin: 0;
+}
+.integration-warning p {
+  margin-top: 3px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.integration-warning.compact {
+  padding: 10px 12px;
+}
+.integration-actions,
+.page-heading-actions {
+  display: flex;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+.danger-button {
+  border: 0;
+  border-radius: 9px;
+  padding: 10px 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 13px;
+  color: #a72f3c;
+  background: #fff0f2;
+}
+.danger-button:hover {
+  background: #ffe4e8;
+}
+.primary-button:disabled,
+.secondary-button:disabled,
+.danger-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.compact-loader {
+  min-height: 130px;
+}
+.spin-icon {
+  animation: gmail-spin 0.9s linear infinite;
+}
+@keyframes gmail-spin {
+  to { transform: rotate(360deg); }
+}
+.company-convocations-panel {
+  display: grid;
+  gap: 12px;
+}
+.convocation-list {
+  display: grid;
+  gap: 10px;
+}
+.convocation-card {
+  width: 100%;
+  border: 1px solid #e0e5ec;
+  background: #fff;
+  border-radius: 11px;
+  padding: 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  text-align: left;
+}
+.convocation-card.clickable {
+  cursor: pointer;
+}
+.convocation-card.clickable:hover {
+  border-color: #bdcbed;
+  background: #fbfdff;
+}
+.convocation-card.unread {
+  border-left: 3px solid #e49b28;
+  background: #fffdf8;
+}
+.convocation-card.read {
+  opacity: 0.78;
+}
+.convocation-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: #fff4df;
+  color: #b97212;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+}
+.convocation-content {
+  min-width: 0;
+  flex: 1;
+}
+.convocation-title-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+}
+.convocation-title-row strong {
+  color: #202b3e;
+  font-size: 13px;
+}
+.convocation-title-row time {
+  color: #8993a3;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.convocation-content > small {
+  display: block;
+  color: #7a8495;
+  margin-top: 4px;
+}
+.convocation-content > p {
+  color: #596579;
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 9px 0 0;
+}
+.convocation-content > em {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 4px 7px;
+  border-radius: 6px;
+  background: #fff4df;
+  color: #93600f;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+}
+.convocation-content details {
+  margin-top: 10px;
+}
+.convocation-content summary {
+  cursor: pointer;
+  color: #315a9e;
+  font-size: 11px;
+  font-weight: 700;
+}
+.convocation-content pre {
+  margin: 9px 0 0;
+  padding: 12px;
+  max-height: 320px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  border-radius: 8px;
+  background: #f7f8fa;
+  color: #445067;
+  font: 11px/1.55 inherit;
+}
+.convocation-summary-card {
+  width: min(260px, 100%);
+  padding: 15px;
+  border: 1px solid #f0dfbd;
+  border-radius: 11px;
+  background: #fffaf0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #a56c14;
+}
+.convocation-summary-card small,
+.convocation-summary-card strong {
+  display: block;
+}
+.convocation-summary-card strong {
+  font-size: 22px;
+  color: #6d4710;
+}
+.global-convocation-list {
+  background: transparent;
+}
+.notification-section-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px 5px;
+  color: #7b8798;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.notification-item.gmail em {
+  color: #a3670d;
+}
+
+@media (max-width: 700px) {
+  .integration-heading,
+  .convocation-title-row,
+  .page-heading-actions {
+    align-items: flex-start;
+  }
+  .integration-heading {
+    flex-wrap: wrap;
+  }
+  .integration-state {
+    margin-left: 54px;
+  }
+  .integration-data {
+    grid-template-columns: 1fr;
+  }
+  .convocation-title-row {
+    flex-direction: column;
+    gap: 4px;
+  }
+}

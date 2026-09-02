@@ -9,6 +9,7 @@ import { tenderRouter } from './tender.routes.js';
 import { deadlineRouter } from './deadline.routes.js';
 import { auditRouter } from './audit.routes.js';
 import { megaRouter } from './mega.routes.js';
+import { gmailRouter } from './gmail.routes.js';
 
 export const apiRouter = Router();
 
@@ -31,3 +32,4 @@ apiRouter.use('/documents', documentRouter);
 apiRouter.use('/deadlines', deadlineRouter);
 apiRouter.use('/audit', auditRouter);
 apiRouter.use('/mega', megaRouter);
+apiRouter.use('/integrations/gmail', gmailRouter);

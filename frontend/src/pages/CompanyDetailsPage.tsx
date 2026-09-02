@@ -1,14 +1,16 @@
 import { ArrowLeft, Building2, Download, File, FolderOpen, Gavel, Percent, RadioTower } from 'lucide-react';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { BidsPage } from './BidsPage';
 import { MegaBrowser } from '../components/MegaBrowser';
 import { CompanyDiscountsPanel } from './CompanyDiscountsPanel';
+import { GmailIntegrationPanel } from '../components/GmailIntegrationPanel';
+import { CompanyConvocationsPanel } from '../components/CompanyConvocationsPanel';
 import { api, errorMessage } from '../services/api';
 import type { ApiResponse, BidDocument, BidProgress, Company } from '../types';
 import { formatBytes, formatDate, optionLabel, progressOptions } from '../utils/bid';
 
-type Tab = 'overview' | 'bids' | 'documents' | 'platforms' | 'discounts' | 'convocations';
+type Tab = 'overview' | 'bids' | 'documents' | 'platforms' | 'discounts' | 'integrations' | 'convocations';
 type PlatformGroup = {
   id: string;
   name: string;
@@ -26,8 +28,12 @@ type PlatformGroup = {
 
 export function CompanyDetailsPage() {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
   const [company, setCompany] = useState<Company | null>(null);
-  const [tab, setTab] = useState<Tab>('overview');
+  const requestedTab = searchParams.get('tab');
+  const initialTab: Tab =
+    requestedTab === 'integrations' || requestedTab === 'convocations' ? requestedTab : 'overview';
+  const [tab, setTab] = useState<Tab>(initialTab);
   const [documents, setDocuments] = useState<BidDocument[]>([]);
   const [platforms, setPlatforms] = useState<PlatformGroup[]>([]);
   const [error, setError] = useState('');
@@ -42,6 +48,14 @@ export function CompanyDetailsPage() {
       setLoading(false);
     }
   }, [id]);
+
+  useEffect(() => {
+    const nextTab = searchParams.get('tab');
+    const timer = window.setTimeout(() => {
+      if (nextTab === 'integrations' || nextTab === 'convocations') setTab(nextTab);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [searchParams]);
   useEffect(() => {
     const timer = window.setTimeout(() => void load(), 0);
     return () => window.clearTimeout(timer);
@@ -110,6 +124,7 @@ export function CompanyDetailsPage() {
             ['documents', 'Documentos'],
             ['platforms', 'Plataformas'],
             ['discounts', 'Baixas'],
+            ['integrations', 'Integrações'],
             ['convocations', 'Convocações']
           ] as Array<[Tab, string]>
         ).map(([value, label]) => (
@@ -228,11 +243,8 @@ export function CompanyDetailsPage() {
         </section>
       )}
       {tab === 'discounts' && <CompanyDiscountsPanel companyId={company.id} />}
-      {tab === 'convocations' && (
-        <section className="empty-state compact">
-          <p>As convocações desta empresa aparecerão aqui após a integração do Gmail.</p>
-        </section>
-      )}
+      {tab === 'integrations' && <GmailIntegrationPanel companyId={company.id} />}
+      {tab === 'convocations' && <CompanyConvocationsPanel companyId={company.id} />}
     </div>
   );
 }
