@@ -3234,7 +3234,7 @@ td small {
 .dashboard-company-cards em { padding: 4px 7px; border-radius: 999px; background: #fff2df; color: #a75b00; font-size: 10px; font-style: normal; white-space: nowrap; }
 .dashboard-empty { padding: 20px 8px; text-align: center; color: #8290a3; font-size: 12px; }
 
-/* Baixa e Carta Proposta dentro da participação */
+/* Baixa dentro da participação */
 .danger-outline { color: #b42318 !important; border-color: #efc4c0 !important; }
 .danger-outline:hover { background: #fff4f2 !important; }
 .commercial-heading { align-items: center; margin-bottom: 18px; }
@@ -3250,47 +3250,16 @@ td small {
 .bid-discount-grid strong { color: #142846; font-size: 16px; }
 .bid-discount-grid label { color: #44536a; font-size: 12px; font-weight: 700; }
 .bid-discount-grid input { height: 42px; border: 1px solid #ccd6e3; border-radius: 8px; padding: 0 11px; font: inherit; }
-.proposal-missing { display: flex; gap: 8px; align-items: center; padding: 11px 13px; margin-bottom: 14px; border: 1px solid #f5d29c; background: #fff8ec; border-radius: 9px; color: #87530b; font-size: 12px; }
-.proposal-summary-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 10px; margin-bottom: 16px; }
-.proposal-summary-grid > div { display: grid; gap: 3px; padding: 12px; background: #f8fafc; border: 1px solid #e1e7ef; border-radius: 9px; }
-.proposal-summary-grid small { color: #75839a; font-size: 10px; text-transform: uppercase; font-weight: 700; }
-.proposal-summary-grid strong { color: #142846; font-size: 13px; }
-.proposal-template-editor { display: grid; gap: 7px; color: #44536a; font-size: 12px; font-weight: 700; }
-.proposal-template-editor textarea { width: 100%; resize: vertical; border: 1px solid #ccd6e3; border-radius: 10px; padding: 14px; font: 13px/1.55 ui-monospace, SFMono-Regular, Consolas, monospace; color: #26364e; background: #fff; }
-.proposal-template-editor textarea:disabled { background: #f8fafc; color: #53647d; }
-.proposal-template-editor small { color: #7a8798; font-weight: 400; line-height: 1.45; }
-.proposal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; }
-.proposal-preview { margin-top: 18px; padding: 16px; background: #f8fafc; border: 1px solid #e1e7ef; border-radius: 10px; }
-.proposal-preview pre { margin: 10px 0 0; white-space: pre-wrap; font: 12px/1.55 ui-monospace, SFMono-Regular, Consolas, monospace; color: #34445d; }
 
 @media (max-width: 1100px) {
   .dashboard-metrics { grid-template-columns: repeat(2, minmax(0,1fr)); }
   .dashboard-grid-main, .dashboard-grid-secondary { grid-template-columns: 1fr; }
   .dashboard-company-cards { grid-template-columns: repeat(2,minmax(0,1fr)); }
   .bid-discount-grid { grid-template-columns: 1fr 1fr; }
-  .proposal-summary-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
 }
 @media (max-width: 720px) {
   .dashboard-hero { align-items: stretch; flex-direction: column; }
   .dashboard-scope-control { min-width: 0; justify-content: stretch; align-items: stretch; flex-direction: column; }
   .dashboard-scope-control label { min-width: 0; }
-  .dashboard-metrics, .dashboard-company-cards, .proposal-summary-grid, .bid-discount-grid { grid-template-columns: 1fr; }
-  .proposal-actions { flex-direction: column; }
-}
-.proposal-source-file { color: #6c7a90; font-size: 10px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.proposal-pdf-import { display: grid; gap: 12px; margin: 0 0 16px; padding: 14px; border: 1px solid #d8e3f1; border-radius: 11px; background: #f8fbff; }
-.proposal-pdf-import-copy { display: flex; align-items: flex-start; gap: 11px; }
-.proposal-pdf-import-copy > div { display: grid; gap: 4px; }
-.proposal-pdf-import-copy strong { color: #173257; font-size: 13px; }
-.proposal-pdf-import-copy small, .proposal-import-note { color: #6f7f95; font-size: 11px; line-height: 1.45; }
-.proposal-import-icon { width: 36px; height: 36px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 9px; background: #e8f1ff; color: #2563eb; }
-.proposal-pdf-import-actions { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; }
-.proposal-pdf-import-actions input[type='file'] { min-width: 0; width: 100%; padding: 9px 10px; border: 1px solid #ccd8e7; border-radius: 8px; background: #fff; color: #43536a; font-size: 11px; }
-.proposal-import-result { display: grid; gap: 4px; margin: 0 0 16px; padding: 11px 13px; border-radius: 9px; font-size: 11px; }
-.proposal-import-result.success { border: 1px solid #b9dfc8; background: #f1fbf4; color: #27633d; }
-.proposal-import-result.warning { border: 1px solid #f0d19a; background: #fff8eb; color: #87530b; }
-.proposal-import-result strong { font-size: 12px; }
-.proposal-import-result small { color: inherit; line-height: 1.4; }
-@media (max-width: 720px) {
-  .proposal-pdf-import-actions { grid-template-columns: 1fr; }
+  .dashboard-metrics, .dashboard-company-cards, .bid-discount-grid { grid-template-columns: 1fr; }
 }

@@ -290,28 +290,6 @@ export type GmailConvocationAlertData = {
   unread: number;
 };
 
-export type ProposalLetterContext = {
-  bidId: string;
-  companyId: string;
-  tenderId: string;
-  template: {
-    municipality: string;
-    state: string | null;
-    bodyTemplate: string;
-    custom: boolean;
-    sourceType: 'TEXT' | 'PDF_IMPORT';
-    sourceFileName: string | null;
-    sourcePdfImportedAt: string | null;
-    updatedAt: string | null;
-  };
-  values: Record<string, string>;
-  missing: string[];
-  canGenerate: boolean;
-  generatedText: string;
-  discountedValue: string | null;
-  discountPercentage: number | null;
-};
-
 export type DashboardData = {
   scope: { companyId: string | null; companyName: string | null };
   companies: CompanySummary[];

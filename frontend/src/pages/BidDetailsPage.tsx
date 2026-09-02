@@ -1,10 +1,10 @@
-import { ArrowLeft, CalendarClock, CheckCircle2, Download, ExternalLink, File as FileIcon, FilePlus2, FileText, Percent, Pencil, Trash2, Unlink, UploadCloud } from 'lucide-react';
+import { ArrowLeft, CalendarClock, CheckCircle2, Download, ExternalLink, File as FileIcon, FilePlus2, Percent, Pencil, Trash2, Unlink } from 'lucide-react';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { CompanyConvocationsPanel } from '../components/CompanyConvocationsPanel';
 import { api, errorMessage } from '../services/api';
-import type { ApiResponse, Bid, BidDocument, DeadlineAlert, DiscountCalculation, DocumentCategory, ProposalLetterContext } from '../types';
+import type { ApiResponse, Bid, BidDocument, DeadlineAlert, DiscountCalculation, DocumentCategory } from '../types';
 import {
   documentCategoryOptions,
   formatBytes,
@@ -16,7 +16,7 @@ import {
   situationOptions
 } from '../utils/bid';
 
-type Tab = 'summary' | 'data' | 'discount' | 'proposal' | 'documents' | 'convocations' | 'deadlines' | 'history';
+type Tab = 'summary' | 'data' | 'discount' | 'documents' | 'convocations' | 'deadlines' | 'history';
 
 export function BidDetailsPage() {
   const { id } = useParams();
@@ -30,7 +30,7 @@ export function BidDetailsPage() {
   const [deadlineError, setDeadlineError] = useState('');
   const requestedTab = searchParams.get('tab');
   const [tab, setTab] = useState<Tab>(
-    requestedTab && ['summary', 'data', 'discount', 'proposal', 'documents', 'convocations', 'deadlines', 'history'].includes(requestedTab)
+    requestedTab && ['summary', 'data', 'discount', 'documents', 'convocations', 'deadlines', 'history'].includes(requestedTab)
       ? (requestedTab as Tab)
       : 'summary'
   );
@@ -209,7 +209,6 @@ export function BidDetailsPage() {
             ['summary', 'Resumo'],
             ['data', 'Dados'],
             ['discount', 'Baixa'],
-            ['proposal', 'Carta Proposta'],
             ['documents', `Documentos (${bid._count?.documents ?? documents.length})`],
             ['convocations', 'Convocações'],
             ['deadlines', 'Prazos'],
@@ -309,7 +308,6 @@ export function BidDetailsPage() {
         </section>
       )}
       {tab === 'discount' && <DiscountPanel bid={bid} canEdit={canEdit} />}
-      {tab === 'proposal' && <ProposalLetterPanel bid={bid} canEdit={canEdit} userRole={user?.role} />}
       {tab === 'documents' && (
         <DocumentsPanel
           bidId={bid.id}
@@ -389,7 +387,7 @@ function DiscountPanel({ bid, canEdit }: { bid: Bid; canEdit: boolean }) {
         <div>
           <span className="eyebrow">Proposta da empresa</span>
           <strong>Baixa desta licitação</strong>
-          <small>O valor salvo aqui será usado automaticamente na Carta Proposta.</small>
+          <small>Informe aqui o valor final da proposta desta empresa.</small>
         </div>
         <Percent size={24} />
       </div>
@@ -407,182 +405,6 @@ function DiscountPanel({ bid, canEdit }: { bid: Bid; canEdit: boolean }) {
           {canEdit && <button className="primary-button" onClick={() => void save()} disabled={saving || !value}>{saving ? 'Salvando...' : item ? 'Atualizar baixa' : 'Salvar baixa'}</button>}
         </div>
       )}
-    </section>
-  );
-}
-
-function ProposalLetterPanel({ bid, canEdit, userRole }: { bid: Bid; canEdit: boolean; userRole?: string }) {
-  const [context, setContext] = useState<ProposalLetterContext | null>(null);
-  const [templateBody, setTemplateBody] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [savingTemplate, setSavingTemplate] = useState(false);
-  const [downloading, setDownloading] = useState(false);
-  const [pdfFile, setPdfFile] = useState<File | null>(null);
-  const [importingPdf, setImportingPdf] = useState(false);
-  const [importFeedback, setImportFeedback] = useState<{ detectedFields: string[]; warnings: string[] } | null>(null);
-  const [error, setError] = useState('');
-  const canEditTemplate = userRole === 'ADMIN' || userRole === 'FUNCIONARIO';
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const response = await api.get<ApiResponse<ProposalLetterContext>>(`/bids/${bid.id}/proposal-letter`);
-      setContext(response.data.data);
-      setTemplateBody(response.data.data.template.bodyTemplate);
-    } catch (err) {
-      setError(errorMessage(err));
-    } finally {
-      setLoading(false);
-    }
-  }, [bid.id]);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => void load(), 0);
-    return () => window.clearTimeout(timer);
-  }, [load]);
-
-  const saveTemplate = async () => {
-    setSavingTemplate(true);
-    setError('');
-    try {
-      await api.put('/proposal-letters/template', {
-        municipality: bid.tender.municipality,
-        state: bid.tender.state,
-        bodyTemplate: templateBody
-      });
-      await load();
-    } catch (err) {
-      setError(errorMessage(err));
-    } finally {
-      setSavingTemplate(false);
-    }
-  };
-
-  const importPdf = async () => {
-    if (!pdfFile) return;
-    setImportingPdf(true);
-    setError('');
-    setImportFeedback(null);
-    try {
-      const form = new FormData();
-      form.append('file', pdfFile);
-      form.append('bidId', bid.id);
-      const response = await api.post<ApiResponse<{ detectedFields: string[]; warnings: string[] }>>('/proposal-letters/template/pdf', form);
-      setImportFeedback({
-        detectedFields: response.data.data.detectedFields,
-        warnings: response.data.data.warnings
-      });
-      setPdfFile(null);
-      await load();
-    } catch (err) {
-      setError(errorMessage(err));
-    } finally {
-      setImportingPdf(false);
-    }
-  };
-
-  const downloadPdf = async () => {
-    if (!context?.canGenerate) return setError(`Preencha antes de gerar: ${context?.missing.join(', ') || 'dados obrigatórios'}`);
-    setDownloading(true);
-    setError('');
-    try {
-      const response = await api.get(`/bids/${bid.id}/proposal-letter/pdf`, { responseType: 'blob' });
-      const url = URL.createObjectURL(response.data as Blob);
-      const link = window.document.createElement('a');
-      link.href = url;
-      link.download = `carta-proposta-${bid.tender.municipality}-${bid.tender.noticeNumber || 'licitacao'}.pdf`.replace(/[\\/:*?"<>|]+/g, '-');
-      link.click();
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      setError(errorMessage(err));
-    } finally {
-      setDownloading(false);
-    }
-  };
-
-  if (loading) return <section className="detail-panel"><div className="table-message"><span className="spinner" />Preparando Carta Proposta...</div></section>;
-
-  return (
-    <section className="detail-panel proposal-letter-panel">
-      <div className="section-heading-inline commercial-heading">
-        <div>
-          <span className="eyebrow">Documento automático</span>
-          <strong>Carta Proposta · {bid.tender.municipality}</strong>
-          <small>O valor global é puxado da Baixa desta empresa. O modelo fica salvo por município.</small>
-        </div>
-        <FileText size={25} />
-      </div>
-      {error && <div className="alert alert-error">{error}</div>}
-      {context && context.missing.length > 0 && (
-        <div className="proposal-missing"><strong>Faltam dados para gerar o PDF:</strong><span>{context.missing.join(' · ')}</span></div>
-      )}
-      <div className="proposal-summary-grid">
-        <div><small>Número</small><strong>{bid.tender.noticeNumber || '—'}</strong></div>
-        <div><small>Valor da baixa</small><strong>{context?.discountedValue ? formatCurrency(context.discountedValue) : '—'}</strong></div>
-        <div><small>Prazo de execução</small><strong>{bid.tender.executionTerm || '—'}</strong></div>
-        <div>
-          <small>Modelo</small>
-          <strong>
-            {context?.template.sourceType === 'PDF_IMPORT'
-              ? 'Importado de PDF'
-              : context?.template.custom
-                ? 'Modelo salvo da cidade'
-                : 'Modelo padrão inicial'}
-          </strong>
-          {context?.template.sourceFileName && <span className="proposal-source-file">{context.template.sourceFileName}</span>}
-        </div>
-      </div>
-      {canEditTemplate && (
-        <div className="proposal-pdf-import">
-          <div className="proposal-pdf-import-copy">
-            <span className="proposal-import-icon"><UploadCloud size={22} /></span>
-            <div>
-              <strong>Importar uma Carta Proposta existente em PDF</strong>
-              <small>
-                Use uma carta antiga desta cidade. O sistema lê o texto, transforma número, processo, objeto, valor da baixa,
-                prazo, validade e dados da empresa em campos automáticos e salva o resultado como modelo da cidade.
-              </small>
-            </div>
-          </div>
-          <div className="proposal-pdf-import-actions">
-            <input
-              type="file"
-              accept="application/pdf,.pdf"
-              onChange={(event) => setPdfFile(event.target.files?.[0] ?? null)}
-              disabled={importingPdf}
-            />
-            <button className="secondary-button" type="button" onClick={() => void importPdf()} disabled={!pdfFile || importingPdf}>
-              <UploadCloud size={16} />
-              {importingPdf ? 'Lendo PDF...' : 'Importar e analisar PDF'}
-            </button>
-          </div>
-          <small className="proposal-import-note">
-            Funciona com PDFs que possuem texto selecionável. Se o arquivo for apenas uma imagem escaneada, o sistema avisa e não substitui o modelo atual.
-          </small>
-        </div>
-      )}
-      {importFeedback && (
-        <div className={`proposal-import-result ${importFeedback.warnings.length ? 'warning' : 'success'}`}>
-          <strong>PDF analisado.</strong>
-          <span>
-            {importFeedback.detectedFields.length
-              ? `Campos identificados: ${importFeedback.detectedFields.join(', ')}.`
-              : 'Nenhum campo variável foi identificado automaticamente.'}
-          </span>
-          {importFeedback.warnings.length > 0 && <small>{importFeedback.warnings.join(' ')}</small>}
-        </div>
-      )}
-      <label className="proposal-template-editor">
-        Modelo da Carta Proposta
-        <textarea rows={16} value={templateBody} onChange={(event) => setTemplateBody(event.target.value)} disabled={!canEditTemplate} />
-        <small>Campos disponíveis: {'{{numero_licitacao}}'}, {'{{processo_administrativo}}'}, {'{{objeto}}'}, {'{{valor_global}}'}, {'{{valor_global_extenso}}'}, {'{{prazo_execucao}}'}, {'{{validade_proposta}}'}, {'{{empresa_razao_social}}'}, {'{{empresa_nome}}'}, {'{{cnpj}}'}, {'{{representante}}'}, {'{{municipio}}'}, {'{{data_atual}}'}.</small>
-      </label>
-      <div className="proposal-actions">
-        {canEditTemplate && <button className="secondary-button" onClick={() => void saveTemplate()} disabled={savingTemplate}>{savingTemplate ? 'Salvando modelo...' : 'Salvar modelo desta cidade'}</button>}
-        {canEdit && <button className="primary-button" onClick={() => void downloadPdf()} disabled={downloading || !context?.canGenerate}><Download size={16} />{downloading ? 'Gerando PDF...' : 'Gerar Carta Proposta em PDF'}</button>}
-      </div>
-      {context && <div className="proposal-preview"><span className="eyebrow">Prévia</span><pre>{context.generatedText}</pre></div>}
     </section>
   );
 }

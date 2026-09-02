@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import * as bidController from '../controllers/bid.controller.js';
 import * as documentController from '../controllers/document.controller.js';
-import * as proposalLetterController from '../controllers/proposal-letter.controller.js';
 import { authenticate } from '../middlewares/auth.js';
 import { uploadDocument } from '../middlewares/upload.js';
 import { validate } from '../middlewares/validate.js';
@@ -27,8 +26,6 @@ bidRouter.post('/', validate(createBidSchema), asyncHandler(bidController.create
 bidRouter.get('/:id', validate(bidIdSchema), asyncHandler(bidController.show));
 bidRouter.put('/:id', validate(updateBidSchema), asyncHandler(bidController.update));
 bidRouter.delete('/:id', validate(bidIdSchema), asyncHandler(bidController.remove));
-bidRouter.get('/:id/proposal-letter', validate(bidIdSchema), asyncHandler(proposalLetterController.context));
-bidRouter.get('/:id/proposal-letter/pdf', validate(bidIdSchema), asyncHandler(proposalLetterController.pdf));
 bidRouter.get('/:bidId/documents', validate(documentBidIdSchema), asyncHandler(documentController.index));
 bidRouter.post(
   '/:bidId/documents',
