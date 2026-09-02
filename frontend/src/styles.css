@@ -137,12 +137,12 @@ p {
 .login-hero {
   padding: 52px clamp(42px, 7vw, 100px);
   background:
-    linear-gradient(145deg, rgba(10, 20, 38, 0.97), rgba(24, 43, 76, 0.96)),
-    radial-gradient(circle at top right, #2d62c4, transparent 55%);
-  color: #fff;
+    radial-gradient(circle at 88% 12%, rgba(82, 138, 245, 0.2), transparent 34%),
+    linear-gradient(145deg, #f5f8ff 0%, #e8f0ff 48%, #dce9ff 100%);
+  color: #10233f;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: center;
   position: relative;
   overflow: hidden;
 }
@@ -151,23 +151,20 @@ p {
   position: absolute;
   width: 380px;
   height: 380px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(37, 99, 235, 0.09);
   border-radius: 50%;
   right: -150px;
   bottom: -80px;
   box-shadow:
-    0 0 0 70px rgba(255, 255, 255, 0.025),
-    0 0 0 140px rgba(255, 255, 255, 0.015);
+    0 0 0 70px rgba(37, 99, 235, 0.025),
+    0 0 0 140px rgba(37, 99, 235, 0.018);
 }
 .login-brand-logo {
   position: relative;
   width: min(360px, 100%);
-  height: 96px;
+  height: 90px;
+  margin-bottom: 28px;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  border-radius: 16px;
-  background: #fff;
-  box-shadow: 0 14px 35px rgba(5, 15, 34, 0.24);
   z-index: 1;
 }
 .login-brand-logo img,
@@ -181,15 +178,24 @@ p {
   height: auto;
   transform: translateY(-50%);
 }
+.login-brand-logo img,
+.login-form-logo img {
+  mix-blend-mode: multiply;
+}
 .login-form-logo {
-  display: none;
+  position: relative;
+  display: block;
+  width: min(280px, 100%);
+  height: 72px;
+  margin-bottom: 2px;
+  overflow: hidden;
 }
 .hero-copy {
   max-width: 530px;
   z-index: 1;
 }
 .hero-kicker {
-  color: #8db5ff;
+  color: #2563eb;
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 2px;
@@ -203,12 +209,15 @@ p {
 }
 .hero-copy p {
   max-width: 470px;
-  color: #c1cbda;
+  color: #53647d;
   line-height: 1.7;
   font-size: 16px;
 }
 .login-hero small {
-  color: #8190a8;
+  position: absolute;
+  bottom: 48px;
+  left: clamp(42px, 7vw, 100px);
+  color: #6d7d95;
   z-index: 1;
 }
 .login-panel {
@@ -1736,16 +1745,8 @@ td small {
     padding: 24px;
   }
   .login-form-logo {
-    position: relative;
-    display: block;
     width: min(280px, 100%);
     height: 72px;
-    margin-bottom: 2px;
-    overflow: hidden;
-    border: 1px solid #e1e7f0;
-    border-radius: 12px;
-    background: #fff;
-    box-shadow: 0 8px 24px rgba(25, 45, 76, 0.08);
   }
   .topbar {
     padding: 0 16px;

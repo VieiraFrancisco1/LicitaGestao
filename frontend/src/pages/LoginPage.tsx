@@ -31,10 +31,10 @@ export function LoginPage() {
   return (
     <div className="login-page">
       <section className="login-hero">
-        <div className="login-brand-logo">
-          <img src={licitaGestaoLogo} alt="LicitaGestão" />
-        </div>
         <div className="hero-copy">
+          <div className="login-brand-logo login-brand-hero">
+            <img src={licitaGestaoLogo} alt="LicitaGestão" />
+          </div>
           <span className="hero-kicker">Gestão de licitações</span>
           <h1>
             Controle simples.
