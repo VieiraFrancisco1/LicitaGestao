@@ -161,9 +161,9 @@ p {
 }
 .login-brand-logo {
   position: relative;
-  width: min(360px, 100%);
-  height: 90px;
-  margin-bottom: 28px;
+  width: min(470px, 100%);
+  height: 118px;
+  margin-bottom: 24px;
   overflow: hidden;
   z-index: 1;
 }
@@ -178,21 +178,22 @@ p {
   height: auto;
   transform: translateY(-50%);
 }
-.login-brand-logo img,
-.login-form-logo img {
-  mix-blend-mode: multiply;
-}
 .login-form-logo {
   position: relative;
   display: block;
-  width: min(280px, 100%);
-  height: 72px;
-  margin-bottom: 2px;
+  width: min(360px, 100%);
+  height: 92px;
+  margin: 0 auto 4px;
   overflow: hidden;
+}
+.login-brand-logo img,
+.login-form-logo img {
+  filter: contrast(1.08) brightness(1.02);
 }
 .hero-copy {
   max-width: 530px;
   z-index: 1;
+  mix-blend-mode: multiply;
 }
 .hero-kicker {
   color: #2563eb;
@@ -1080,7 +1081,7 @@ td small {
   box-shadow: 0 10px 28px rgba(29, 45, 72, 0.07);
 }
 .company-bids-table {
-  min-width: 1160px;
+  min-width: 1260px;
   table-layout: fixed;
 }
 .company-bids-table th {
@@ -1102,14 +1103,15 @@ td small {
   background: #dbe2eb;
   content: '';
 }
-.company-bids-table th:nth-child(1) { width: 13%; }
+.company-bids-table th:nth-child(1) { width: 12%; }
 .company-bids-table th:nth-child(2) { width: 8%; }
-.company-bids-table th:nth-child(3) { width: 25%; }
-.company-bids-table th:nth-child(4) { width: 8%; }
-.company-bids-table th:nth-child(5) { width: 14%; }
-.company-bids-table th:nth-child(6) { width: 11%; }
-.company-bids-table th:nth-child(7) { width: 9%; }
-.company-bids-table th:nth-child(8) { width: 12%; }
+.company-bids-table th:nth-child(3) { width: 22%; }
+.company-bids-table th:nth-child(4) { width: 9%; }
+.company-bids-table th:nth-child(5) { width: 8%; }
+.company-bids-table th:nth-child(6) { width: 13%; }
+.company-bids-table th:nth-child(7) { width: 10%; }
+.company-bids-table th:nth-child(8) { width: 8%; }
+.company-bids-table th:nth-child(9) { width: 10%; }
 .company-bids-table td {
   padding: 15px 10px;
   vertical-align: top;
@@ -1134,6 +1136,40 @@ td small {
 .company-tender-date strong {
   color: #275b9f;
   white-space: nowrap;
+}
+.company-tender-validity strong {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  padding: 5px 9px;
+  border: 1px solid #ccdaec;
+  border-radius: 7px;
+  background: #eef4fc;
+  color: #294f80;
+  font-size: 13px;
+  font-weight: 850;
+  white-space: nowrap;
+}
+.company-guarantee-pill {
+  display: inline-flex;
+  min-width: 42px;
+  min-height: 28px;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 9px;
+  border: 1px solid #d8dee8;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 850;
+}
+.company-guarantee-pill.required {
+  border-color: #bcdcc9;
+  background: #e8f7ef;
+  color: #237249;
+}
+.company-guarantee-pill.not-required {
+  background: #f2f4f7;
+  color: #566276;
 }
 .company-bids-table .company-tender-object strong {
   display: -webkit-box;
@@ -1745,8 +1781,8 @@ td small {
     padding: 24px;
   }
   .login-form-logo {
-    width: min(280px, 100%);
-    height: 72px;
+    width: min(330px, 100%);
+    height: 84px;
   }
   .topbar {
     padding: 0 16px;

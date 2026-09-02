@@ -65,7 +65,7 @@ export function BidsPage({ fixedCompanyId }: { fixedCompanyId?: string }) {
   const canCreate =
     user?.role === 'ADMIN' || user?.role === 'EMPRESA' || Boolean(user?.assignedCompanies.length);
   const embeddedInCompany = Boolean(fixedCompanyId);
-  const columnCount = embeddedInCompany ? 8 : 11;
+  const columnCount = embeddedInCompany ? 9 : 11;
 
   return (
     <div className="page-stack">
@@ -154,6 +154,7 @@ export function BidsPage({ fixedCompanyId }: { fixedCompanyId?: string }) {
                   <th>Data</th>
                   <th>Objeto</th>
                   <th>Validade</th>
+                  <th>Garantia</th>
                   <th>Valor e plataforma</th>
                   <th>Andamento</th>
                   <th>Situação</th>
@@ -216,8 +217,19 @@ export function BidsPage({ fixedCompanyId }: { fixedCompanyId?: string }) {
                         <td className="object-cell company-tender-object">
                           <strong>{bid.tender.object}</strong>
                         </td>
+                        <td className="company-tender-validity">
+                          <strong>
+                            {bid.tender.proposalValidityDays ? `${bid.tender.proposalValidityDays} dias` : '—'}
+                          </strong>
+                        </td>
                         <td>
-                          {bid.tender.proposalValidityDays ? `${bid.tender.proposalValidityDays} dias` : '—'}
+                          <span
+                            className={`company-guarantee-pill ${
+                              bid.tender.guaranteeType === 'NAO_EXIGIDA' ? 'not-required' : 'required'
+                            }`}
+                          >
+                            {bid.tender.guaranteeType === 'NAO_EXIGIDA' ? 'Não' : 'Sim'}
+                          </span>
                         </td>
                         <td className="company-tender-value">
                           <strong>{formatCurrency(bid.proposalValue ?? bid.tender.estimatedValue)}</strong>
