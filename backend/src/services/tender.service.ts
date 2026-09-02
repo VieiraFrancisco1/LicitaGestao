@@ -4,6 +4,7 @@ import { AppError } from '../utils/app-error.js';
 import type { AuthScope } from './access.service.js';
 
 export type TenderInput = {
+  modality?: string | null;
   noticeNumber?: string | null;
   processNumber?: string | null;
   municipality?: string;
@@ -58,6 +59,9 @@ const clean = (data: TenderInput, referenceValue?: number | Prisma.Decimal | nul
   const estimatedValue = data.estimatedValue ?? referenceValue;
   return {
     ...rest,
+    ...(data.modality !== undefined ? { modality: data.modality || null } : {}),
+    ...(data.noticeNumber !== undefined ? { noticeNumber: data.noticeNumber || null } : {}),
+    ...(data.processNumber !== undefined ? { processNumber: data.processNumber || null } : {}),
     ...(data.platformLink !== undefined ? { platformLink: data.platformLink || null } : {}),
     ...(data.seobraLink !== undefined ? { seobraLink: data.seobraLink || null } : {}),
     ...(requiresGuaranteeOnePercent !== undefined

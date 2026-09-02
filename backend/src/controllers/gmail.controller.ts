@@ -8,6 +8,7 @@ import {
   getGmailStatus,
   listCompanyEmailMessages,
   listGmailConvocationAlerts,
+  linkGmailConvocationToBid,
   markAllGmailConvocationsRead,
   markGmailConvocationRead,
   syncCompanyGmail
@@ -78,7 +79,7 @@ export const messages = async (req: Request, res: Response) => {
   const data = await listCompanyEmailMessages(
     req.params.companyId as string,
     req.auth!,
-    req.query as unknown as { limit: number; convocationsOnly: boolean }
+    req.query as unknown as { limit: number; convocationsOnly: boolean; bidId?: string }
   );
   res.json({ success: true, data });
 };
@@ -96,4 +97,17 @@ export const readAlert = async (req: Request, res: Response) => {
 export const readAllAlerts = async (req: Request, res: Response) => {
   const data = await markAllGmailConvocationsRead(req.auth!);
   res.json({ success: true, data });
+};
+
+export const linkMessage = async (req: Request, res: Response) => {
+  const result = await linkGmailConvocationToBid(req.params.messageId as string, req.body.bidId ?? null, req.auth!);
+  await recordAudit(req.auth!, {
+    action: AuditActions.UPDATE,
+    entityType: 'EMAIL_MESSAGE',
+    entityId: result.id,
+    entityLabel: result.subject ?? 'Convocação por e-mail',
+    description: req.body.bidId ? 'Convocação vinculada manualmente a uma licitação' : 'Vínculo manual da convocação removido',
+    metadata: { bidId: req.body.bidId ?? null, companyId: result.companyId }
+  });
+  res.json({ success: true, message: req.body.bidId ? 'Convocação vinculada à licitação' : 'Vínculo removido', data: result });
 };

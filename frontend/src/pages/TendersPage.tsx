@@ -127,7 +127,7 @@ export function TendersPage() {
                 setSearch(event.target.value);
                 setPage(1);
               }}
-              placeholder="Cidade ou objeto"
+              placeholder="Cidade, número, processo ou objeto"
             />
           </label>
           <button
@@ -176,6 +176,12 @@ export function TendersPage() {
                   <tr key={tender.id}>
                     <td>
                       <strong>{tender.municipality}</strong>
+                      {(tender.modality || tender.noticeNumber || tender.processNumber) && (
+                        <small>
+                          {[tender.modality, tender.noticeNumber ? `Nº ${tender.noticeNumber}` : null].filter(Boolean).join(' · ')}
+                          {tender.processNumber ? `${tender.modality || tender.noticeNumber ? ' · ' : ''}Proc. ${tender.processNumber}` : ''}
+                        </small>
+                      )}
                     </td>
                     <td>{formatDate(tender.sessionDate)}</td>
                     <td className="object-cell">

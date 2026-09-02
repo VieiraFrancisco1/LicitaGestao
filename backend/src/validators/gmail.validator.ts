@@ -11,10 +11,16 @@ export const gmailMessagesSchema = z.object({
     convocationsOnly: z
       .enum(['true', 'false'])
       .default('false')
-      .transform((value) => value === 'true')
+      .transform((value) => value === 'true'),
+    bidId: uuid.optional()
   })
 });
 
 export const gmailReadAlertSchema = z.object({
   body: z.object({ messageId: uuid })
+});
+
+export const gmailLinkMessageSchema = z.object({
+  params: z.object({ messageId: uuid }),
+  body: z.object({ bidId: uuid.nullable() })
 });

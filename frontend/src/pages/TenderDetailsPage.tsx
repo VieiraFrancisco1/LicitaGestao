@@ -71,6 +71,9 @@ export function TenderDetailsPage() {
         </section>
       )}
       <div className="details-grid">
+        <Info label="Modalidade" value={tender.modality || 'Não informada'} />
+        <Info label="Número da licitação" value={tender.noticeNumber || 'Não informado'} />
+        <Info label="Processo administrativo" value={tender.processNumber || 'Não informado'} />
         <Info label="Data" value={formatDate(tender.sessionDate)} />
         <Info label="Plataforma" value={tender.platform?.name || 'Não informada'} />
         <Info label="Valor global" value={formatCurrency(tender.estimatedValue)} />

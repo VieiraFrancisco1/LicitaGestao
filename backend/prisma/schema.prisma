@@ -162,6 +162,7 @@ model Platform {
 
 model Tender {
   id                     String                @id @default(uuid()) @db.Uuid
+  modality               String?               @db.VarChar(80)
   noticeNumber           String?               @map("notice_number") @db.VarChar(120)
   processNumber          String?               @map("process_number") @db.VarChar(120)
   municipality           String                @db.VarChar(120)
@@ -190,6 +191,7 @@ model Tender {
   updatedAt              DateTime              @updatedAt @map("updated_at")
   bids                   Bid[]
   discounts              DiscountCalculation[]
+  emailMessages          EmailMessage[]         @relation("EmailMatchedTender")
 
   @@index([platformId])
   @@index([sessionDate])
@@ -217,6 +219,7 @@ model Bid {
   createdAt     DateTime     @default(now()) @map("created_at")
   updatedAt     DateTime     @updatedAt @map("updated_at")
   documents     Document[]
+  emailMessages  EmailMessage[] @relation("EmailMatchedBid")
 
   @@unique([tenderId, companyId])
   @@index([tenderId])
@@ -301,12 +304,21 @@ model EmailMessage {
   processingStatus      EmailProcessingStatus @default(PENDENTE) @map("processing_status")
   isPotentialConvocation Boolean               @default(false) @map("is_potential_convocation")
   convocationReason     String?               @map("convocation_reason") @db.VarChar(255)
+  tenderId              String?               @map("tender_id") @db.Uuid
+  tender                Tender?               @relation("EmailMatchedTender", fields: [tenderId], references: [id], onDelete: SetNull)
+  bidId                 String?               @map("bid_id") @db.Uuid
+  bid                   Bid?                  @relation("EmailMatchedBid", fields: [bidId], references: [id], onDelete: SetNull)
+  convocationMatchMethod String?              @map("convocation_match_method") @db.VarChar(40)
+  convocationMatchConfidence Int?             @map("convocation_match_confidence")
+  convocationMatchedAt  DateTime?             @map("convocation_matched_at")
   createdAt             DateTime              @default(now()) @map("created_at")
   updatedAt             DateTime              @updatedAt @map("updated_at")
 
   @@unique([companyId, gmailMessageId])
   @@index([companyId, receivedAt])
   @@index([companyId, isPotentialConvocation, receivedAt])
+  @@index([tenderId, receivedAt])
+  @@index([bidId, receivedAt])
   @@index([processingStatus])
   @@map("email_messages")
 }

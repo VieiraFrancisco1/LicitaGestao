@@ -178,7 +178,19 @@ export function BidsPage({ fixedCompanyId }: { fixedCompanyId?: string }) {
                     <td>
                       <strong>{bid.company.tradeName || bid.company.legalName}</strong>
                     </td>
-                    <td>{bid.tender.municipality}</td>
+                    <td>
+                      <strong>{bid.tender.municipality}</strong>
+                      {(bid.tender.modality || bid.tender.noticeNumber || bid.tender.processNumber) && (
+                        <small>
+                          {[bid.tender.modality, bid.tender.noticeNumber ? `Nº ${bid.tender.noticeNumber}` : null]
+                            .filter(Boolean)
+                            .join(' · ')}
+                          {bid.tender.processNumber
+                            ? `${bid.tender.modality || bid.tender.noticeNumber ? ' · ' : ''}Proc. ${bid.tender.processNumber}`
+                            : ''}
+                        </small>
+                      )}
+                    </td>
                     <td>{formatDate(bid.tender.sessionDate)}</td>
                     <td className="object-cell">
                       <strong>{bid.tender.object}</strong>

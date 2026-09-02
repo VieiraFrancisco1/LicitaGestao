@@ -5,6 +5,9 @@ import { api, errorMessage } from '../services/api';
 import type { ApiResponse, Platform, Tender } from '../types';
 
 type TenderForm = {
+  modality: string;
+  noticeNumber: string;
+  processNumber: string;
   municipality: string;
   sessionDate: string;
   object: string;
@@ -17,6 +20,9 @@ type TenderForm = {
 };
 
 const emptyForm: TenderForm = {
+  modality: '',
+  noticeNumber: '',
+  processNumber: '',
   municipality: '',
   sessionDate: '',
   object: '',
@@ -51,6 +57,9 @@ export function BidFormPage() {
       .then((response) => {
         const tender = response.data.data;
         setForm({
+          modality: tender.modality ?? '',
+          noticeNumber: tender.noticeNumber ?? '',
+          processNumber: tender.processNumber ?? '',
           municipality: tender.municipality,
           sessionDate: tender.sessionDate.slice(0, 10),
           object: tender.object,
@@ -118,6 +127,37 @@ export function BidFormPage() {
           <span>Dados da licitação</span>
         </div>
         <div className="bid-form-grid">
+          <label>
+            Modalidade
+            <select value={form.modality} onChange={(event) => field('modality', event.target.value)}>
+              <option value="">Selecione (opcional)</option>
+              <option value="Concorrência Eletrônica">Concorrência Eletrônica</option>
+              <option value="Pregão Eletrônico">Pregão Eletrônico</option>
+              <option value="Dispensa Eletrônica">Dispensa Eletrônica</option>
+              <option value="Credenciamento">Credenciamento</option>
+              <option value="Leilão Eletrônico">Leilão Eletrônico</option>
+              <option value="Outro">Outro</option>
+            </select>
+            <small className="field-help">Ajuda a relacionar convocações recebidas por e-mail.</small>
+          </label>
+          <label>
+            Número da licitação
+            <input
+              placeholder="Ex.: 005/2026"
+              value={form.noticeNumber}
+              onChange={(event) => field('noticeNumber', event.target.value)}
+            />
+            <small className="field-help">Número do pregão, concorrência ou procedimento eletrônico.</small>
+          </label>
+          <label>
+            Processo administrativo
+            <input
+              placeholder="Ex.: 0000620260323000322"
+              value={form.processNumber}
+              onChange={(event) => field('processNumber', event.target.value)}
+            />
+            <small className="field-help">Informe exatamente como aparece nos avisos da plataforma.</small>
+          </label>
           <label>
             Data da licitação
             <input

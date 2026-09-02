@@ -38,7 +38,7 @@ export function ConvocationsPage() {
 
   const open = async (item: GmailConvocationAlert) => {
     void api.post('/integrations/gmail/alerts/read', { messageId: item.messageId }).catch(() => undefined);
-    navigate(`/empresas/${item.companyId}?tab=convocations&message=${item.messageId}`);
+    navigate(item.bidId ? `/participacoes/${item.bidId}?tab=convocations&message=${item.messageId}` : `/empresas/${item.companyId}?tab=convocations&message=${item.messageId}`);
   };
 
   const markAll = async () => {
@@ -91,6 +91,13 @@ export function ConvocationsPage() {
                   <time>{formatDateTime(item.receivedAt)}</time>
                 </div>
                 <small>{item.companyName} · De: {item.sender}</small>
+                {item.tender ? (
+                  <div className="convocation-inline-match matched">
+                    Vinculada: {[item.tender.modality, item.tender.noticeNumber].filter(Boolean).join(' ') || 'Licitação'} · {item.tender.municipality}
+                  </div>
+                ) : (
+                  <div className="convocation-inline-match pending">Não vinculada — confira e vincule na área da empresa</div>
+                )}
                 {item.snippet && <p>{item.snippet}</p>}
               </div>
             </button>

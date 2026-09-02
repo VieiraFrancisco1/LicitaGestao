@@ -79,6 +79,7 @@ export type TenderParticipation = {
 
 export type Tender = {
   id: string;
+  modality: string | null;
   noticeNumber: string | null;
   processNumber: string | null;
   municipality: string;
@@ -258,6 +259,13 @@ export type EmailMessage = {
   processingStatus: EmailProcessingStatus;
   isPotentialConvocation: boolean;
   convocationReason: string | null;
+  tenderId: string | null;
+  bidId: string | null;
+  convocationMatchMethod: 'PROCESS_NUMBER' | 'NOTICE_NUMBER' | 'CONTEXT' | 'MANUAL' | null;
+  convocationMatchConfidence: number | null;
+  convocationMatchedAt: string | null;
+  tender: Pick<Tender, 'id' | 'modality' | 'noticeNumber' | 'processNumber' | 'municipality'> | null;
+  bid: { id: string } | null;
   createdAt: string;
 };
 
@@ -270,6 +278,9 @@ export type GmailConvocationAlert = {
   subject: string | null;
   receivedAt: string;
   snippet: string | null;
+  tenderId: string | null;
+  bidId: string | null;
+  tender: Pick<Tender, 'modality' | 'noticeNumber' | 'processNumber' | 'municipality'> | null;
   read: boolean;
 };
 

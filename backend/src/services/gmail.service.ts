@@ -213,6 +213,221 @@ function emailAccessWhere(auth: AuthScope): Record<string, unknown> {
   return { company: { staffLinks: { some: { userId: auth.userId } } } };
 }
 
+
+type MatchCandidate = {
+  id: string;
+  companyId: string;
+  tenderId: string;
+  tender: {
+    id: string;
+    modality: string | null;
+    noticeNumber: string | null;
+    processNumber: string | null;
+    municipality: string;
+    object: string;
+    sessionDate: Date;
+    platform: { id: string; name: string } | null;
+  };
+};
+
+type MatchMessage = {
+  id: string;
+  companyId: string;
+  subject: string | null;
+  snippet: string | null;
+  textContent: string | null;
+  isPotentialConvocation: boolean;
+  bidId?: string | null;
+  convocationMatchMethod?: string | null;
+};
+
+type ConvocationMatch = {
+  bidId: string;
+  tenderId: string;
+  method: 'PROCESS_NUMBER' | 'NOTICE_NUMBER' | 'CONTEXT';
+  confidence: number;
+};
+
+function normalizeForMatch(value: string | null | undefined) {
+  return (value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+function compactIdentifier(value: string | null | undefined) {
+  return normalizeForMatch(value).replace(/\s+/g, '');
+}
+
+function meaningfulPlatformTokens(name: string | null | undefined) {
+  const ignored = new Set(['tecnologia', 'compras', 'portal', 'sistema', 'licitacoes', 'licitacao']);
+  return normalizeForMatch(name)
+    .split(' ')
+    .filter((token) => token.length >= 3 && !ignored.has(token));
+}
+
+function objectKeywords(value: string | null | undefined) {
+  const ignored = new Set([
+    'contratacao', 'empresa', 'execucao', 'municipio', 'secretaria', 'servicos', 'atraves',
+    'objeto', 'publica', 'publico', 'para', 'com', 'dos', 'das', 'uma', 'obra', 'obras'
+  ]);
+  return Array.from(new Set(normalizeForMatch(value).split(' ')))
+    .filter((token) => token.length >= 6 && !ignored.has(token))
+    .slice(0, 12);
+}
+
+function evaluateCandidate(candidate: MatchCandidate, message: MatchMessage) {
+  const raw = [message.subject, message.snippet, message.textContent].filter(Boolean).join('\n');
+  const normalized = normalizeForMatch(raw);
+  const compact = normalized.replace(/\s+/g, '');
+  const process = compactIdentifier(candidate.tender.processNumber);
+  const notice = compactIdentifier(candidate.tender.noticeNumber);
+  const municipality = normalizeForMatch(candidate.tender.municipality);
+  const modality = normalizeForMatch(candidate.tender.modality);
+  const platformTokens = meaningfulPlatformTokens(candidate.tender.platform?.name);
+  const keywords = objectKeywords(candidate.tender.object);
+
+  const processMatch = process.length >= 6 && compact.includes(process);
+  const noticeMatch = notice.length >= 4 && compact.includes(notice);
+  const municipalityMatch = municipality.length >= 3 && normalized.includes(municipality);
+  const modalityMatch = modality.length >= 4 && normalized.includes(modality);
+  const platformMatch = platformTokens.some((token) => normalized.includes(token));
+  const keywordMatches = keywords.filter((token) => normalized.includes(token)).length;
+
+  let score = 0;
+  if (processMatch) score += 100;
+  if (noticeMatch) score += 70;
+  if (municipalityMatch) score += 18;
+  if (modalityMatch) score += 12;
+  if (platformMatch) score += 12;
+  score += Math.min(keywordMatches, 3) * 4;
+
+  const contextMatch = municipalityMatch && platformMatch;
+  if (contextMatch) score += 45;
+  const method: ConvocationMatch['method'] | null = processMatch
+    ? 'PROCESS_NUMBER'
+    : noticeMatch
+      ? 'NOTICE_NUMBER'
+      : contextMatch
+        ? 'CONTEXT'
+        : null;
+  const eligible = processMatch || noticeMatch || contextMatch;
+  return { score, method, eligible };
+}
+
+async function findBestConvocationMatch(companyId: string, message: MatchMessage): Promise<ConvocationMatch | null> {
+  const candidates = (await db.bid.findMany({
+    where: { companyId },
+    select: {
+      id: true,
+      companyId: true,
+      tenderId: true,
+      tender: {
+        select: {
+          id: true,
+          modality: true,
+          noticeNumber: true,
+          processNumber: true,
+          municipality: true,
+          object: true,
+          sessionDate: true,
+          platform: { select: { id: true, name: true } }
+        }
+      }
+    },
+    orderBy: { tender: { sessionDate: 'desc' } },
+    take: 500
+  })) as MatchCandidate[];
+
+  const ranked = candidates
+    .map((candidate) => ({ candidate, ...evaluateCandidate(candidate, message) }))
+    .filter((item) => item.eligible && item.method)
+    .sort((a, b) => b.score - a.score);
+
+  const best = ranked[0];
+  if (!best || !best.method) return null;
+  const second = ranked[1];
+  if (second && second.score === best.score) return null;
+
+  return {
+    bidId: best.candidate.id,
+    tenderId: best.candidate.tenderId,
+    method: best.method,
+    confidence:
+      best.method === 'PROCESS_NUMBER'
+        ? 100
+        : best.method === 'NOTICE_NUMBER'
+          ? Math.min(98, Math.max(85, best.score))
+          : 75
+  };
+}
+
+async function autoLinkConvocationMessage(messageId: string) {
+  const message = (await db.emailMessage.findUnique({
+    where: { id: messageId },
+    select: {
+      id: true,
+      companyId: true,
+      subject: true,
+      snippet: true,
+      textContent: true,
+      isPotentialConvocation: true,
+      bidId: true,
+      convocationMatchMethod: true
+    }
+  })) as MatchMessage | null;
+  if (!message?.isPotentialConvocation) return null;
+  if (message.bidId && message.convocationMatchMethod === 'MANUAL') return null;
+
+  const match = await findBestConvocationMatch(message.companyId, message);
+  if (!match) return null;
+  await db.emailMessage.update({
+    where: { id: message.id },
+    data: {
+      tenderId: match.tenderId,
+      bidId: match.bidId,
+      convocationMatchMethod: match.method,
+      convocationMatchConfidence: match.confidence,
+      convocationMatchedAt: new Date()
+    }
+  });
+  return match;
+}
+
+export async function relinkPotentialConvocationsForTender(tenderId: string) {
+  const bids = (await db.bid.findMany({ where: { tenderId }, select: { id: true, companyId: true } })) as Array<{
+    id: string;
+    companyId: string;
+  }>;
+  const companyIds = Array.from(new Set(bids.map((bid) => bid.companyId)));
+  for (const companyId of companyIds) {
+    const messages = (await db.emailMessage.findMany({
+      where: {
+        companyId,
+        isPotentialConvocation: true,
+        OR: [{ bidId: null }, { convocationMatchMethod: { not: 'MANUAL' } }]
+      },
+      select: { id: true },
+      orderBy: { receivedAt: 'desc' },
+      take: 200
+    })) as Array<{ id: string }>;
+    for (const message of messages) await autoLinkConvocationMessage(message.id);
+  }
+}
+
+export async function relinkUnmatchedConvocations() {
+  const messages = (await db.emailMessage.findMany({
+    where: { isPotentialConvocation: true, bidId: null },
+    select: { id: true },
+    orderBy: { receivedAt: 'desc' },
+    take: 500
+  })) as Array<{ id: string }>;
+  for (const message of messages) await autoLinkConvocationMessage(message.id);
+  return { checked: messages.length };
+}
+
 export async function getGmailStatus(companyId: string, auth: AuthScope): Promise<GmailStatus> {
   await assertCompanyPortalAccess(companyId, auth);
   const integration = await db.emailIntegration.findUnique({
@@ -392,7 +607,7 @@ export async function syncGmailIntegration(companyId: string) {
       const detection = detectPotentialConvocation({ subject, snippet, text: textContent });
 
       try {
-        await db.emailMessage.create({
+        const created = await db.emailMessage.create({
           data: {
             companyId,
             gmailMessageId: message.id,
@@ -405,10 +620,14 @@ export async function syncGmailIntegration(companyId: string) {
             processingStatus: 'PROCESSADO',
             isPotentialConvocation: detection.detected,
             convocationReason: detection.reason
-          }
+          },
+          select: { id: true }
         });
         inserted += 1;
-        if (detection.detected) convocations += 1;
+        if (detection.detected) {
+          convocations += 1;
+          await autoLinkConvocationMessage(created.id);
+        }
       } catch (error) {
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') continue;
         throw error;
@@ -461,7 +680,11 @@ export async function syncAllGmailIntegrations() {
 
 export function startGmailPolling() {
   if (!gmailConfigured() || pollTimer) return;
-  firstPollTimer = setTimeout(() => void syncAllGmailIntegrations(), 10_000);
+  firstPollTimer = setTimeout(() => {
+    void relinkUnmatchedConvocations()
+      .catch((error) => console.error('Falha ao reavaliar convocações existentes:', safeGoogleError(error)))
+      .finally(() => void syncAllGmailIntegrations());
+  }, 10_000);
   firstPollTimer.unref();
   pollTimer = setInterval(() => void syncAllGmailIntegrations(), env.GMAIL_POLL_INTERVAL_MS);
   pollTimer.unref();
@@ -478,11 +701,19 @@ export function stopGmailPolling() {
 export async function listCompanyEmailMessages(
   companyId: string,
   auth: AuthScope,
-  query: { limit: number; convocationsOnly: boolean }
+  query: { limit: number; convocationsOnly: boolean; bidId?: string }
 ) {
   await assertCompanyPortalAccess(companyId, auth);
+  if (query.bidId) {
+    const bid = await db.bid.findFirst({ where: { id: query.bidId, companyId }, select: { id: true } });
+    if (!bid) throw new AppError('Participação não encontrada nesta empresa', 404);
+  }
   return db.emailMessage.findMany({
-    where: { companyId, ...(query.convocationsOnly ? { isPotentialConvocation: true } : {}) },
+    where: {
+      companyId,
+      ...(query.convocationsOnly ? { isPotentialConvocation: true } : {}),
+      ...(query.bidId ? { bidId: query.bidId } : {})
+    },
     select: {
       id: true,
       companyId: true,
@@ -496,10 +727,57 @@ export async function listCompanyEmailMessages(
       processingStatus: true,
       isPotentialConvocation: true,
       convocationReason: true,
+      tenderId: true,
+      bidId: true,
+      convocationMatchMethod: true,
+      convocationMatchConfidence: true,
+      convocationMatchedAt: true,
+      tender: {
+        select: { id: true, modality: true, noticeNumber: true, processNumber: true, municipality: true }
+      },
+      bid: { select: { id: true } },
       createdAt: true
     },
     orderBy: { receivedAt: 'desc' },
     take: query.limit
+  });
+}
+
+export async function linkGmailConvocationToBid(messageId: string, bidId: string | null, auth: AuthScope) {
+  const message = await db.emailMessage.findFirst({
+    where: { id: messageId, ...emailAccessWhere(auth), isPotentialConvocation: true },
+    select: { id: true, companyId: true }
+  });
+  if (!message) throw new AppError('Convocação não encontrada', 404);
+
+  if (!bidId) {
+    return db.emailMessage.update({
+      where: { id: message.id },
+      data: {
+        tenderId: null,
+        bidId: null,
+        convocationMatchMethod: null,
+        convocationMatchConfidence: null,
+        convocationMatchedAt: null
+      }
+    });
+  }
+
+  const bid = await db.bid.findFirst({
+    where: { id: bidId, companyId: message.companyId },
+    select: { id: true, tenderId: true }
+  });
+  if (!bid) throw new AppError('A licitação selecionada não pertence à empresa desta convocação', 422);
+
+  return db.emailMessage.update({
+    where: { id: message.id },
+    data: {
+      tenderId: bid.tenderId,
+      bidId: bid.id,
+      convocationMatchMethod: 'MANUAL',
+      convocationMatchConfidence: 100,
+      convocationMatchedAt: new Date()
+    }
   });
 }
 
@@ -513,12 +791,17 @@ export async function listGmailConvocationAlerts(auth: AuthScope) {
       subject: true,
       receivedAt: true,
       snippet: true,
+      tenderId: true,
+      bidId: true,
+      tender: { select: { modality: true, noticeNumber: true, processNumber: true, municipality: true } },
       company: { select: { legalName: true, tradeName: true } }
     },
     orderBy: { receivedAt: 'desc' },
     take: 50
   })) as Array<{
     id: string; companyId: string; sender: string; subject: string | null; receivedAt: Date; snippet: string | null;
+    tenderId: string | null; bidId: string | null;
+    tender: { modality: string | null; noticeNumber: string | null; processNumber: string | null; municipality: string } | null;
     company: { legalName: string; tradeName: string | null };
   }>;
   const alertKeys = messages.map((message) => `GMAIL_CONVOCATION:${message.id}`);
@@ -540,6 +823,9 @@ export async function listGmailConvocationAlerts(auth: AuthScope) {
       subject: message.subject,
       receivedAt: message.receivedAt,
       snippet: message.snippet,
+      tenderId: message.tenderId,
+      bidId: message.bidId,
+      tender: message.tender,
       read: readKeys.has(key)
     };
   });

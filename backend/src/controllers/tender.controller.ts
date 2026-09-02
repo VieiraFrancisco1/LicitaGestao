@@ -8,6 +8,7 @@ import {
   updateTender
 } from '../services/tender.service.js';
 import { AuditActions, recordAudit } from '../services/audit.service.js';
+import { relinkPotentialConvocationsForTender } from '../services/gmail.service.js';
 
 export const index = async (req: Request, res: Response) => {
   const result = await listTenders(req.query as unknown as Parameters<typeof listTenders>[0], req.auth!);
@@ -29,6 +30,9 @@ export const create = async (req: Request, res: Response) => {
     description: 'Licitação cadastrada',
     metadata: { changedFields: Object.keys(req.body) }
   });
+  await relinkPotentialConvocationsForTender(tender.id).catch((error) =>
+    console.error('Falha ao reavaliar convocações após cadastro da licitação:', error)
+  );
   res.status(201).json({ success: true, message: 'Licitação adicionada ao controle geral', data: tender });
 };
 
@@ -42,6 +46,9 @@ export const update = async (req: Request, res: Response) => {
     description: 'Licitação atualizada',
     metadata: { changedFields: Object.keys(req.body) }
   });
+  await relinkPotentialConvocationsForTender(tender.id).catch((error) =>
+    console.error('Falha ao reavaliar convocações após atualização da licitação:', error)
+  );
   res.json({ success: true, message: 'Licitação geral atualizada', data: tender });
 };
 

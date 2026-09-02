@@ -2976,3 +2976,199 @@ td small {
   text-decoration: none;
   white-space: nowrap;
 }
+
+/* Ajustes de identificação de licitação e vínculo de convocações */
+.bid-details-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 28px;
+  padding: 22px 24px;
+}
+.bid-details-header .details-copy {
+  min-width: 0;
+}
+.bid-details-header .details-copy h2 {
+  margin-bottom: 5px;
+}
+.tender-reference-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 9px;
+}
+.tender-reference-line span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 25px;
+  padding: 4px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #dce7f8;
+  font-size: 10px;
+  font-weight: 700;
+}
+.bid-details-actions {
+  display: grid;
+  justify-items: end;
+  gap: 9px;
+  min-width: max-content;
+}
+.external-action-group,
+.workflow-action-group {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.bid-details-header .compact-header-action {
+  min-height: 36px;
+  padding: 8px 11px;
+  border-radius: 8px;
+  font-size: 11px;
+  line-height: 1;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.bid-details-header .secondary-button.compact-header-action {
+  background: rgba(255, 255, 255, 0.94);
+  color: #24324a;
+}
+.bid-details-header .primary-button.compact-header-action {
+  box-shadow: none;
+}
+.bid-details-header .status-pill {
+  padding: 6px 9px;
+  white-space: nowrap;
+}
+
+.convocation-card.matched {
+  border-left: 3px solid #35a36f;
+}
+.convocation-card.unmatched {
+  border-left: 3px solid #e49b28;
+}
+.convocation-match-box {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 10px;
+  padding: 9px 10px;
+  border-radius: 9px;
+}
+.convocation-match-box > svg {
+  flex: 0 0 auto;
+}
+.convocation-match-box > span {
+  min-width: 0;
+  flex: 1;
+}
+.convocation-match-box strong,
+.convocation-match-box small {
+  display: block;
+}
+.convocation-match-box strong {
+  font-size: 11px;
+}
+.convocation-match-box small {
+  margin-top: 2px;
+  font-size: 10px;
+  line-height: 1.35;
+}
+.convocation-match-box.matched {
+  border: 1px solid #caead9;
+  background: #f1fbf5;
+  color: #26714e;
+}
+.convocation-match-box.pending {
+  border: 1px solid #f0dfbd;
+  background: #fffaf0;
+  color: #93600f;
+  flex-wrap: wrap;
+}
+.convocation-match-box select {
+  min-width: min(390px, 100%);
+  max-width: 100%;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  background: #fff;
+  padding: 8px 10px;
+  color: #344054;
+  font-size: 11px;
+}
+.compact-button {
+  padding: 8px 10px;
+  font-size: 11px;
+}
+.text-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  background: transparent;
+  padding: 5px 4px;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.text-action.danger {
+  color: #aa3944;
+}
+.convocation-inline-match {
+  display: inline-flex;
+  margin-top: 7px;
+  padding: 4px 7px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+}
+.convocation-inline-match.matched {
+  background: #edf9f2;
+  color: #28724f;
+}
+.convocation-inline-match.pending {
+  background: #fff4df;
+  color: #93600f;
+}
+
+@media (max-width: 1180px) {
+  .bid-details-header {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+  .bid-details-actions {
+    justify-items: start;
+    min-width: 0;
+  }
+  .external-action-group,
+  .workflow-action-group {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 700px) {
+  .bid-details-header {
+    padding: 18px;
+    gap: 16px;
+  }
+  .bid-details-actions,
+  .external-action-group,
+  .workflow-action-group {
+    width: 100%;
+  }
+  .external-action-group,
+  .workflow-action-group {
+    align-items: stretch;
+  }
+  .bid-details-header .compact-header-action {
+    flex: 1 1 auto;
+  }
+  .convocation-match-box {
+    align-items: flex-start;
+  }
+  .convocation-match-box.pending select {
+    width: 100%;
+  }
+}

@@ -1,7 +1,8 @@
 import { ArrowLeft, CalendarClock, CheckCircle2, Download, ExternalLink, File as FileIcon, FilePlus2, Pencil, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { CompanyConvocationsPanel } from '../components/CompanyConvocationsPanel';
 import { api, errorMessage } from '../services/api';
 import type { ApiResponse, Bid, BidDocument, DeadlineAlert, DocumentCategory } from '../types';
 import {
@@ -19,13 +20,19 @@ type Tab = 'summary' | 'data' | 'documents' | 'convocations' | 'deadlines' | 'hi
 
 export function BidDetailsPage() {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const [bid, setBid] = useState<Bid | null>(null);
   const [documents, setDocuments] = useState<BidDocument[]>([]);
   const [deadlines, setDeadlines] = useState<DeadlineAlert[]>([]);
   const [deadlineLoading, setDeadlineLoading] = useState(false);
   const [deadlineError, setDeadlineError] = useState('');
-  const [tab, setTab] = useState<Tab>('summary');
+  const requestedTab = searchParams.get('tab');
+  const [tab, setTab] = useState<Tab>(
+    requestedTab && ['summary', 'data', 'documents', 'convocations', 'deadlines', 'history'].includes(requestedTab)
+      ? (requestedTab as Tab)
+      : 'summary'
+  );
   const [loading, setLoading] = useState(true);
   const [markingAttached, setMarkingAttached] = useState(false);
   const [error, setError] = useState('');
@@ -105,8 +112,8 @@ export function BidDetailsPage() {
 
   return (
     <div className="page-stack">
-      <div className="details-header">
-        <div>
+      <div className="details-header bid-details-header">
+        <div className="details-copy">
           <Link to={`/empresas/${bid.companyId}`} className="back-link">
             <ArrowLeft size={16} />
             Área da empresa
@@ -115,35 +122,45 @@ export function BidDetailsPage() {
           <h2>
             {bid.tender.municipality} — {formatDate(bid.tender.sessionDate)}
           </h2>
+          {(bid.tender.modality || bid.tender.noticeNumber || bid.tender.processNumber) && (
+            <div className="tender-reference-line">
+              {bid.tender.modality && <span>{bid.tender.modality}</span>}
+              {bid.tender.noticeNumber && <span>Nº {bid.tender.noticeNumber}</span>}
+              {bid.tender.processNumber && <span>Processo {bid.tender.processNumber}</span>}
+            </div>
+          )}
           <p>{bid.tender.object}</p>
         </div>
-        <div className="details-actions">
+        <div className="details-actions bid-details-actions">
+          <div className="external-action-group">
           {bid.tender.seobraLink && (
             <a
-              className="secondary-button"
+              className="secondary-button compact-header-action"
               href={bid.tender.seobraLink}
               target="_blank"
               rel="noreferrer"
             >
-              <ExternalLink size={16} />
-              Abrir no SEOBRA
+              <ExternalLink size={15} />
+              SEOBRA
             </a>
           )}
           {bid.tender.platformLink && (
             <a
-              className="secondary-button"
+              className="secondary-button compact-header-action"
               href={bid.tender.platformLink}
               target="_blank"
               rel="noreferrer"
             >
-              <ExternalLink size={16} />
-              Abrir na plataforma
+              <ExternalLink size={15} />
+              Plataforma
             </a>
           )}
+          </div>
+          <div className="workflow-action-group">
           <span className="status-pill active">{optionLabel(situationOptions, bid.situation)}</span>
           {canEdit && bid.situation !== 'ANEXADA' && (
             <button
-              className="secondary-button"
+              className="secondary-button compact-header-action"
               disabled={markingAttached}
               onClick={() => void markAttached()}
             >
@@ -152,11 +169,12 @@ export function BidDetailsPage() {
             </button>
           )}
           {canEdit && (
-            <Link className="primary-button" to={`/participacoes/${bid.id}/editar`}>
-              <Pencil size={16} />
+            <Link className="primary-button compact-header-action" to={`/participacoes/${bid.id}/editar`}>
+              <Pencil size={15} />
               Editar
             </Link>
           )}
+          </div>
         </div>
       </div>
       {error && <div className="alert alert-error">{error}</div>}
@@ -199,6 +217,18 @@ export function BidDetailsPage() {
             <div>
               <dt>Empresa</dt>
               <dd>{bid.company.legalName}</dd>
+            </div>
+            <div>
+              <dt>Modalidade</dt>
+              <dd>{bid.tender.modality || '—'}</dd>
+            </div>
+            <div>
+              <dt>Número da licitação</dt>
+              <dd>{bid.tender.noticeNumber || '—'}</dd>
+            </div>
+            <div>
+              <dt>Processo administrativo</dt>
+              <dd>{bid.tender.processNumber || '—'}</dd>
             </div>
             <div>
               <dt>Planilha</dt>
@@ -263,7 +293,7 @@ export function BidDetailsPage() {
         />
       )}
       {tab === 'convocations' && (
-        <FuturePanel text="As convocações desta licitação aparecerão aqui quando a integração de e-mail for ativada." />
+        <CompanyConvocationsPanel companyId={bid.companyId} bidId={bid.id} showHeading={false} />
       )}
       {tab === 'deadlines' && (
         <DeadlinesPanel deadlines={deadlines} loading={deadlineLoading} error={deadlineError} />

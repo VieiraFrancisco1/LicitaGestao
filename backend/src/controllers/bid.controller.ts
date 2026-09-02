@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import { createBid, getBid, listBids, updateBid } from '../services/bid.service.js';
 import { AuditActions, recordAudit } from '../services/audit.service.js';
+import { relinkPotentialConvocationsForTender } from '../services/gmail.service.js';
 
 export const index = async (req: Request, res: Response) => {
   const result = await listBids(req.query as unknown as Parameters<typeof listBids>[0], req.auth!);
@@ -22,6 +23,9 @@ export const create = async (req: Request, res: Response) => {
     description: 'Participação de empresa cadastrada na licitação',
     metadata: { tenderId: bid.tenderId, companyId: bid.companyId }
   });
+  await relinkPotentialConvocationsForTender(bid.tenderId).catch((error) =>
+    console.error('Falha ao reavaliar convocações após associar empresa:', error)
+  );
   res.status(201).json({ success: true, message: 'Licitação associada à empresa', data: bid });
 };
 
@@ -35,6 +39,9 @@ export const createForTender = async (req: Request, res: Response) => {
     description: 'Participação de empresa cadastrada na licitação',
     metadata: { tenderId: bid.tenderId, companyId: bid.companyId }
   });
+  await relinkPotentialConvocationsForTender(bid.tenderId).catch((error) =>
+    console.error('Falha ao reavaliar convocações após associar empresa:', error)
+  );
   res.status(201).json({ success: true, message: 'Licitação associada à empresa', data: bid });
 };
 

@@ -145,7 +145,7 @@ export function DeadlineNotifications() {
             window.focus();
             notification.close();
             void api.post('/integrations/gmail/alerts/read', { messageId: item.messageId }).catch(() => undefined);
-            navigate(`/empresas/${item.companyId}?tab=convocations&message=${item.messageId}`);
+            navigate(item.bidId ? `/participacoes/${item.bidId}?tab=convocations&message=${item.messageId}` : `/empresas/${item.companyId}?tab=convocations&message=${item.messageId}`);
           };
           history.add(notificationKey);
           changed = true;
@@ -230,7 +230,7 @@ export function DeadlineNotifications() {
     );
     setOpen(false);
     void api.post('/integrations/gmail/alerts/read', { messageId: item.messageId }).catch(() => undefined);
-    navigate(`/empresas/${item.companyId}?tab=convocations&message=${item.messageId}`);
+    navigate(item.bidId ? `/participacoes/${item.bidId}?tab=convocations&message=${item.messageId}` : `/empresas/${item.companyId}?tab=convocations&message=${item.messageId}`);
   };
 
   const markAll = async () => {
@@ -295,7 +295,7 @@ export function DeadlineNotifications() {
                 <span>
                   <strong>{item.subject || 'Possível convocação'}</strong>
                   <small>{item.companyName} · {formatDateTime(item.receivedAt)}</small>
-                  <em>Possível convocação recebida por e-mail</em>
+                  <em>{item.bidId ? 'Convocação vinculada à licitação' : 'Possível convocação recebida por e-mail'}</em>
                 </span>
               </button>
             ))}
