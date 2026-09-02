@@ -3,14 +3,11 @@ import {
   CheckCircle2,
   ClipboardCheck,
   FileText,
-  ExternalLink,
   FilterX,
   FolderOpen,
   Link2,
-  MessageSquareText,
   Pencil,
   Plus,
-  RotateCcw,
   Search,
   Trash2,
   UserRoundCheck,
@@ -74,7 +71,6 @@ export function TendersPage() {
   const [actionId, setActionId] = useState('');
   const [error, setError] = useState('');
   const [associating, setAssociating] = useState<Tender | null>(null);
-  const [notesTender, setNotesTender] = useState<Tender | null>(null);
 
   const yearOptions = Array.from({ length: 8 }, (_, index) => currentYear - 5 + index);
   const daysInSelectedMonth = month === 'all' ? 31 : new Date(year, Number(month), 0).getDate();
@@ -140,19 +136,6 @@ export function TendersPage() {
     }
   };
 
-  const moveTender = async (tender: Tender, status: 'PENDENTE' | 'ANEXADA') => {
-    setActionId(tender.id);
-    setError('');
-    try {
-      await api.patch(`/tenders/${tender.id}/list-status`, { status });
-      await load();
-    } catch (err) {
-      setError(errorMessage(err));
-    } finally {
-      setActionId('');
-    }
-  };
-
   const deleteTender = async (tender: Tender) => {
     const label = tender.noticeNumber ? `${tender.municipality} · ${tender.noticeNumber}` : tender.municipality;
     if (
@@ -187,7 +170,7 @@ export function TendersPage() {
         <div>
           <p>Controle geral compartilhado</p>
           <h2>Licitações</h2>
-          <span>Organize as sessões por mês, acompanhe a planilha e veja quem está responsável.</span>
+          <span>Organize as sessões por data, acompanhe a planilha e veja quem está responsável.</span>
         </div>
         <Link className="primary-button" to="/licitacoes/nova">
           <Plus size={18} />
@@ -218,8 +201,9 @@ export function TendersPage() {
       </div>
 
       <section className="table-card tender-control-card">
-        <div className="tender-date-filter-bar">
-          <div className="tender-date-selectors">
+        <div className="tender-date-filter-bar single-sided-filter-bar">
+          <div className="tender-date-filter-spacer" aria-hidden="true" />
+          <div className="tender-date-selectors right-only-date-selectors">
             <label>
               <span>Dia</span>
               <select
@@ -304,10 +288,11 @@ export function TendersPage() {
         </div>
 
         <div className="table-wrap">
-          <table className="bids-table general-tenders-table organized-tenders-table">
+          <table className="bids-table general-tenders-table organized-tenders-table cleaner-tenders-table">
             <thead>
               <tr>
                 <th>Licitação</th>
+                <th>Data</th>
                 <th>Objeto</th>
                 <th>Valor e plataforma</th>
                 <th>Planilha</th>
@@ -318,14 +303,14 @@ export function TendersPage() {
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={6} className="table-message">
+                  <td colSpan={7} className="table-message">
                     Carregando licitações...
                   </td>
                 </tr>
               )}
               {!loading && !data?.items.length && (
                 <tr>
-                  <td colSpan={6} className="table-message">
+                  <td colSpan={7} className="table-message">
                     <FileText size={28} />
                     Nenhuma licitação para {selectedDateLabel.toLowerCase()}.
                   </td>
@@ -336,13 +321,16 @@ export function TendersPage() {
                   const isResponsible = tender.spreadsheetResponsibleUserId === user?.id;
                   const canRelease = isResponsible || user?.role === 'ADMIN';
                   const canManageSpreadsheet = user?.role !== 'EMPRESA';
+                  const attachedBids = tender.bids.filter((bid) => bid.situation === 'ANEXADA');
+                  const otherAssociatedBids = tender.bids.filter((bid) => bid.situation !== 'ANEXADA');
+                  const hasAvailableAssociation = companies.some(
+                    (company) => !tender.bids.some((bid) => bid.companyId === company.id)
+                  );
+
                   return (
                     <tr key={tender.id}>
-                      <td className="tender-identity-cell">
-                        <div className="tender-city-line">
-                          <strong>{tender.municipality}</strong>
-                          <span>{formatDate(tender.sessionDate)}</span>
-                        </div>
+                      <td className="clean-tender-cell tender-main-cell">
+                        <strong>{tender.municipality}</strong>
                         {(tender.modality || tender.noticeNumber) && (
                           <small>
                             {[tender.modality, tender.noticeNumber ? `Nº ${tender.noticeNumber}` : null]
@@ -350,53 +338,29 @@ export function TendersPage() {
                               .join(' · ')}
                           </small>
                         )}
-                        {tender.processNumber && <small>Proc. {tender.processNumber}</small>}
                       </td>
-                      <td className="object-cell organized-object-cell">
+                      <td className="clean-tender-cell tender-date-cell">
+                        <strong>{formatDate(tender.sessionDate)}</strong>
+                        {tender.sessionTime && <small>{tender.sessionTime}</small>}
+                      </td>
+                      <td className="clean-tender-cell tender-object-cell">
                         <strong>{tender.object}</strong>
-                        <small>
-                          Validade: {tender.proposalValidityDays ?? '—'} dias · Garantia 1%:{' '}
-                          {Number(tender.guaranteePercentage) === 1 ? 'Sim' : 'Não'}
-                        </small>
                       </td>
-                      <td className="tender-value-platform-cell">
+                      <td className="clean-tender-cell tender-value-cell">
                         <strong>{formatCurrency(tender.estimatedValue)}</strong>
                         <small>{tender.platform?.name || 'Sem plataforma'}</small>
-                        {(tender.seobraLink || tender.platformLink) && (
-                          <div className="tender-quick-links">
-                            {tender.seobraLink && (
-                              <a href={tender.seobraLink} target="_blank" rel="noreferrer" title="Abrir no SEOBRA">
-                                <ExternalLink size={12} />
-                                SEOBRA
-                              </a>
-                            )}
-                            {tender.platformLink && (
-                              <a href={tender.platformLink} target="_blank" rel="noreferrer" title="Abrir na plataforma">
-                                <ExternalLink size={12} />
-                                Plataforma
-                              </a>
-                            )}
-                          </div>
-                        )}
                       </td>
-                      <td className="spreadsheet-control-cell">
-                        <div className="spreadsheet-inline-layout">
-                          <div className="spreadsheet-inline-info">
-                            <div className="spreadsheet-status-line">
-                              <span className={`spreadsheet-status-pill ${tender.spreadsheetReady ? 'ready' : ''}`}>
-                                {tender.spreadsheetReady ? <CheckCircle2 size={14} /> : <ClipboardCheck size={14} />}
-                                {tender.spreadsheetReady ? 'Pronta' : 'Em preparação'}
-                              </span>
-                            </div>
-                            <div className="spreadsheet-owner-line">
-                              <UserRoundCheck size={15} />
-                              <span>
-                                <small>Responsável</small>
-                                <strong>{tender.spreadsheetResponsibleUser?.name || 'Não definido'}</strong>
-                              </span>
-                            </div>
+                      <td className="clean-tender-cell tender-spreadsheet-cell">
+                        <div className="spreadsheet-horizontal-card">
+                          <div className="spreadsheet-summary-block">
+                            <span className={`spreadsheet-status-pill ${tender.spreadsheetReady ? 'ready' : ''}`}>
+                              {tender.spreadsheetReady ? <CheckCircle2 size={14} /> : <ClipboardCheck size={14} />}
+                              {tender.spreadsheetReady ? 'Pronta' : 'Em preparação'}
+                            </span>
+                            <small>Responsável técnico</small>
+                            <strong>{tender.spreadsheetResponsibleUser?.name || 'Não definido'}</strong>
                           </div>
-                          <div className="spreadsheet-action-stack">
+                          <div className="spreadsheet-action-column">
                             {canManageSpreadsheet && !tender.spreadsheetResponsibleUserId && (
                               <button
                                 className="mini-action-button primary-soft"
@@ -417,87 +381,72 @@ export function TendersPage() {
                                 Liberar
                               </button>
                             )}
-                            <button className="mini-action-button" onClick={() => setNotesTender(tender)}>
-                              <MessageSquareText size={14} />
-                              Observação
-                            </button>
+                            {canManageSpreadsheet && (
+                              <button
+                                className={`mini-action-button ${tender.spreadsheetReady ? 'ready' : ''}`}
+                                disabled={actionId === tender.id}
+                                onClick={() => void toggleSpreadsheet(tender)}
+                              >
+                                {tender.spreadsheetReady ? 'Marcar não pronta' : 'Marcar pronta'}
+                              </button>
+                            )}
                           </div>
-                          <button
-                            className={`mini-action-button spreadsheet-ready-button ${tender.spreadsheetReady ? 'ready' : ''}`}
-                            disabled={actionId === tender.id}
-                            onClick={() => void toggleSpreadsheet(tender)}
-                          >
-                            {tender.spreadsheetReady ? 'Desmarcar pronta' : 'Marcar pronta'}
-                          </button>
                         </div>
                       </td>
-                      <td className="companies-cell">
+                      <td className="clean-tender-cell companies-cell cleaner-companies-cell">
                         <span className="association-count">
                           <Building2 size={15} />
                           {tender.attachedCompanies}/{tender._count?.bids ?? 0} anexaram
                         </span>
-                        {tender.bids.length > 0 ? (
-                          <small>
-                            {tender.bids.map((bid) => bid.company.tradeName || bid.company.legalName).join(', ')}
-                          </small>
-                        ) : (
-                          <small>Nenhuma empresa associada</small>
+                        {attachedBids.length > 0 && (
+                          <div className="company-tag-list">
+                            {attachedBids.map((bid) => (
+                              <span key={bid.id} className="company-status-tag attached">
+                                {(bid.company.tradeName || bid.company.legalName).trim()} anexou
+                              </span>
+                            ))}
+                          </div>
                         )}
+                        {attachedBids.length === 0 && otherAssociatedBids.length > 0 && (
+                          <small>
+                            Associadas: {otherAssociatedBids.map((bid) => bid.company.tradeName || bid.company.legalName).join(', ')}
+                          </small>
+                        )}
+                        {tender.bids.length === 0 && <small>Nenhuma empresa associada</small>}
                       </td>
-                      <td className="organized-actions-cell">
-                        <div className="organized-row-actions">
-                          <div className="primary-action-stack">
+                      <td className="clean-tender-cell organized-actions-cell cleaner-actions-cell">
+                        <div className="action-grid-pairs">
+                          <div className="action-pair-row">
                             <Link className="action-button compact-action-button" to={`/licitacoes/${tender.id}`}>
                               <FolderOpen size={15} />
                               Abrir
                             </Link>
-                            {companies.some((company) => !tender.bids.some((bid) => bid.companyId === company.id)) && (
+                            {hasAvailableAssociation ? (
                               <button className="action-button compact-action-button" onClick={() => setAssociating(tender)}>
                                 <Link2 size={15} />
                                 Associar
                               </button>
+                            ) : (
+                              <span className="empty-action-slot" aria-hidden="true" />
                             )}
                           </div>
-                          <div className="secondary-action-stack">
-                            {listStatus === 'PENDENTE' ? (
+                          <div className="action-pair-row">
+                            <Link className="action-button compact-action-button" to={`/licitacoes/${tender.id}/editar`}>
+                              <Pencil size={15} />
+                              Editar
+                            </Link>
+                            {user?.role !== 'EMPRESA' ? (
                               <button
-                                className="action-button compact-action-button move-attached"
-                                disabled={!tender.allCompaniesAttached || actionId === tender.id}
-                                title={
-                                  tender.allCompaniesAttached
-                                    ? 'Mover para já anexadas'
-                                    : 'Todas as empresas precisam marcar a participação como ANEXADA'
-                                }
-                                onClick={() => void moveTender(tender, 'ANEXADA')}
+                                className="action-button compact-action-button danger-action"
+                                disabled={actionId === tender.id}
+                                onClick={() => void deleteTender(tender)}
                               >
-                                <CheckCircle2 size={15} />
-                                Já anexada
+                                <Trash2 size={15} />
+                                Apagar
                               </button>
                             ) : (
-                              <button
-                                className="action-button compact-action-button"
-                                disabled={actionId === tender.id}
-                                onClick={() => void moveTender(tender, 'PENDENTE')}
-                              >
-                                <RotateCcw size={15} />
-                                Voltar
-                              </button>
+                              <span className="empty-action-slot" aria-hidden="true" />
                             )}
-                            <div className="icon-action-row">
-                              <Link className="action-button icon-only-action" to={`/licitacoes/${tender.id}/editar`} title="Editar">
-                                <Pencil size={15} />
-                              </Link>
-                              {user?.role !== 'EMPRESA' && (
-                                <button
-                                  className="action-button icon-only-action danger-action"
-                                  disabled={actionId === tender.id}
-                                  onClick={() => void deleteTender(tender)}
-                                  title="Excluir licitação"
-                                >
-                                  <Trash2 size={15} />
-                                </button>
-                              )}
-                            </div>
                           </div>
                         </div>
                       </td>
@@ -536,84 +485,7 @@ export function TendersPage() {
           }}
         />
       )}
-
-      {notesTender && (
-        <SpreadsheetNotesModal
-          tender={notesTender}
-          canEdit={user?.role === 'ADMIN' || notesTender.spreadsheetResponsibleUserId === user?.id}
-          onClose={() => setNotesTender(null)}
-          onSaved={() => {
-            setNotesTender(null);
-            void load();
-          }}
-        />
-      )}
     </div>
-  );
-}
-
-function SpreadsheetNotesModal({
-  tender,
-  canEdit,
-  onClose,
-  onSaved
-}: {
-  tender: Tender;
-  canEdit: boolean;
-  onClose: () => void;
-  onSaved: () => void;
-}) {
-  const [notes, setNotes] = useState(tender.spreadsheetNotes || '');
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-
-  const save = async (event: FormEvent) => {
-    event.preventDefault();
-    if (!canEdit) return;
-    setSaving(true);
-    setError('');
-    try {
-      await api.patch(`/tenders/${tender.id}/spreadsheet-notes`, { notes: notes.trim() || null });
-      onSaved();
-    } catch (err) {
-      setError(errorMessage(err));
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <Modal title="Observações da planilha" onClose={onClose}>
-      <form className="entity-form" onSubmit={(event) => void save(event)}>
-        <div className="section-note">
-          <strong>{tender.municipality}</strong> · {formatDate(tender.sessionDate)}
-          <br />
-          Responsável: {tender.spreadsheetResponsibleUser?.name || 'não definido'}
-        </div>
-        {error && <div className="alert alert-error">{error}</div>}
-        <label>
-          Informações, alterações e pendências da planilha
-          <textarea
-            rows={8}
-            value={notes}
-            disabled={!canEdit}
-            onChange={(event) => setNotes(event.target.value)}
-            placeholder="Ex.: revisar composição do item 4.2; orçamento atualizado; falta conferir BDI..."
-          />
-        </label>
-        {!canEdit && <small>Somente o responsável pela planilha ou um administrador pode editar.</small>}
-        <div className="modal-actions">
-          <button type="button" className="secondary-button" onClick={onClose}>
-            Fechar
-          </button>
-          {canEdit && (
-            <button className="primary-button" disabled={saving}>
-              {saving ? 'Salvando...' : 'Salvar observações'}
-            </button>
-          )}
-        </div>
-      </form>
-    </Modal>
   );
 }
 
@@ -636,6 +508,7 @@ function AssociationModal({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const companyName = useMemo(() => companies.find((company) => company.id === companyId), [companies, companyId]);
+
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     setSaving(true);
@@ -655,6 +528,7 @@ function AssociationModal({
       setSaving(false);
     }
   };
+
   return (
     <Modal title="Associar licitação à empresa" onClose={onClose}>
       <form className="entity-form" onSubmit={(event) => void submit(event)}>
