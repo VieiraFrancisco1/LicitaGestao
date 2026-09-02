@@ -3566,206 +3566,684 @@ td small {
   }
 }
 
-.single-sided-filter-bar {
-  justify-content: space-between;
+/* Ajuste fino da listagem de licitações: filtro único por data e linha compacta */
+.tender-date-filter-bar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-end;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+  background: #fbfcfe;
 }
-
-.tender-date-filter-spacer {
-  flex: 1;
+.tender-date-selectors {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 8px;
 }
-
-.right-only-date-selectors {
-  margin-left: auto;
-}
-
-.right-only-date-selectors label {
+.tender-date-selectors label {
   display: grid;
-  gap: 6px;
-}
-
-.right-only-date-selectors label span {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.7px;
-  color: #7a8698;
+  gap: 4px;
+  color: #6f7c91;
+  font-size: 9px;
   font-weight: 800;
+  letter-spacing: .55px;
+  text-transform: uppercase;
+}
+.tender-date-selectors select {
+  height: 38px;
+  min-width: 86px;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  background: #fff;
+  color: #273247;
+  padding: 0 30px 0 10px;
+  font-size: 12px;
+  font-weight: 700;
+  outline: 0;
+}
+.tender-date-selectors label:nth-child(2) select { min-width: 150px; }
+.tender-date-selectors label:nth-child(3) select { min-width: 96px; }
+.tender-date-selectors select:focus {
+  border-color: #7aa2ed;
+  box-shadow: 0 0 0 3px #e9f0ff;
+}
+.tender-date-selectors select:disabled {
+  background: #f4f6f9;
+  color: #9aa4b4;
+  cursor: not-allowed;
 }
 
-.cleaner-tenders-table {
-  min-width: 1440px;
+.organized-tenders-table {
+  min-width: 1390px;
 }
-
-.cleaner-tenders-table th:nth-child(1) { width: 190px; }
-.cleaner-tenders-table th:nth-child(2) { width: 120px; }
-.cleaner-tenders-table th:nth-child(3) { width: 340px; }
-.cleaner-tenders-table th:nth-child(4) { width: 170px; }
-.cleaner-tenders-table th:nth-child(5) { width: 270px; }
-.cleaner-tenders-table th:nth-child(6) { width: 240px; }
-.cleaner-tenders-table th:nth-child(7) { width: 220px; }
-
-.clean-tender-cell {
-  vertical-align: top;
+.organized-tenders-table th,
+.organized-tenders-table td {
+  vertical-align: middle;
 }
-
-.tender-main-cell,
-.tender-date-cell,
-.tender-object-cell,
-.tender-value-cell,
-.cleaner-companies-cell,
-.cleaner-actions-cell {
-  display: grid;
-  gap: 6px;
+.organized-tenders-table td {
+  padding-top: 13px;
+  padding-bottom: 13px;
 }
+.organized-tenders-table th:nth-child(1) { width: 190px; }
+.organized-tenders-table th:nth-child(2) { width: 285px; }
+.organized-tenders-table th:nth-child(3) { width: 175px; }
+.organized-tenders-table th:nth-child(4) { width: 370px; }
+.organized-tenders-table th:nth-child(5) { width: 175px; }
+.organized-tenders-table th:nth-child(6) { width: 195px; }
 
-.tender-main-cell strong,
-.tender-date-cell strong,
-.tender-value-cell strong {
-  font-size: 13px;
-  color: #172033;
+.tender-value-platform-cell {
+  align-content: center;
 }
-
-.tender-main-cell small,
-.tender-date-cell small,
-.tender-value-cell small,
-.tender-object-cell small,
-.cleaner-companies-cell small {
-  color: var(--muted);
-  line-height: 1.45;
+.tender-quick-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 2px;
 }
-
-.tender-object-cell strong {
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  white-space: normal !important;
-  line-height: 1.45;
-}
-
-.tender-date-cell strong {
+.tender-quick-links a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid #dbe5f5;
+  border-radius: 6px;
+  padding: 4px 6px;
+  background: #f6f9ff;
+  color: #315a9e;
+  font-size: 9px;
+  font-weight: 800;
+  text-decoration: none;
   white-space: nowrap;
 }
-
-.spreadsheet-horizontal-card {
-  display: flex;
-  align-items: stretch;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 10px 12px;
-  border: 1px solid #e3e8f1;
-  border-radius: 10px;
-  background: #fbfcff;
-  min-height: 96px;
+.tender-quick-links a:hover {
+  border-color: #b9cbed;
+  background: #edf4ff;
 }
 
-.spreadsheet-summary-block {
+.spreadsheet-control-cell {
+  display: table-cell;
+}
+.spreadsheet-inline-layout {
   display: grid;
-  align-content: start;
+  grid-template-columns: auto minmax(105px, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  min-width: 345px;
+}
+.spreadsheet-inline-info {
+  display: contents;
+}
+.spreadsheet-status-line {
+  min-width: 88px;
+}
+.spreadsheet-owner-line {
+  min-width: 105px;
+  align-items: center;
+}
+.spreadsheet-owner-line > span {
+  min-width: 0;
+}
+.spreadsheet-owner-line strong {
+  display: block;
+  max-width: 125px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.spreadsheet-action-stack {
+  display: grid;
+  align-content: center;
   gap: 5px;
+  min-width: 92px;
+}
+.spreadsheet-action-stack .mini-action-button,
+.spreadsheet-ready-button {
+  width: 100%;
+  justify-content: center;
+  white-space: nowrap;
+}
+.spreadsheet-ready-button {
+  min-width: 92px;
+}
+
+.organized-actions-cell {
+  min-width: 185px;
+}
+.organized-row-actions {
+  display: grid;
+  grid-template-columns: minmax(82px, 1fr) minmax(82px, 1fr);
+  align-items: start;
+  gap: 7px;
+  white-space: normal;
+}
+.primary-action-stack,
+.secondary-action-stack {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+}
+.compact-action-button {
+  width: 100%;
+  min-height: 31px;
+  padding: 6px 8px;
+  justify-content: center;
+  white-space: nowrap;
+}
+.icon-action-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.icon-action-row .icon-only-action {
+  width: 100%;
   min-width: 0;
 }
 
-.spreadsheet-summary-block small {
-  font-size: 9px;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-  color: #8792a4;
-  font-weight: 800;
+@media (max-width: 900px) {
+  .tender-date-filter-bar {
+    justify-content: stretch;
+  }
+  .tender-date-selectors {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 90px minmax(150px, 1fr) 100px;
+  }
+  .tender-date-selectors select,
+  .tender-date-selectors label:nth-child(2) select,
+  .tender-date-selectors label:nth-child(3) select {
+    width: 100%;
+    min-width: 0;
+  }
 }
 
-.spreadsheet-summary-block strong {
-  color: #25344c;
+/* Organização v2 da listagem de licitações: menos ruído e sem rolagem horizontal em desktop */
+.organized-tenders-table {
+  width: 100%;
+  min-width: 1080px;
+  table-layout: fixed;
+}
+.organized-tenders-table th,
+.organized-tenders-table td {
+  vertical-align: top;
+}
+.organized-tenders-table td {
+  padding: 14px 12px;
+}
+.organized-tenders-table th:nth-child(1) { width: 13%; }
+.organized-tenders-table th:nth-child(2) { width: 21%; }
+.organized-tenders-table th:nth-child(3) { width: 13%; }
+.organized-tenders-table th:nth-child(4) { width: 27%; }
+.organized-tenders-table th:nth-child(5) { width: 13%; }
+.organized-tenders-table th:nth-child(6) { width: 13%; }
+
+.organized-tenders-table tbody tr {
+  transition: background .15s ease;
+}
+.organized-tenders-table tbody tr:hover {
+  background: #fbfdff;
+}
+
+.tender-city-line {
+  align-items: flex-start;
+}
+.tender-city-line strong {
+  font-size: 13px;
+  line-height: 1.35;
+}
+.tender-city-line span {
+  flex: 0 0 auto;
+}
+
+.organized-object-cell strong {
   font-size: 12px;
+  line-height: 1.45;
+}
+.tender-value-platform-cell {
+  align-content: start;
+}
+.tender-quick-links {
+  gap: 6px;
+  margin-top: 5px;
+}
+
+.spreadsheet-control-cell {
+  display: table-cell;
+}
+.spreadsheet-compact-layout {
+  display: grid;
+  gap: 9px;
+  min-width: 0;
+}
+.spreadsheet-summary-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.spreadsheet-summary-row .spreadsheet-status-pill {
+  flex: 0 0 auto;
+}
+.compact-owner-line {
+  min-width: 0;
+  flex: 1;
+  align-items: center;
+}
+.compact-owner-line > span {
+  min-width: 0;
+}
+.compact-owner-line strong {
+  display: block;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.spreadsheet-buttons-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.spreadsheet-buttons-row .mini-action-button {
+  width: auto;
+  min-width: 0;
+  min-height: 30px;
+  justify-content: center;
+  padding: 5px 8px;
+  white-space: nowrap;
+}
+.spreadsheet-buttons-row .spreadsheet-ready-button {
+  min-width: 0;
+}
+
+.organized-companies-cell {
+  align-content: start;
+  gap: 7px;
+}
+.organized-companies-cell small {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.4;
+}
+.company-associate-button {
+  width: fit-content;
+  margin-top: 2px;
+  color: #245fca;
+  border-color: #c9d9f6;
+  background: #f2f6ff;
+}
+
+.organized-actions-cell {
+  min-width: 0;
+}
+.simplified-row-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+  min-width: 0;
+}
+.simplified-row-actions .compact-action-button {
+  width: 100%;
+  min-height: 31px;
+  padding: 6px 8px;
+  justify-content: center;
+  white-space: nowrap;
+}
+.main-open-action {
+  font-weight: 800;
+}
+.simplified-row-actions .icon-action-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+.simplified-row-actions .icon-only-action {
+  width: 100%;
+}
+
+@media (min-width: 1280px) {
+  .organized-tenders-table {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 1279px) {
+  .organized-tenders-table {
+    min-width: 1080px;
+  }
+}
+
+/* Ajuste final — listagem horizontal e organizada de licitações */
+.tender-control-card {
+  overflow: hidden;
+}
+
+.tender-date-filter-bar {
+  justify-content: flex-end;
+  align-items: center;
+  padding: 12px 16px 10px;
+}
+
+.tender-date-selectors {
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.organized-tender-filters {
+  display: grid;
+  grid-template-columns: minmax(340px, 1fr) auto;
+  align-items: end;
+  gap: 12px;
+  padding: 0 16px 16px;
+}
+
+.organized-tender-filters .search-field {
+  min-width: 0;
+}
+
+.organized-tenders-table {
+  width: 100%;
+  min-width: 0;
+  table-layout: fixed;
+}
+
+.organized-tenders-table th,
+.organized-tenders-table td {
+  vertical-align: top;
+}
+
+.organized-tenders-table td {
+  padding: 16px 10px;
+}
+
+.organized-tenders-table th:nth-child(1) { width: 12%; }
+.organized-tenders-table th:nth-child(2) { width: 9%; }
+.organized-tenders-table th:nth-child(3) { width: 26%; }
+.organized-tenders-table th:nth-child(4) { width: 9%; }
+.organized-tenders-table th:nth-child(5) { width: 12%; }
+.organized-tenders-table th:nth-child(6) { width: 16%; }
+.organized-tenders-table th:nth-child(7) { width: 8%; }
+.organized-tenders-table th:nth-child(8) { width: 8%; }
+
+.compact-license-cell {
+  padding-right: 6px;
+}
+
+.compact-license-cell strong {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 15px;
+  line-height: 1.25;
+  color: #18283f;
+}
+
+.compact-license-cell small {
+  display: block;
+  color: #78859b;
+  font-size: 11px;
   line-height: 1.4;
 }
 
-.spreadsheet-action-column {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  align-items: stretch;
-  min-width: 128px;
+.tender-date-cell strong {
+  display: block;
+  font-size: 15px;
+  line-height: 1.25;
+  color: #1f3149;
+  white-space: nowrap;
 }
 
-.spreadsheet-action-column .mini-action-button {
-  justify-content: center;
-  min-height: 34px;
+.organized-object-cell strong {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  font-size: 14px;
+  line-height: 1.45;
+  color: #1a2d46;
 }
 
-.company-tag-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+.tender-validity-cell strong,
+.tender-value-platform-cell strong {
+  display: block;
+  font-size: 15px;
+  line-height: 1.3;
+  color: #18283f;
 }
 
-.company-status-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  width: fit-content;
-  max-width: 100%;
-  border-radius: 999px;
-  padding: 5px 9px;
+.tender-validity-cell small,
+.tender-value-platform-cell small {
+  display: block;
+  margin-top: 6px;
+  color: #7a879b;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.spreadsheet-control-cell {
+  display: table-cell;
+}
+
+.spreadsheet-inline-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 118px;
+  gap: 10px;
+  min-width: 0;
+  align-items: start;
+}
+
+.spreadsheet-inline-info {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.spreadsheet-inline-owner {
+  min-width: 0;
+}
+
+.spreadsheet-inline-owner small {
+  display: block;
+  margin-bottom: 4px;
+  color: #7b889d;
   font-size: 10px;
   font-weight: 800;
-  line-height: 1.2;
+  letter-spacing: .45px;
+  text-transform: uppercase;
 }
 
-.company-status-tag.attached {
-  background: #edf8f1;
-  color: #1b6e42;
+.spreadsheet-inline-owner strong {
+  display: block;
+  color: #223451;
+  font-size: 13px;
+  line-height: 1.35;
+  word-break: break-word;
 }
 
-.action-grid-pairs {
+.spreadsheet-inline-actions {
   display: grid;
+  gap: 6px;
+  align-content: start;
+}
+
+.spreadsheet-inline-actions .mini-action-button,
+.spreadsheet-inline-actions .spreadsheet-ready-button {
+  width: 100%;
+  min-height: 32px;
+  padding: 6px 8px;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+.organized-companies-cell {
   gap: 8px;
 }
 
-.action-pair-row {
+.organized-companies-cell .association-count {
+  align-items: center;
+}
+
+.organized-companies-cell small {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  line-height: 1.45;
+}
+
+.organized-actions-cell {
+  min-width: 0;
+}
+
+.paired-row-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
-.compact-action-button {
-  justify-content: center;
+.paired-row-actions .compact-action-button {
   width: 100%;
-  min-height: 36px;
+  min-width: 0;
+  min-height: 34px;
+  padding: 6px 10px;
+  justify-content: center;
+  white-space: nowrap;
 }
 
-.empty-action-slot {
-  display: block;
-  min-height: 36px;
+.danger-soft-button {
+  border-color: #f2d3cf;
+  background: #fff6f5;
+  color: #cb4737;
+}
+
+.danger-soft-button:hover {
+  border-color: #e6b2ab;
+  background: #ffefed;
+}
+
+.ghost-disabled {
+  opacity: .45;
+  pointer-events: none;
+}
+
+@media (max-width: 1400px) {
+  .organized-tenders-table {
+    min-width: 1260px;
+  }
+}
+
+@media (max-width: 980px) {
+  .organized-tender-filters {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Medidas finais revisadas — desktop */
+.organized-tenders-table th:nth-child(1) { width: 11%; }
+.organized-tenders-table th:nth-child(2) { width: 7%; }
+.organized-tenders-table th:nth-child(3) { width: 24%; }
+.organized-tenders-table th:nth-child(4) { width: 7%; }
+.organized-tenders-table th:nth-child(5) { width: 11%; }
+.organized-tenders-table th:nth-child(6) { width: 18%; }
+.organized-tenders-table th:nth-child(7) { width: 10%; }
+.organized-tenders-table th:nth-child(8) { width: 12%; }
+
+/* Aproxima cidade e data para aproveitar melhor a largura */
+.organized-tenders-table th:nth-child(1),
+.organized-tenders-table td:nth-child(1) {
+  padding-right: 5px;
+}
+
+.organized-tenders-table th:nth-child(2),
+.organized-tenders-table td:nth-child(2) {
+  padding-left: 5px;
+}
+
+/* Filtro de data sempre compacto e alinhado à direita */
+.tender-date-filter-bar {
+  min-height: 68px;
+  justify-content: flex-end !important;
+}
+
+.tender-date-selectors {
+  width: auto;
+  margin-left: auto;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: flex-end;
+  justify-content: flex-end;
+}
+
+.tender-date-selectors label {
+  width: auto;
+  min-width: 0;
+}
+
+.tender-date-selectors select {
+  width: auto;
+}
+
+/* Empresas anexadas aparecem como aviso curto e fácil de ler */
+.attached-company-list {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+}
+
+.attached-company-pill {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: #eef8f2;
+  color: #237049;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+/* Ações em duas linhas, duas colunas, sem quebrar a organização */
+.paired-row-actions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.paired-row-actions .compact-action-button {
+  min-height: 34px;
+  padding-left: 7px;
+  padding-right: 7px;
+  font-size: 11px;
+}
+
+/* Reduz a altura das linhas sem apertar o conteúdo */
+.organized-tenders-table tbody td {
+  padding-top: 14px;
+  padding-bottom: 14px;
+}
+
+@media (max-width: 1400px) {
+  .organized-tenders-table {
+    min-width: 1260px;
+  }
 }
 
 @media (max-width: 900px) {
-  .single-sided-filter-bar {
-    flex-direction: column;
-    align-items: stretch;
+  .tender-date-filter-bar {
+    min-height: 0;
   }
 
-  .tender-date-filter-spacer {
-    display: none;
-  }
-
-  .right-only-date-selectors {
-    margin-left: 0;
+  .tender-date-selectors {
     width: 100%;
+    display: grid;
+    grid-template-columns: 90px minmax(150px, 1fr) 100px;
   }
 
-  .right-only-date-selectors label {
-    flex: 1;
-  }
-
-  .spreadsheet-horizontal-card {
-    flex-direction: column;
-  }
-
-  .spreadsheet-action-column {
-    min-width: 0;
-  }
-
-  .action-pair-row {
-    grid-template-columns: 1fr;
+  .tender-date-selectors label,
+  .tender-date-selectors select {
+    width: 100%;
   }
 }
