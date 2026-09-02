@@ -8,6 +8,7 @@ import { platformRouter } from './platform.routes.js';
 import { tenderRouter } from './tender.routes.js';
 import { deadlineRouter } from './deadline.routes.js';
 import { auditRouter } from './audit.routes.js';
+import { megaRouter } from './mega.routes.js';
 
 export const apiRouter = Router();
 
@@ -29,3 +30,4 @@ apiRouter.use('/bids', bidRouter);
 apiRouter.use('/documents', documentRouter);
 apiRouter.use('/deadlines', deadlineRouter);
 apiRouter.use('/audit', auditRouter);
+apiRouter.use('/mega', megaRouter);

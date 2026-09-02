@@ -25,6 +25,7 @@ export type Company = {
   phone: string | null;
   contactName: string | null;
   observations: string | null;
+  megaFolderPath: string | null;
   active: boolean;
   createdAt: string;
   updatedAt: string;
@@ -60,6 +61,7 @@ export type Platform = {
   name: string;
   site: string | null;
   observations: string | null;
+  megaFolderPath: string | null;
   active: boolean;
   _count?: { tenders: number };
 };
@@ -149,6 +151,9 @@ export type BidDocument = {
   size: number;
   category: DocumentCategory;
   createdAt: string;
+  storageProvider?: string;
+  remoteNodeId?: string | null;
+  remotePath?: string | null;
   uploadedBy: { id: string; name: string };
   bid?: { id: string; tender: Pick<Tender, 'id' | 'noticeNumber' | 'municipality' | 'object'> };
 };
@@ -198,4 +203,30 @@ export type AuditLog = {
   metadata: unknown;
   createdAt: string;
   actor: { id: string; name: string; email: string } | null;
+};
+
+
+export type MegaStatus = {
+  configured: boolean;
+  connected: boolean;
+  rootFolder: string;
+  accountName: string | null;
+  spaceUsed: number | null;
+  spaceTotal: number | null;
+};
+
+export type MegaItem = {
+  id: string;
+  name: string;
+  type: 'folder' | 'file';
+  size: number;
+  updatedAt: string | null;
+  path: string;
+};
+
+export type MegaBrowseData = {
+  path: string;
+  basePath: string | null;
+  scopeLabel: string;
+  items: MegaItem[];
 };

@@ -11,7 +11,11 @@ const envSchema = z.object({
   ACCESS_TOKEN_EXPIRES_IN: z.string().default('15m'),
   REFRESH_TOKEN_EXPIRES_IN_DAYS: z.coerce.number().int().positive().default(7),
   STORAGE_PATH: z.string().min(1).default('./storage'),
-  MAX_UPLOAD_MB: z.coerce.number().int().min(1).max(100).default(25)
+  MAX_UPLOAD_MB: z.coerce.number().int().min(1).max(100).default(25),
+  MEGA_EMAIL: z.string().email().optional(),
+  MEGA_PASSWORD: z.string().min(1).optional(),
+  MEGA_ROOT_FOLDER: z.string().trim().default(''),
+  MEGA_TENDERS_FOLDER: z.string().trim().min(1).default('LICITAÇÕES')
 });
 
 const parsed = envSchema.safeParse(process.env);

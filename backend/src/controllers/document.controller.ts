@@ -1,3 +1,4 @@
+import { pipeline } from 'node:stream/promises';
 import type { Request, Response } from 'express';
 import type { DocumentCategory } from '@prisma/client';
 import {
@@ -25,15 +26,23 @@ export const upload = async (req: Request, res: Response) => {
     entityType: 'DOCUMENT',
     entityId: document.id,
     entityLabel: document.originalName,
-    description: 'Documento enviado',
-    metadata: { bidId: document.bidId, category: document.category }
+    description: 'Documento enviado ao MEGA',
+    metadata: { bidId: document.bidId, category: document.category, provider: 'MEGA' }
   });
-  res.status(201).json({ success: true, message: 'Documento enviado', data: document });
+  res.status(201).json({ success: true, message: 'Documento enviado ao MEGA', data: document });
 };
 
 export const download = async (req: Request, res: Response) => {
-  const { document, fullPath } = await getDocumentDownload(req.params.id as string, req.auth!);
-  res.download(fullPath, document.originalName);
+  const payload = await getDocumentDownload(req.params.id as string, req.auth!);
+  if (payload.mode === 'local') {
+    res.download(payload.fullPath, payload.document.originalName);
+    return;
+  }
+
+  res.attachment(payload.document.originalName);
+  res.setHeader('Content-Type', payload.document.mimeType || 'application/octet-stream');
+  if (payload.document.size) res.setHeader('Content-Length', String(payload.document.size));
+  await pipeline(payload.stream as NodeJS.ReadableStream, res);
 };
 
 export const remove = async (req: Request, res: Response) => {
@@ -42,7 +51,7 @@ export const remove = async (req: Request, res: Response) => {
     action: AuditActions.DELETE,
     entityType: 'DOCUMENT',
     entityId: req.params.id as string,
-    description: 'Documento excluído'
+    description: 'Documento excluído e movido para a lixeira do MEGA'
   });
   res.json({ success: true, message: 'Documento excluído' });
 };

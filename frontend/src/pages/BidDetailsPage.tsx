@@ -289,7 +289,7 @@ function DocumentsPanel({
           <div>
             <FilePlus2 size={24} />
             <strong>Anexar documento</strong>
-            <small>PDF, Word, Excel, imagem, CSV ou ZIP — até 25 MB</small>
+            <small>O arquivo será armazenado no MEGA — PDF, Word, Excel, imagem, CSV ou ZIP — até 25 MB</small>
           </div>
           <select value={category} onChange={(event) => setCategory(event.target.value as DocumentCategory)}>
             {documentCategoryOptions.map((option) => (

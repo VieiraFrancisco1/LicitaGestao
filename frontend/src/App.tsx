@@ -16,6 +16,7 @@ import { TenderDetailsPage } from './pages/TenderDetailsPage';
 import { ParticipationFormPage } from './pages/ParticipationFormPage';
 import { DeadlinesPage } from './pages/DeadlinesPage';
 import { AuditPage } from './pages/AuditPage';
+import { DocumentsPage } from './pages/DocumentsPage';
 
 export default function App() {
   return (
@@ -38,7 +39,7 @@ export default function App() {
               <Route path="empresas/:id" element={<CompanyDetailsPage />} />
               <Route path="convocacoes" element={<PlaceholderPage title="Convocações" phase="a Fase 6" />} />
               <Route path="prazos" element={<DeadlinesPage />} />
-              <Route path="documentos" element={<PlaceholderPage title="Documentos" phase="a Fase 4" />} />
+              <Route path="documentos" element={<DocumentsPage />} />
               <Route path="plataformas" element={<PlatformsPage />} />
               <Route path="usuarios" element={<ProtectedRoute roles={['ADMIN']} />}>
                 <Route index element={<UsersPage />} />

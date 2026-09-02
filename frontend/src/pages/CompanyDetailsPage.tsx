@@ -2,6 +2,7 @@ import { ArrowLeft, Building2, Download, File, FolderOpen, Gavel, Percent, Radio
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { BidsPage } from './BidsPage';
+import { MegaBrowser } from '../components/MegaBrowser';
 import { CompanyDiscountsPanel } from './CompanyDiscountsPanel';
 import { api, errorMessage } from '../services/api';
 import type { ApiResponse, BidDocument, BidProgress, Company } from '../types';
@@ -152,41 +153,52 @@ export function CompanyDetailsPage() {
       )}
       {tab === 'bids' && <BidsPage fixedCompanyId={company.id} />}
       {tab === 'documents' && (
-        <section className="detail-panel">
-          <div className="section-note">
-            Os documentos ficam vinculados à licitação correta. Para enviar um novo arquivo, abra a licitação.
-          </div>
-          <div className="document-list">
-            {documents.length === 0 && (
-              <div className="table-message">
-                <File size={28} />
-                Nenhum documento nesta empresa.
+        <div className="page-stack company-documents-stack">
+          <section className="detail-panel">
+            <div className="section-note">
+              Pasta principal da empresa no MEGA. O sistema tenta localizar a pasta existente pelo nome da empresa e só cria uma nova se não encontrar.
+            </div>
+            <MegaBrowser companyId={company.id} compact />
+          </section>
+          <section className="detail-panel">
+            <div className="section-heading-inline">
+              <div>
+                <strong>Documentos vinculados às licitações</strong>
+                <small>Arquivos enviados dentro de cada participação e armazenados no MEGA.</small>
               </div>
-            )}
-            {documents.map((document) => (
-              <article key={document.id}>
-                <span className="file-icon">
-                  <File size={20} />
-                </span>
-                <div>
-                  <strong>{document.originalName}</strong>
-                  <small>
-                    {document.bid?.tender.municipality} · {formatBytes(document.size)} ·{' '}
-                    {formatDate(document.createdAt)}
-                  </small>
+            </div>
+            <div className="document-list">
+              {documents.length === 0 && (
+                <div className="table-message">
+                  <File size={28} />
+                  Nenhum documento de licitação nesta empresa.
                 </div>
-                <Link className="action-button" to={`/participacoes/${document.bidId}`}>
-                  <FolderOpen size={15} />
-                  Licitação
-                </Link>
-                <button className="action-button" onClick={() => void download(document)}>
-                  <Download size={15} />
-                  Baixar
-                </button>
-              </article>
-            ))}
-          </div>
-        </section>
+              )}
+              {documents.map((document) => (
+                <article key={document.id}>
+                  <span className="file-icon">
+                    <File size={20} />
+                  </span>
+                  <div>
+                    <strong>{document.originalName}</strong>
+                    <small>
+                      {document.bid?.tender.municipality} · {formatBytes(document.size)} ·{' '}
+                      {formatDate(document.createdAt)}
+                    </small>
+                  </div>
+                  <Link className="action-button" to={`/participacoes/${document.bidId}`}>
+                    <FolderOpen size={15} />
+                    Licitação
+                  </Link>
+                  <button className="action-button" onClick={() => void download(document)}>
+                    <Download size={15} />
+                    Baixar
+                  </button>
+                </article>
+              ))}
+            </div>
+          </section>
+        </div>
       )}
       {tab === 'platforms' && (
         <section className="platform-grid company-platforms">

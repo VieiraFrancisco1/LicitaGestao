@@ -27,6 +27,7 @@
     "express-rate-limit": "latest",
     "helmet": "latest",
     "jsonwebtoken": "latest",
+    "megajs": "^1.3.10",
     "multer": "latest",
     "zod": "latest"
   },

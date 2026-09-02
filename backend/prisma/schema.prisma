@@ -112,6 +112,7 @@ model Company {
   phone        String?               @db.VarChar(30)
   contactName  String?               @map("contact_name") @db.VarChar(120)
   observations String?               @db.Text
+  megaFolderPath String?              @map("mega_folder_path") @db.VarChar(1000)
   active       Boolean               @default(true)
   users        User[]
   staffLinks   CompanyUser[]
@@ -226,6 +227,9 @@ model Document {
   size         Int
   category     DocumentCategory @default(OUTRO)
   path         String           @db.VarChar(1000)
+  storageProvider String        @default("LOCAL") @map("storage_provider") @db.VarChar(20)
+  remoteNodeId String?          @map("remote_node_id") @db.VarChar(120)
+  remotePath   String?          @map("remote_path") @db.VarChar(1000)
   uploadedById String           @map("uploaded_by_id") @db.Uuid
   uploadedBy   User             @relation(fields: [uploadedById], references: [id], onDelete: Restrict)
   createdAt    DateTime         @default(now()) @map("created_at")
@@ -233,6 +237,7 @@ model Document {
   @@index([bidId])
   @@index([uploadedById])
   @@index([category])
+  @@index([remoteNodeId])
   @@map("documents")
 }
 
