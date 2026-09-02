@@ -1,8 +1,9 @@
-import { Gavel, LockKeyhole, Mail } from 'lucide-react';
+import { LockKeyhole, Mail } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { errorMessage } from '../services/api';
+import licitaGestaoLogo from '../assets/licitagestao-logo.png';
 
 export function LoginPage() {
   const { user, login } = useAuth();
@@ -30,11 +31,8 @@ export function LoginPage() {
   return (
     <div className="login-page">
       <section className="login-hero">
-        <div className="login-brand">
-          <span>
-            <Gavel size={25} />
-          </span>
-          LicitaGestão
+        <div className="login-brand-logo">
+          <img src={licitaGestaoLogo} alt="LicitaGestão" />
         </div>
         <div className="hero-copy">
           <span className="hero-kicker">Gestão de licitações</span>
@@ -51,6 +49,9 @@ export function LoginPage() {
       </section>
       <section className="login-panel">
         <form className="login-card" onSubmit={submit}>
+          <div className="login-form-logo">
+            <img src={licitaGestaoLogo} alt="LicitaGestão" />
+          </div>
           <div>
             <span className="eyebrow">Bem-vindo</span>
             <h2>Entre na sua conta</h2>

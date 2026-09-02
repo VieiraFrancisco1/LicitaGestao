@@ -1,4 +1,5 @@
 import {
+  Archive,
   ArrowLeft,
   Building2,
   ExternalLink,
@@ -7,6 +8,7 @@ import {
   FolderOpen,
   MessageSquareText,
   Pencil,
+  RotateCcw,
   Trash2,
   UserRoundCheck,
   UserRoundX
@@ -85,6 +87,21 @@ export function TenderDetailsPage() {
     }
   };
 
+  const toggleListStatus = async () => {
+    if (!tender) return;
+    const status = tender.listStatus === 'ANEXADA' ? 'PENDENTE' : 'ANEXADA';
+    setAction(true);
+    setError('');
+    try {
+      await api.patch(`/tenders/${tender.id}/list-status`, { status });
+      await load();
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setAction(false);
+    }
+  };
+
   const removeTender = async () => {
     if (!tender) return;
     const label = tender.noticeNumber ? `${tender.municipality} · ${tender.noticeNumber}` : tender.municipality;
@@ -128,6 +145,14 @@ export function TenderDetailsPage() {
           <p>{tender.object}</p>
         </div>
         <div className="detail-header-actions">
+          <button
+            className={`secondary-button tender-list-status-action ${tender.listStatus === 'ANEXADA' ? 'attached' : ''}`}
+            disabled={action}
+            onClick={() => void toggleListStatus()}
+          >
+            {tender.listStatus === 'ANEXADA' ? <RotateCcw size={16} /> : <Archive size={16} />}
+            {tender.listStatus === 'ANEXADA' ? 'Voltar para pendentes' : 'Mover para já anexadas'}
+          </button>
           <Link className="primary-button" to={`/licitacoes/${tender.id}/editar`}>
             <Pencil size={16} />
             Editar dados gerais

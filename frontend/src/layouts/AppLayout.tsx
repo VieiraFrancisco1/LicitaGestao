@@ -18,6 +18,7 @@ import { useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { DeadlineNotifications } from '../components/DeadlineNotifications';
+import licitaGestaoLogo from '../assets/licitagestao-logo.png';
 
 const titles: Record<string, string> = {
   '/': 'Dashboard',
@@ -82,14 +83,10 @@ export function AppLayout() {
       )}
       <aside className={`sidebar ${menuOpen ? 'sidebar-open' : ''}`}>
         <div className="brand">
-          <div className="brand-mark">
-            <Gavel size={23} />
+          <div className="brand-logo-frame">
+            <img src={licitaGestaoLogo} alt="LicitaGestão" />
           </div>
-          <div>
-            <strong>LicitaGestão</strong>
-            <span>Controle empresarial</span>
-          </div>
-          <button className="mobile-close" onClick={() => setMenuOpen(false)}>
+          <button className="mobile-close" onClick={() => setMenuOpen(false)} aria-label="Fechar menu">
             <X size={20} />
           </button>
         </div>

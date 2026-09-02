@@ -64,6 +64,8 @@ export function BidsPage({ fixedCompanyId }: { fixedCompanyId?: string }) {
     user?.assignedCompanies.some((company) => company.id === bid.companyId);
   const canCreate =
     user?.role === 'ADMIN' || user?.role === 'EMPRESA' || Boolean(user?.assignedCompanies.length);
+  const embeddedInCompany = Boolean(fixedCompanyId);
+  const columnCount = embeddedInCompany ? 8 : 11;
 
   return (
     <div className="page-stack">
@@ -77,8 +79,8 @@ export function BidsPage({ fixedCompanyId }: { fixedCompanyId?: string }) {
         </div>
       )}
       {error && <div className="alert alert-error">{error}</div>}
-      <section className="table-card">
-        <div className="bid-filters">
+      <section className={`table-card ${embeddedInCompany ? 'company-bids-card' : ''}`}>
+        <div className={`bid-filters ${embeddedInCompany ? 'company-bid-filters' : ''}`}>
           <label className="search-field">
             <Search size={18} />
             <input
@@ -87,7 +89,11 @@ export function BidsPage({ fixedCompanyId }: { fixedCompanyId?: string }) {
                 setSearch(event.target.value);
                 setPage(1);
               }}
-              placeholder="Empresa, município, objeto, edital ou processo"
+              placeholder={
+                embeddedInCompany
+                  ? 'Município, objeto, edital ou processo'
+                  : 'Empresa, município, objeto, edital ou processo'
+              }
             />
           </label>
           {!fixedCompanyId && (
@@ -140,33 +146,46 @@ export function BidsPage({ fixedCompanyId }: { fixedCompanyId?: string }) {
           </button>
         </div>
         <div className="table-wrap">
-          <table className="bids-table">
+          <table className={`bids-table ${embeddedInCompany ? 'company-bids-table' : ''}`}>
             <thead>
-              <tr>
-                <th>Empresa</th>
-                <th>Município</th>
-                <th>Data</th>
-                <th>Objeto</th>
-                <th>Validade</th>
-                <th>Valor</th>
-                <th>Seguro</th>
-                <th>Andamento</th>
-                <th>Plataforma</th>
-                <th>Situação</th>
-                <th>Ações</th>
-              </tr>
+              {embeddedInCompany ? (
+                <tr>
+                  <th>Licitação</th>
+                  <th>Data</th>
+                  <th>Objeto</th>
+                  <th>Validade</th>
+                  <th>Valor e plataforma</th>
+                  <th>Andamento</th>
+                  <th>Situação</th>
+                  <th>Ações</th>
+                </tr>
+              ) : (
+                <tr>
+                  <th>Empresa</th>
+                  <th>Município</th>
+                  <th>Data</th>
+                  <th>Objeto</th>
+                  <th>Validade</th>
+                  <th>Valor</th>
+                  <th>Seguro</th>
+                  <th>Andamento</th>
+                  <th>Plataforma</th>
+                  <th>Situação</th>
+                  <th>Ações</th>
+                </tr>
+              )}
             </thead>
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={11} className="table-message">
+                  <td colSpan={columnCount} className="table-message">
                     Carregando licitações...
                   </td>
                 </tr>
               )}
               {!loading && !data?.items.length && (
                 <tr>
-                  <td colSpan={11} className="table-message">
+                  <td colSpan={columnCount} className="table-message">
                     <FileText size={28} />
                     Nenhuma licitação encontrada.
                   </td>
@@ -175,82 +194,143 @@ export function BidsPage({ fixedCompanyId }: { fixedCompanyId?: string }) {
               {!loading &&
                 data?.items.map((bid) => (
                   <tr key={bid.id}>
-                    <td>
-                      <strong>{bid.company.tradeName || bid.company.legalName}</strong>
-                    </td>
-                    <td>
-                      <strong>{bid.tender.municipality}</strong>
-                      {(bid.tender.modality || bid.tender.noticeNumber || bid.tender.processNumber) && (
-                        <small>
-                          {[bid.tender.modality, bid.tender.noticeNumber ? `Nº ${bid.tender.noticeNumber}` : null]
-                            .filter(Boolean)
-                            .join(' · ')}
-                          {bid.tender.processNumber
-                            ? `${bid.tender.modality || bid.tender.noticeNumber ? ' · ' : ''}Proc. ${bid.tender.processNumber}`
-                            : ''}
-                        </small>
-                      )}
-                    </td>
-                    <td>{formatDate(bid.tender.sessionDate)}</td>
-                    <td className="object-cell">
-                      <strong>{bid.tender.object}</strong>
-                      <small>Valor global: {formatCurrency(bid.tender.estimatedValue)}</small>
-                    </td>
-                    <td>
-                      {bid.tender.proposalValidityDays ? `${bid.tender.proposalValidityDays} dias` : '—'}
-                    </td>
-                    <td>{formatCurrency(bid.proposalValue || bid.tender.estimatedValue)}</td>
-                    <td>{bid.tender.guaranteeType === 'NAO_EXIGIDA' ? 'Não' : 'Sim'}</td>
-                    <td>
-                      <span className="role-pill">
-                        {optionLabel(progressOptions, bid.progress as BidProgress)}
-                      </span>
-                    </td>
-                    <td>
-                      <div className="table-platform-cell">
-                        <span>{bid.tender.platform?.name || '—'}</span>
-                        <div className="table-external-links">
-                          {bid.tender.platformLink && (
-                            <a
-                              className="inline-link-button"
-                              href={bid.tender.platformLink}
-                              target="_blank"
-                              rel="noreferrer"
-                              title="Abrir esta licitação na plataforma"
-                            >
-                              <ExternalLink size={13} />
-                              Plataforma
-                            </a>
+                    {embeddedInCompany ? (
+                      <>
+                        <td className="company-tender-identity">
+                          <strong>{bid.tender.municipality}</strong>
+                          {(bid.tender.modality || bid.tender.noticeNumber || bid.tender.processNumber) && (
+                            <small>
+                              {[
+                                bid.tender.modality,
+                                bid.tender.noticeNumber ? `Nº ${bid.tender.noticeNumber}` : null,
+                                bid.tender.processNumber ? `Proc. ${bid.tender.processNumber}` : null
+                              ]
+                                .filter(Boolean)
+                                .join(' · ')}
+                            </small>
                           )}
-                          {bid.tender.seobraLink && (
-                            <a
-                              className="inline-link-button"
-                              href={bid.tender.seobraLink}
-                              target="_blank"
-                              rel="noreferrer"
-                              title="Abrir esta licitação no SEOBRA"
-                            >
-                              <ExternalLink size={13} />
-                              SEOBRA
-                            </a>
+                        </td>
+                        <td className="company-tender-date">
+                          <strong>{formatDate(bid.tender.sessionDate)}</strong>
+                        </td>
+                        <td className="object-cell company-tender-object">
+                          <strong>{bid.tender.object}</strong>
+                        </td>
+                        <td>
+                          {bid.tender.proposalValidityDays ? `${bid.tender.proposalValidityDays} dias` : '—'}
+                        </td>
+                        <td className="company-tender-value">
+                          <strong>{formatCurrency(bid.proposalValue ?? bid.tender.estimatedValue)}</strong>
+                          <small>{bid.tender.platform?.name || 'Sem plataforma'}</small>
+                        </td>
+                        <td>
+                          <span className="role-pill">
+                            {optionLabel(progressOptions, bid.progress as BidProgress)}
+                          </span>
+                        </td>
+                        <td>
+                          <span className={`company-bid-situation ${bid.situation.toLowerCase()}`}>
+                            {optionLabel(situationOptions, bid.situation as BidSituation)}
+                          </span>
+                        </td>
+                        <td>
+                          <div className="company-bid-actions">
+                            <Link className="action-button" to={`/participacoes/${bid.id}`}>
+                              <FolderOpen size={15} />
+                              Abrir
+                            </Link>
+                            {canEdit(bid) && (
+                              <Link className="action-button" to={`/participacoes/${bid.id}/editar`}>
+                                <Pencil size={15} />
+                                Editar
+                              </Link>
+                            )}
+                          </div>
+                        </td>
+                      </>
+                    ) : (
+                      <>
+                        <td>
+                          <strong>{bid.company.tradeName || bid.company.legalName}</strong>
+                        </td>
+                        <td>
+                          <strong>{bid.tender.municipality}</strong>
+                          {(bid.tender.modality || bid.tender.noticeNumber || bid.tender.processNumber) && (
+                            <small>
+                              {[
+                                bid.tender.modality,
+                                bid.tender.noticeNumber ? `Nº ${bid.tender.noticeNumber}` : null
+                              ]
+                                .filter(Boolean)
+                                .join(' · ')}
+                              {bid.tender.processNumber
+                                ? `${bid.tender.modality || bid.tender.noticeNumber ? ' · ' : ''}Proc. ${bid.tender.processNumber}`
+                                : ''}
+                            </small>
                           )}
-                        </div>
-                      </div>
-                    </td>
-                    <td>{optionLabel(situationOptions, bid.situation as BidSituation)}</td>
-                    <td>
-                      <div className="row-actions">
-                        <Link className="action-button" to={`/participacoes/${bid.id}`}>
-                          <FolderOpen size={15} />
-                          Abrir
-                        </Link>
-                        {canEdit(bid) && (
-                          <Link className="action-button" to={`/participacoes/${bid.id}/editar`}>
-                            <Pencil size={15} />
-                          </Link>
-                        )}
-                      </div>
-                    </td>
+                        </td>
+                        <td>{formatDate(bid.tender.sessionDate)}</td>
+                        <td className="object-cell">
+                          <strong>{bid.tender.object}</strong>
+                          <small>Valor global: {formatCurrency(bid.tender.estimatedValue)}</small>
+                        </td>
+                        <td>
+                          {bid.tender.proposalValidityDays ? `${bid.tender.proposalValidityDays} dias` : '—'}
+                        </td>
+                        <td>{formatCurrency(bid.proposalValue ?? bid.tender.estimatedValue)}</td>
+                        <td>{bid.tender.guaranteeType === 'NAO_EXIGIDA' ? 'Não' : 'Sim'}</td>
+                        <td>
+                          <span className="role-pill">
+                            {optionLabel(progressOptions, bid.progress as BidProgress)}
+                          </span>
+                        </td>
+                        <td>
+                          <div className="table-platform-cell">
+                            <span>{bid.tender.platform?.name || '—'}</span>
+                            <div className="table-external-links">
+                              {bid.tender.platformLink && (
+                                <a
+                                  className="inline-link-button"
+                                  href={bid.tender.platformLink}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  title="Abrir esta licitação na plataforma"
+                                >
+                                  <ExternalLink size={13} />
+                                  Plataforma
+                                </a>
+                              )}
+                              {bid.tender.seobraLink && (
+                                <a
+                                  className="inline-link-button"
+                                  href={bid.tender.seobraLink}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  title="Abrir esta licitação no SEOBRA"
+                                >
+                                  <ExternalLink size={13} />
+                                  SEOBRA
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td>{optionLabel(situationOptions, bid.situation as BidSituation)}</td>
+                        <td>
+                          <div className="row-actions">
+                            <Link className="action-button" to={`/participacoes/${bid.id}`}>
+                              <FolderOpen size={15} />
+                              Abrir
+                            </Link>
+                            {canEdit(bid) && (
+                              <Link className="action-button" to={`/participacoes/${bid.id}/editar`}>
+                                <Pencil size={15} />
+                              </Link>
+                            )}
+                          </div>
+                        </td>
+                      </>
+                    )}
                   </tr>
                 ))}
             </tbody>

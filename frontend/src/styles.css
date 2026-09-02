@@ -159,22 +159,30 @@ p {
     0 0 0 70px rgba(255, 255, 255, 0.025),
     0 0 0 140px rgba(255, 255, 255, 0.015);
 }
-.login-brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-weight: 750;
-  font-size: 20px;
-  letter-spacing: -0.3px;
+.login-brand-logo {
+  position: relative;
+  width: min(360px, 100%);
+  height: 96px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 14px 35px rgba(5, 15, 34, 0.24);
   z-index: 1;
 }
-.login-brand span {
-  display: grid;
-  place-items: center;
-  width: 43px;
-  height: 43px;
-  border-radius: 12px;
-  background: #2f6dea;
+.login-brand-logo img,
+.login-form-logo img,
+.brand-logo-frame img {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  display: block;
+  width: 100%;
+  height: auto;
+  transform: translateY(-50%);
+}
+.login-form-logo {
+  display: none;
 }
 .hero-copy {
   max-width: 530px;
@@ -331,34 +339,22 @@ p {
   flex-direction: column;
 }
 .brand {
-  height: 78px;
+  position: relative;
+  height: 90px;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 0 22px;
+  padding: 11px 14px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.07);
 }
-.brand-mark {
-  width: 40px;
-  height: 40px;
-  display: grid;
-  place-items: center;
+.brand-logo-frame {
+  position: relative;
+  width: 100%;
+  height: 64px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 11px;
-  background: #2d66d7;
-  color: #fff;
-}
-.brand strong,
-.brand span {
-  display: block;
-}
-.brand strong {
-  color: #fff;
-  font-size: 16px;
-}
-.brand span {
-  font-size: 10px;
-  color: #718099;
-  margin-top: 2px;
+  background: #fff;
+  box-shadow: 0 8px 20px rgba(4, 12, 26, 0.18);
 }
 .sidebar nav {
   padding: 17px 13px;
@@ -371,14 +367,14 @@ p {
 .nav-label {
   display: block;
   padding: 7px 12px;
-  color: #5f6d84;
-  font-size: 10px;
+  color: #92a3bd;
+  font-size: 10.5px;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 1.2px;
 }
 .nav-section a {
-  color: #aeb9ca;
+  color: #f3f6fb;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -386,17 +382,23 @@ p {
   padding: 10px 12px;
   border-radius: 8px;
   margin: 2px 0;
-  font-size: 13px;
-  font-weight: 550;
+  font-size: 14px;
+  font-weight: 650;
+}
+.nav-section a svg {
+  color: #b8cbee;
 }
 .nav-section a:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.085);
   color: #fff;
 }
 .nav-section a.active {
-  background: #243652;
+  background: #29436a;
   color: #fff;
   box-shadow: inset 3px 0 #4f87f2;
+}
+.nav-section a.active svg {
+  color: #fff;
 }
 .sidebar-footer {
   margin: 12px;
@@ -432,7 +434,7 @@ p {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 30px;
+  padding: 0 22px;
   position: sticky;
   top: 0;
   z-index: 20;
@@ -468,7 +470,7 @@ p {
   border: 0;
   outline: 0;
   background: transparent;
-  font-size: 12px;
+  font-size: 13px;
 }
 .notification-button,
 .icon-button,
@@ -518,7 +520,7 @@ p {
 }
 .profile-copy strong {
   color: #273247;
-  font-size: 12px;
+  font-size: 13px;
   max-width: 145px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -554,9 +556,9 @@ p {
   background: #fff0f1;
 }
 .content {
-  padding: 28px 30px 45px;
-  max-width: 1600px;
-  margin: 0 auto;
+  padding: 24px 20px 42px;
+  max-width: none;
+  margin: 0;
 }
 .menu-button,
 .mobile-close,
@@ -699,7 +701,7 @@ p {
 }
 .page-heading span {
   color: var(--muted);
-  font-size: 13px;
+  font-size: 14px;
 }
 .table-card {
   background: #fff;
@@ -755,7 +757,7 @@ th {
   background: #f8f9fb;
   color: #737e90;
   text-align: left;
-  font-size: 10px;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.65px;
   padding: 11px 16px;
@@ -765,7 +767,7 @@ td {
   padding: 14px 16px;
   border-bottom: 1px solid #edf0f4;
   color: #495466;
-  font-size: 12px;
+  font-size: 13px;
 }
 tbody tr:last-child td {
   border-bottom: 0;
@@ -779,10 +781,11 @@ td small {
 }
 td strong {
   color: #253046;
-  font-size: 13px;
+  font-size: 14px;
 }
 td small {
   color: #8791a1;
+  font-size: 11px;
   margin-top: 3px;
 }
 .table-message {
@@ -949,7 +952,7 @@ td small {
 }
 .embedded-heading > span {
   color: #5f6d82;
-  font-size: 12px;
+  font-size: 13.5px;
 }
 .company-switcher {
   min-width: 220px;
@@ -1031,6 +1034,9 @@ td small {
   padding: 16px;
   border-bottom: 1px solid var(--line);
 }
+.company-bid-filters {
+  grid-template-columns: minmax(280px, 1.5fr) repeat(2, minmax(160px, 0.8fr)) auto;
+}
 .bid-filters .search-field {
   width: 100%;
 }
@@ -1058,6 +1064,120 @@ td small {
 .bids-table .object-cell strong {
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.company-bids-card {
+  border-color: #dfe5ee;
+  box-shadow: 0 10px 28px rgba(29, 45, 72, 0.07);
+}
+.company-bids-table {
+  min-width: 1160px;
+  table-layout: fixed;
+}
+.company-bids-table th {
+  position: relative;
+  padding: 13px 10px;
+  border-bottom: 2px solid #cfd8e4;
+  background: linear-gradient(180deg, #f8fafc 0%, #edf2f7 100%);
+  color: #34445d;
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0.7px;
+}
+.company-bids-table th:not(:last-child)::after {
+  position: absolute;
+  top: 10px;
+  right: 0;
+  bottom: 10px;
+  width: 1px;
+  background: #dbe2eb;
+  content: '';
+}
+.company-bids-table th:nth-child(1) { width: 13%; }
+.company-bids-table th:nth-child(2) { width: 8%; }
+.company-bids-table th:nth-child(3) { width: 25%; }
+.company-bids-table th:nth-child(4) { width: 8%; }
+.company-bids-table th:nth-child(5) { width: 14%; }
+.company-bids-table th:nth-child(6) { width: 11%; }
+.company-bids-table th:nth-child(7) { width: 9%; }
+.company-bids-table th:nth-child(8) { width: 12%; }
+.company-bids-table td {
+  padding: 15px 10px;
+  vertical-align: top;
+  border-bottom-color: #e6ebf2;
+  transition: background-color 0.16s ease, box-shadow 0.16s ease;
+}
+.company-bids-table td + td {
+  border-left: 1px solid #f0f3f7;
+}
+.company-bids-table tbody tr:nth-child(even) td {
+  background: #fbfcfe;
+}
+.company-bids-table tbody tr:hover td {
+  background: #f4f8fd;
+}
+.company-bids-table tbody tr:hover td:first-child {
+  box-shadow: inset 3px 0 0 #4f78c5;
+}
+.company-tender-identity strong {
+  color: #17345b;
+}
+.company-tender-date strong {
+  color: #275b9f;
+  white-space: nowrap;
+}
+.company-bids-table .company-tender-object strong {
+  display: -webkit-box;
+  overflow: hidden;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+.company-tender-value small {
+  width: fit-content;
+  padding: 3px 7px;
+  border-radius: 6px;
+  background: #eef2f7;
+  color: #52637b;
+  font-weight: 750;
+}
+.company-bid-situation {
+  display: inline-flex;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: #eef2f7;
+  color: #536176;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+.company-bid-situation.pendente {
+  background: #fff4d8;
+  color: #96610b;
+}
+.company-bid-situation.anexada,
+.company-bid-situation.classificada,
+.company-bid-situation.habilitada,
+.company-bid-situation.vencedora,
+.company-bid-situation.finalizada {
+  background: #e8f7ef;
+  color: #237249;
+}
+.company-bid-situation.desclassificada,
+.company-bid-situation.inabilitada,
+.company-bid-situation.perdida {
+  background: #fff0ef;
+  color: #b33d35;
+}
+.company-bid-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+.company-bid-actions .action-button {
+  min-width: 0;
+  padding: 7px 8px;
+  border: 1px solid #d9e3f1;
   white-space: nowrap;
 }
 
@@ -1137,6 +1257,7 @@ td small {
   margin: 0;
   color: #c0ccdd;
   line-height: 1.5;
+  font-size: 14px;
 }
 .details-header .eyebrow {
   margin-top: 14px;
@@ -1171,7 +1292,7 @@ td small {
   padding: 9px 14px;
   background: transparent;
   color: #667085;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
 }
 .tabs button.active {
@@ -1195,14 +1316,14 @@ td small {
 }
 .detail-stat small {
   color: #7d8798;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 .detail-stat strong {
   color: #26334a;
-  font-size: 17px;
+  font-size: 18px;
 }
 .detail-panel {
   padding: 20px;
@@ -1555,6 +1676,19 @@ td small {
     margin-left: auto;
     color: #91a0b5;
   }
+  .brand .mobile-close {
+    position: absolute;
+    top: 50%;
+    right: 18px;
+    z-index: 2;
+    width: 32px;
+    height: 32px;
+    margin: 0;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.92);
+    color: #17345b;
+    transform: translateY(-50%);
+  }
   .sidebar-overlay {
     display: block;
     position: fixed;
@@ -1600,6 +1734,18 @@ td small {
   }
   .login-panel {
     padding: 24px;
+  }
+  .login-form-logo {
+    position: relative;
+    display: block;
+    width: min(280px, 100%);
+    height: 72px;
+    margin-bottom: 2px;
+    overflow: hidden;
+    border: 1px solid #e1e7f0;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 8px 24px rgba(25, 45, 76, 0.08);
   }
   .topbar {
     padding: 0 16px;
@@ -4398,4 +4544,32 @@ td small {
 .paired-row-actions .danger-soft-button:hover:not(:disabled) {
   border-color: #e5b3ac;
   background: #ffedeb;
+}
+
+/* Ação da tela de detalhes para mover a licitação entre as listas */
+.tender-list-status-action {
+  border: 1px solid #bcdcc9;
+  background: #edf8f1;
+  color: #237249;
+  box-shadow: 0 2px 7px rgba(35, 114, 73, .08);
+  transition: border-color .16s ease, background-color .16s ease, box-shadow .16s ease, transform .16s ease;
+}
+
+.tender-list-status-action:hover:not(:disabled) {
+  border-color: #97c8aa;
+  background: #e2f3e9;
+  box-shadow: 0 5px 12px rgba(35, 114, 73, .12);
+  transform: translateY(-1px);
+}
+
+.tender-list-status-action.attached {
+  border-color: #d8dee8;
+  background: #f3f5f8;
+  color: #536176;
+  box-shadow: none;
+}
+
+.tender-list-status-action.attached:hover:not(:disabled) {
+  border-color: #c7d0dc;
+  background: #e9edf2;
 }
