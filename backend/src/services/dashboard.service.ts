@@ -66,10 +66,7 @@ export async function getDashboard(auth: AuthScope, requestedCompanyId?: string)
         where: {
           ...baseWhere,
           progress: { not: BidProgress.FINALIZADA },
-          OR: [
-            { tender: { sessionDate: { gte: sevenDaysAgo, lte: in3Days } } },
-            { tender: { proposalExpirationDate: { gte: sevenDaysAgo, lte: in3Days } } }
-          ]
+          tender: { sessionDate: { gte: sevenDaysAgo, lte: in3Days } }
         },
         include: { company: true, tender: { include: { platform: true } } },
         orderBy: { tender: { sessionDate: 'asc' } },
@@ -102,7 +99,7 @@ export async function getDashboard(auth: AuthScope, requestedCompanyId?: string)
   const deadlineItems = deadlineCandidates.flatMap((bid) => {
     const items: Array<{
       key: string;
-      type: 'SESSION' | 'PROPOSAL_EXPIRATION';
+      type: 'SESSION';
       title: string;
       date: string;
       days: number;
@@ -127,23 +124,6 @@ export async function getDashboard(auth: AuthScope, requestedCompanyId?: string)
         municipality: bid.tender.municipality,
         platformName: bid.tender.platform?.name ?? null
       });
-    }
-    if (bid.tender.proposalExpirationDate) {
-      const validityDays = daysBetween(bid.tender.proposalExpirationDate, today);
-      if (validityDays >= -7 && validityDays <= 3) {
-        items.push({
-          key: `VALIDITY:${bid.id}:${dateOnly(bid.tender.proposalExpirationDate)}`,
-          type: 'PROPOSAL_EXPIRATION',
-          title: 'Validade da proposta',
-          date: dateOnly(bid.tender.proposalExpirationDate),
-          days: validityDays,
-          bidId: bid.id,
-          companyId: bid.companyId,
-          companyName,
-          municipality: bid.tender.municipality,
-          platformName: bid.tender.platform?.name ?? null
-        });
-      }
     }
     return items;
   }).sort((a, b) => a.days - b.days);

@@ -3,7 +3,7 @@ import { prisma } from '../config/database.js';
 import { AppError } from '../utils/app-error.js';
 import type { AuthScope } from './access.service.js';
 
-export type DeadlineType = 'SESSION' | 'PROPOSAL_EXPIRATION';
+export type DeadlineType = 'SESSION';
 export type DeadlineSeverity = 'OVERDUE' | 'TODAY' | 'URGENT' | 'UPCOMING' | 'FUTURE';
 
 const DAY_MS = 86_400_000;
@@ -45,7 +45,7 @@ export async function listDeadlineAlerts(auth: AuthScope, query: { horizon: numb
   const tenders = await prisma.tender.findMany({
     where: {
       ...tenderScope(auth),
-      OR: [{ sessionDate: { gte: min, lte: max } }, { proposalExpirationDate: { gte: min, lte: max } }]
+      sessionDate: { gte: min, lte: max }
     },
     include: { platform: { select: { id: true, name: true } } },
     orderBy: { sessionDate: 'asc' }
@@ -86,20 +86,6 @@ export async function listDeadlineAlerts(auth: AuthScope, query: { horizon: numb
       });
     }
 
-    if (tender.proposalExpirationDate) {
-      const proposalDays = daysFromToday(tender.proposalExpirationDate, today);
-      if (proposalDays >= -query.pastDays && proposalDays <= query.horizon) {
-        result.push({
-          ...base,
-          key: `PROPOSAL_EXPIRATION:${tender.id}:${dateOnly(tender.proposalExpirationDate)}`,
-          type: 'PROPOSAL_EXPIRATION',
-          title: 'Validade da proposta',
-          date: dateOnly(tender.proposalExpirationDate),
-          days: proposalDays,
-          severity: severity(proposalDays)
-        });
-      }
-    }
     return result;
   });
 
@@ -156,20 +142,7 @@ export async function listTenderDeadlines(auth: AuthScope, tenderId: string) {
       date: dateOnly(tender.sessionDate),
       days: daysFromToday(tender.sessionDate, today),
       severity: severity(daysFromToday(tender.sessionDate, today))
-    },
-    ...(tender.proposalExpirationDate
-      ? [
-          {
-            ...base,
-            key: `PROPOSAL_EXPIRATION:${tender.id}:${dateOnly(tender.proposalExpirationDate)}`,
-            type: 'PROPOSAL_EXPIRATION' as const,
-            title: 'Validade da proposta',
-            date: dateOnly(tender.proposalExpirationDate),
-            days: daysFromToday(tender.proposalExpirationDate, today),
-            severity: severity(daysFromToday(tender.proposalExpirationDate, today))
-          }
-        ]
-      : [])
+    }
   ];
 
   const reads = await (prisma as any).notificationRead.findMany({

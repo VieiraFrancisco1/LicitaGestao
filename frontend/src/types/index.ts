@@ -299,6 +299,9 @@ export type ProposalLetterContext = {
     state: string | null;
     bodyTemplate: string;
     custom: boolean;
+    sourceType: 'TEXT' | 'PDF_IMPORT';
+    sourceFileName: string | null;
+    sourcePdfImportedAt: string | null;
     updatedAt: string | null;
   };
   values: Record<string, string>;

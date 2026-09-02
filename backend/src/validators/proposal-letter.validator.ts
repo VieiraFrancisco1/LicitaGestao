@@ -18,3 +18,12 @@ export const saveProposalTemplateSchema = z.object({
   params: z.object({}),
   query: z.object({})
 });
+
+
+export const importProposalPdfSchema = z.object({
+  body: z.object({
+    bidId: z.string().uuid()
+  }),
+  params: z.object({}),
+  query: z.object({})
+});

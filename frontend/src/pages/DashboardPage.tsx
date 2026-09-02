@@ -83,7 +83,7 @@ export function DashboardPage() {
         <Metric icon={<Gavel />} label="Em andamento" value={data?.metrics.activeBids ?? 0} detail="participações ativas" />
         <Metric icon={<CalendarClock />} label="Próximas sessões" value={data?.metrics.upcomingSessions ?? 0} detail="nos próximos 7 dias" />
         <Metric icon={<BellRing />} label="Convocações" value={data?.metrics.pendingConvocations ?? 0} detail="pendentes de leitura" />
-        <Metric icon={<TriangleAlert />} label="Prazos críticos" value={data?.metrics.criticalDeadlines ?? 0} detail="vencidos ou em até 3 dias" />
+        <Metric icon={<TriangleAlert />} label="Sessões críticas" value={data?.metrics.criticalDeadlines ?? 0} detail="sessões vencidas ou em até 3 dias" />
       </section>
 
       <section className="dashboard-grid-main">
@@ -94,7 +94,7 @@ export function DashboardPage() {
           <div className="attention-list">
             {!data?.attention.length && <div className="dashboard-empty">Nenhum item crítico no momento.</div>}
             {data?.attention.map((item) => (
-              <Link key={item.key} className={`attention-row ${item.severity.toLowerCase()}`} to={item.bidId ? `/participacoes/${item.bidId}${item.type === 'CONVOCATION' ? '?tab=convocations' : item.type === 'PROPOSAL_EXPIRATION' ? '?tab=deadlines' : ''}` : `/empresas/${item.companyId}?tab=convocations`}>
+              <Link key={item.key} className={`attention-row ${item.severity.toLowerCase()}`} to={item.bidId ? `/participacoes/${item.bidId}${item.type === 'CONVOCATION' ? '?tab=convocations' : ''}` : `/empresas/${item.companyId}?tab=convocations`}>
                 <span className="attention-indicator" />
                 <span className="attention-copy"><strong>{item.title}</strong><small>{item.subtitle}</small></span>
                 <span className="attention-time">{item.type === 'CONVOCATION' ? 'Nova mensagem' : relative(item.days)}</span>

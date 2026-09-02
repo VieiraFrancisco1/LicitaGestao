@@ -1,4 +1,4 @@
-import { ArrowLeft, CalendarClock, CheckCircle2, Download, ExternalLink, File as FileIcon, FilePlus2, FileText, Percent, Pencil, Trash2, Unlink } from 'lucide-react';
+import { ArrowLeft, CalendarClock, CheckCircle2, Download, ExternalLink, File as FileIcon, FilePlus2, FileText, Percent, Pencil, Trash2, Unlink, UploadCloud } from 'lucide-react';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -229,11 +229,7 @@ export function BidDetailsPage() {
           <InfoCard label="Proposta" value={formatCurrency(bid.proposalValue)} />
           <InfoCard
             label="Validade"
-            value={
-              bid.tender.proposalValidityDays
-                ? `${bid.tender.proposalValidityDays} dias — ${formatDate(bid.tender.proposalExpirationDate)}`
-                : 'Não informada'
-            }
+            value={bid.tender.proposalValidityDays ? `${bid.tender.proposalValidityDays} dias` : 'Não informada'}
           />
           <InfoCard label="Garantia" value={optionLabel(guaranteeOptions, bid.tender.guaranteeType)} />
         </div>
@@ -421,6 +417,9 @@ function ProposalLetterPanel({ bid, canEdit, userRole }: { bid: Bid; canEdit: bo
   const [loading, setLoading] = useState(true);
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [importingPdf, setImportingPdf] = useState(false);
+  const [importFeedback, setImportFeedback] = useState<{ detectedFields: string[]; warnings: string[] } | null>(null);
   const [error, setError] = useState('');
   const canEditTemplate = userRole === 'ADMIN' || userRole === 'FUNCIONARIO';
 
@@ -457,6 +456,29 @@ function ProposalLetterPanel({ bid, canEdit, userRole }: { bid: Bid; canEdit: bo
       setError(errorMessage(err));
     } finally {
       setSavingTemplate(false);
+    }
+  };
+
+  const importPdf = async () => {
+    if (!pdfFile) return;
+    setImportingPdf(true);
+    setError('');
+    setImportFeedback(null);
+    try {
+      const form = new FormData();
+      form.append('file', pdfFile);
+      form.append('bidId', bid.id);
+      const response = await api.post<ApiResponse<{ detectedFields: string[]; warnings: string[] }>>('/proposal-letters/template/pdf', form);
+      setImportFeedback({
+        detectedFields: response.data.data.detectedFields,
+        warnings: response.data.data.warnings
+      });
+      setPdfFile(null);
+      await load();
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setImportingPdf(false);
     }
   };
 
@@ -499,12 +521,62 @@ function ProposalLetterPanel({ bid, canEdit, userRole }: { bid: Bid; canEdit: bo
         <div><small>Número</small><strong>{bid.tender.noticeNumber || '—'}</strong></div>
         <div><small>Valor da baixa</small><strong>{context?.discountedValue ? formatCurrency(context.discountedValue) : '—'}</strong></div>
         <div><small>Prazo de execução</small><strong>{bid.tender.executionTerm || '—'}</strong></div>
-        <div><small>Modelo</small><strong>{context?.template.custom ? 'Modelo salvo da cidade' : 'Modelo padrão inicial'}</strong></div>
+        <div>
+          <small>Modelo</small>
+          <strong>
+            {context?.template.sourceType === 'PDF_IMPORT'
+              ? 'Importado de PDF'
+              : context?.template.custom
+                ? 'Modelo salvo da cidade'
+                : 'Modelo padrão inicial'}
+          </strong>
+          {context?.template.sourceFileName && <span className="proposal-source-file">{context.template.sourceFileName}</span>}
+        </div>
       </div>
+      {canEditTemplate && (
+        <div className="proposal-pdf-import">
+          <div className="proposal-pdf-import-copy">
+            <span className="proposal-import-icon"><UploadCloud size={22} /></span>
+            <div>
+              <strong>Importar uma Carta Proposta existente em PDF</strong>
+              <small>
+                Use uma carta antiga desta cidade. O sistema lê o texto, transforma número, processo, objeto, valor da baixa,
+                prazo, validade e dados da empresa em campos automáticos e salva o resultado como modelo da cidade.
+              </small>
+            </div>
+          </div>
+          <div className="proposal-pdf-import-actions">
+            <input
+              type="file"
+              accept="application/pdf,.pdf"
+              onChange={(event) => setPdfFile(event.target.files?.[0] ?? null)}
+              disabled={importingPdf}
+            />
+            <button className="secondary-button" type="button" onClick={() => void importPdf()} disabled={!pdfFile || importingPdf}>
+              <UploadCloud size={16} />
+              {importingPdf ? 'Lendo PDF...' : 'Importar e analisar PDF'}
+            </button>
+          </div>
+          <small className="proposal-import-note">
+            Funciona com PDFs que possuem texto selecionável. Se o arquivo for apenas uma imagem escaneada, o sistema avisa e não substitui o modelo atual.
+          </small>
+        </div>
+      )}
+      {importFeedback && (
+        <div className={`proposal-import-result ${importFeedback.warnings.length ? 'warning' : 'success'}`}>
+          <strong>PDF analisado.</strong>
+          <span>
+            {importFeedback.detectedFields.length
+              ? `Campos identificados: ${importFeedback.detectedFields.join(', ')}.`
+              : 'Nenhum campo variável foi identificado automaticamente.'}
+          </span>
+          {importFeedback.warnings.length > 0 && <small>{importFeedback.warnings.join(' ')}</small>}
+        </div>
+      )}
       <label className="proposal-template-editor">
         Modelo da Carta Proposta
         <textarea rows={16} value={templateBody} onChange={(event) => setTemplateBody(event.target.value)} disabled={!canEditTemplate} />
-        <small>Campos disponíveis: {'{{numero_licitacao}}'}, {'{{processo_administrativo}}'}, {'{{objeto}}'}, {'{{valor_global}}'}, {'{{prazo_execucao}}'}, {'{{validade_proposta}}'}, {'{{empresa_razao_social}}'}, {'{{cnpj}}'}, {'{{representante}}'}, {'{{municipio}}'}.</small>
+        <small>Campos disponíveis: {'{{numero_licitacao}}'}, {'{{processo_administrativo}}'}, {'{{objeto}}'}, {'{{valor_global}}'}, {'{{valor_global_extenso}}'}, {'{{prazo_execucao}}'}, {'{{validade_proposta}}'}, {'{{empresa_razao_social}}'}, {'{{empresa_nome}}'}, {'{{cnpj}}'}, {'{{representante}}'}, {'{{municipio}}'}, {'{{data_atual}}'}.</small>
       </label>
       <div className="proposal-actions">
         {canEditTemplate && <button className="secondary-button" onClick={() => void saveTemplate()} disabled={savingTemplate}>{savingTemplate ? 'Salvando modelo...' : 'Salvar modelo desta cidade'}</button>}
@@ -561,7 +633,7 @@ function DeadlinesPanel({
   return (
     <section className="detail-panel deadline-panel">
       <div className="section-note">
-        Estes são os mesmos prazos usados pelo sino e pelas notificações do LicitaGestão.
+        Aqui aparecem somente datas operacionais da licitação, como a sessão. A validade da Carta Proposta não é tratada como prazo.
       </div>
       <div className="deadline-list">
         {deadlines.map((item) => (
@@ -583,11 +655,7 @@ function DeadlinesPanel({
                 {item.noticeNumber || item.processNumber || 'Licitação sem número'} · {item.municipality}
                 {item.state ? `/${item.state}` : ''}
               </span>
-              <small>
-                {item.type === 'SESSION'
-                  ? 'Data da sessão cadastrada na licitação.'
-                  : 'Prazo calculado pela validade da proposta cadastrada.'}
-              </small>
+              <small>Data da sessão cadastrada na licitação.</small>
             </span>
             <span className="deadline-meta">
               <strong>

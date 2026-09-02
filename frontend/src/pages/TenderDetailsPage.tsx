@@ -80,11 +80,7 @@ export function TenderDetailsPage() {
         <Info label="Valor global" value={formatCurrency(tender.estimatedValue)} />
         <Info
           label="Validade"
-          value={
-            tender.proposalValidityDays
-              ? `${tender.proposalValidityDays} dias — ${formatDate(tender.proposalExpirationDate)}`
-              : 'Não informada'
-          }
+          value={tender.proposalValidityDays ? `${tender.proposalValidityDays} dias` : 'Não informada'}
         />
         <Info label="Garantia de 1%" value={Number(tender.guaranteePercentage) === 1 ? 'Sim' : 'Não'} />
         <Info label="Planilha" value={tender.spreadsheetReady ? 'Pronta' : 'Ainda não pronta'} />

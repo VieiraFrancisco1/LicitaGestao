@@ -4,6 +4,7 @@ import {
   buildProposalPdf,
   getProposalLetterContext,
   getProposalTemplate,
+  importProposalPdfTemplate,
   saveProposalTemplate
 } from '../services/proposal-letter.service.js';
 import { AppError } from '../utils/app-error.js';
@@ -24,6 +25,37 @@ export const saveTemplate = async (req: Request, res: Response) => {
     metadata: { municipality: item.municipality, state: item.state }
   });
   res.json({ success: true, message: 'Modelo da Carta Proposta salvo', data: item });
+};
+
+
+export const importPdfTemplate = async (req: Request, res: Response) => {
+  if (!req.file) throw new AppError('Selecione um PDF de Carta Proposta', 422);
+  const item = await importProposalPdfTemplate(
+    String(req.body.bidId),
+    { buffer: req.file.buffer, originalname: req.file.originalname, mimetype: req.file.mimetype },
+    req.auth!
+  );
+  await recordAudit(req.auth!, {
+    action: AuditActions.UPLOAD,
+    entityType: 'PROPOSAL_TEMPLATE',
+    entityId: item.id,
+    entityLabel: item.municipality,
+    description: 'Modelo de Carta Proposta importado de PDF',
+    metadata: {
+      municipality: item.municipality,
+      state: item.state,
+      sourceFileName: item.sourceFileName,
+      detectedFields: item.detectedFields,
+      warnings: item.warnings
+    }
+  });
+  res.json({
+    success: true,
+    message: item.warnings.length
+      ? 'PDF importado. Revise os campos que não foram identificados automaticamente.'
+      : 'PDF importado e convertido em modelo com sucesso',
+    data: item
+  });
 };
 
 export const context = async (req: Request, res: Response) => {

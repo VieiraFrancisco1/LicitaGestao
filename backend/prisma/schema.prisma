@@ -275,13 +275,16 @@ model DiscountCalculation {
 }
 
 model ProposalLetterTemplate {
-  id           String   @id @default(uuid()) @db.Uuid
-  scopeKey     String   @unique @map("scope_key") @db.VarChar(180)
-  municipality String   @db.VarChar(120)
-  state        String?  @db.Char(2)
-  bodyTemplate String   @map("body_template") @db.Text
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  id                  String    @id @default(uuid()) @db.Uuid
+  scopeKey            String    @unique @map("scope_key") @db.VarChar(180)
+  municipality        String    @db.VarChar(120)
+  state               String?   @db.Char(2)
+  bodyTemplate        String    @map("body_template") @db.Text
+  sourceType          String    @default("TEXT") @map("source_type") @db.VarChar(20)
+  sourceFileName      String?   @map("source_file_name") @db.VarChar(255)
+  sourcePdfImportedAt DateTime? @map("source_pdf_imported_at")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
 
   @@index([municipality, state])
   @@map("proposal_letter_templates")

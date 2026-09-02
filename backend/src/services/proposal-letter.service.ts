@@ -3,6 +3,7 @@ import { prisma } from '../config/database.js';
 import { AppError } from '../utils/app-error.js';
 import { assertCompanyWriteAccess, type AuthScope } from './access.service.js';
 import { getBid } from './bid.service.js';
+import { brlInWords, convertExtractedLetterToTemplate, extractTextFromProposalPdf } from '../utils/proposal-pdf.js';
 
 export const DEFAULT_PROPOSAL_TEMPLATE = `CARTA PROPOSTA
 
@@ -40,12 +41,15 @@ const scopeKey = (municipality: string, state?: string | null) =>
 
 export async function getProposalTemplate(municipality: string, state: string | null | undefined) {
   const key = scopeKey(municipality, state);
-  const template = await prisma.proposalLetterTemplate.findUnique({ where: { scopeKey: key } });
+  const template = await (prisma as any).proposalLetterTemplate.findUnique({ where: { scopeKey: key } });
   return {
     municipality,
     state: state || null,
     bodyTemplate: template?.bodyTemplate ?? DEFAULT_PROPOSAL_TEMPLATE,
     custom: Boolean(template),
+    sourceType: template?.sourceType ?? 'TEXT',
+    sourceFileName: template?.sourceFileName ?? null,
+    sourcePdfImportedAt: template?.sourcePdfImportedAt ?? null,
     updatedAt: template?.updatedAt ?? null
   };
 }
@@ -56,18 +60,24 @@ export async function saveProposalTemplate(
 ) {
   if (auth.role === UserRole.EMPRESA) throw new AppError('Apenas a equipe pode alterar modelos de Carta Proposta', 403);
   const key = scopeKey(input.municipality, input.state);
-  return prisma.proposalLetterTemplate.upsert({
+  return (prisma as any).proposalLetterTemplate.upsert({
     where: { scopeKey: key },
     create: {
       scopeKey: key,
       municipality: input.municipality.trim(),
       state: input.state?.trim().toUpperCase() || null,
-      bodyTemplate: input.bodyTemplate.trim()
+      bodyTemplate: input.bodyTemplate.trim(),
+      sourceType: 'TEXT',
+      sourceFileName: null,
+      sourcePdfImportedAt: null
     },
     update: {
       municipality: input.municipality.trim(),
       state: input.state?.trim().toUpperCase() || null,
-      bodyTemplate: input.bodyTemplate.trim()
+      bodyTemplate: input.bodyTemplate.trim(),
+      sourceType: 'TEXT',
+      sourceFileName: null,
+      sourcePdfImportedAt: null
     }
   });
 }
@@ -78,21 +88,81 @@ const brl = (value: string | number) =>
 const dateBr = (value: Date) =>
   new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Fortaleza' }).format(value);
 
+
 function replaceTemplate(template: string, values: Record<string, string>) {
   return template.replace(/\{\{([a-z0-9_]+)\}\}/gi, (_full, key: string) => values[key] ?? `{{${key}}}`);
 }
 
+
+export async function importProposalPdfTemplate(
+  bidId: string,
+  file: { buffer: Buffer; originalname: string; mimetype: string },
+  auth: AuthScope
+) {
+  if (auth.role === UserRole.EMPRESA) throw new AppError('Apenas a equipe pode importar modelos de Carta Proposta', 403);
+  if (file.mimetype !== 'application/pdf' && !file.originalname.toLowerCase().endsWith('.pdf')) {
+    throw new AppError('Selecione um arquivo PDF de Carta Proposta', 422);
+  }
+  const bid = await getBid(bidId, auth);
+  await assertCompanyWriteAccess(bid.companyId, auth);
+  const extractedText = await extractTextFromProposalPdf(file.buffer);
+  const converted = convertExtractedLetterToTemplate(extractedText, {
+    municipality: bid.tender.municipality,
+    companyLegalName: bid.company.legalName,
+    companyTradeName: bid.company.tradeName,
+    cnpj: bid.company.cnpj,
+    representative: bid.company.contactName
+  });
+  if (converted.bodyTemplate.length < 20) throw new AppError('O PDF não contém texto suficiente para virar um modelo', 422);
+
+  const key = scopeKey(bid.tender.municipality, bid.tender.state);
+  const saved = await (prisma as any).proposalLetterTemplate.upsert({
+    where: { scopeKey: key },
+    create: {
+      scopeKey: key,
+      municipality: bid.tender.municipality.trim(),
+      state: bid.tender.state?.trim().toUpperCase() || null,
+      bodyTemplate: converted.bodyTemplate,
+      sourceType: 'PDF_IMPORT',
+      sourceFileName: file.originalname.slice(0, 255),
+      sourcePdfImportedAt: new Date()
+    },
+    update: {
+      municipality: bid.tender.municipality.trim(),
+      state: bid.tender.state?.trim().toUpperCase() || null,
+      bodyTemplate: converted.bodyTemplate,
+      sourceType: 'PDF_IMPORT',
+      sourceFileName: file.originalname.slice(0, 255),
+      sourcePdfImportedAt: new Date()
+    }
+  });
+
+  return {
+    id: saved.id,
+    municipality: saved.municipality,
+    state: saved.state,
+    sourceType: saved.sourceType,
+    sourceFileName: saved.sourceFileName,
+    sourcePdfImportedAt: saved.sourcePdfImportedAt,
+    bodyTemplate: saved.bodyTemplate,
+    detectedFields: converted.detectedFields,
+    warnings: converted.warnings,
+    extractedCharacters: extractedText.length
+  };
+}
+
 export async function getProposalLetterContext(bidId: string, auth: AuthScope) {
   const bid = await getBid(bidId, auth);
+  const tender = bid.tender as typeof bid.tender & { modality?: string | null; executionTerm?: string | null };
   await assertCompanyWriteAccess(bid.companyId, auth);
   const discount = await prisma.discountCalculation.findUnique({
     where: { companyId_tenderId: { companyId: bid.companyId, tenderId: bid.tenderId } }
   });
-  const template = await getProposalTemplate(bid.tender.municipality, bid.tender.state);
+  const template = await getProposalTemplate(tender.municipality, tender.state);
 
   const missing: string[] = [];
-  if (!bid.tender.noticeNumber) missing.push('Número da licitação');
-  if (!bid.tender.executionTerm) missing.push('Prazo de execução');
+  if (!tender.noticeNumber) missing.push('Número da licitação');
+  if (!tender.executionTerm) missing.push('Prazo de execução');
   if (!discount?.discountedValue) missing.push('Valor final da baixa');
 
   const values = {
@@ -100,15 +170,16 @@ export async function getProposalLetterContext(bidId: string, auth: AuthScope) {
     empresa_nome: bid.company.tradeName || bid.company.legalName,
     cnpj: bid.company.cnpj,
     representante: bid.company.contactName || 'Representante legal',
-    municipio: bid.tender.municipality,
-    estado: bid.tender.state || '',
-    modalidade: bid.tender.modality || 'Licitação',
-    numero_licitacao: bid.tender.noticeNumber || 'não informado',
-    processo_administrativo: bid.tender.processNumber || 'não informado',
-    objeto: bid.tender.object,
+    municipio: tender.municipality,
+    estado: tender.state || '',
+    modalidade: tender.modality || 'Licitação',
+    numero_licitacao: tender.noticeNumber || 'não informado',
+    processo_administrativo: tender.processNumber || 'não informado',
+    objeto: tender.object,
     valor_global: discount?.discountedValue ? brl(discount.discountedValue.toString()) : 'não informado',
-    prazo_execucao: bid.tender.executionTerm || 'não informado',
-    validade_proposta: bid.tender.proposalValidityDays ? `${bid.tender.proposalValidityDays} dias` : 'não informada',
+    valor_global_extenso: discount?.discountedValue ? brlInWords(discount.discountedValue.toString()) : 'não informado',
+    prazo_execucao: tender.executionTerm || 'não informado',
+    validade_proposta: tender.proposalValidityDays ? `${tender.proposalValidityDays} dias` : 'não informada',
     data_atual: dateBr(new Date())
   };
 
@@ -123,10 +194,10 @@ export async function getProposalLetterContext(bidId: string, auth: AuthScope) {
     generatedText: replaceTemplate(template.bodyTemplate, values),
     discountedValue: discount?.discountedValue?.toString() ?? null,
     discountPercentage:
-      discount?.discountedValue && bid.tender.estimatedValue
-        ? Number(bid.tender.estimatedValue)
-            ? ((Number(bid.tender.estimatedValue) - Number(discount.discountedValue)) /
-                Number(bid.tender.estimatedValue)) *
+      discount?.discountedValue && tender.estimatedValue
+        ? Number(tender.estimatedValue)
+            ? ((Number(tender.estimatedValue) - Number(discount.discountedValue)) /
+                Number(tender.estimatedValue)) *
               100
             : null
         : null
