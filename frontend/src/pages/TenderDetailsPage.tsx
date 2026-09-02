@@ -1,4 +1,4 @@
-import { ArrowLeft, Building2, FileText, FolderOpen, Pencil } from 'lucide-react';
+import { ArrowLeft, Building2, ExternalLink, FileSpreadsheet, FileText, FolderOpen, Pencil } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api, errorMessage } from '../services/api';
@@ -45,6 +45,31 @@ export function TenderDetailsPage() {
         </Link>
       </div>
       {error && <div className="alert alert-error">{error}</div>}
+      {(tender.seobraLink || tender.platformLink) && (
+        <section className="detail-panel tender-links-panel">
+          <div className="panel-heading">
+            <div>
+              <span className="eyebrow">Acessos rápidos</span>
+              <h3>Links da licitação</h3>
+            </div>
+          </div>
+          <div className="tender-link-actions">
+            {tender.seobraLink && (
+              <a className="primary-button" href={tender.seobraLink} target="_blank" rel="noreferrer">
+                <FileSpreadsheet size={17} />
+                Abrir no SEOBRA
+                <ExternalLink size={14} />
+              </a>
+            )}
+            {tender.platformLink && (
+              <a className="secondary-button" href={tender.platformLink} target="_blank" rel="noreferrer">
+                <ExternalLink size={17} />
+                Abrir na plataforma
+              </a>
+            )}
+          </div>
+        </section>
+      )}
       <div className="details-grid">
         <Info label="Data" value={formatDate(tender.sessionDate)} />
         <Info label="Plataforma" value={tender.platform?.name || 'Não informada'} />

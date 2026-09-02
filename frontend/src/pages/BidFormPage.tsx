@@ -12,6 +12,8 @@ type TenderForm = {
   estimatedValue: string;
   requiresGuaranteeOnePercent: boolean;
   platformId: string;
+  platformLink: string;
+  seobraLink: string;
 };
 
 const emptyForm: TenderForm = {
@@ -21,7 +23,9 @@ const emptyForm: TenderForm = {
   proposalValidityDays: '',
   estimatedValue: '',
   requiresGuaranteeOnePercent: false,
-  platformId: ''
+  platformId: '',
+  platformLink: '',
+  seobraLink: ''
 };
 
 export function BidFormPage() {
@@ -54,7 +58,9 @@ export function BidFormPage() {
           estimatedValue: tender.estimatedValue ?? '',
           requiresGuaranteeOnePercent:
             tender.guaranteeType !== 'NAO_EXIGIDA' && Number(tender.guaranteePercentage) === 1,
-          platformId: tender.platformId ?? ''
+          platformId: tender.platformId ?? '',
+          platformLink: tender.platformLink ?? '',
+          seobraLink: tender.seobraLink ?? ''
         });
       })
       .catch((err) => setError(errorMessage(err)))
@@ -179,6 +185,26 @@ export function BidFormPage() {
                 Execute as migrations da atualização ou cadastre uma plataforma no menu Plataformas.
               </small>
             )}
+          </label>
+          <label>
+            Link da licitação na plataforma
+            <input
+              type="url"
+              placeholder="https://..."
+              value={form.platformLink}
+              onChange={(event) => field('platformLink', event.target.value)}
+            />
+            <small className="field-help">Cole manualmente o link direto da licitação na plataforma.</small>
+          </label>
+          <label>
+            Link do SEOBRA
+            <input
+              type="url"
+              placeholder="https://..."
+              value={form.seobraLink}
+              onChange={(event) => field('seobraLink', event.target.value)}
+            />
+            <small className="field-help">Cole manualmente o link usado para abrir a planilha desta licitação no SEOBRA.</small>
           </label>
           <label className="full">
             Objeto

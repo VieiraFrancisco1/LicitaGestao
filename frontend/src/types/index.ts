@@ -96,6 +96,7 @@ export type Tender = {
   platformId: string | null;
   platform: Platform | null;
   platformLink: string | null;
+  seobraLink: string | null;
   spreadsheetReady: boolean;
   listStatus: 'PENDENTE' | 'ANEXADA';
   attachedCompanies: number;

@@ -2939,3 +2939,16 @@ td small {
     gap: 4px;
   }
 }
+
+.tender-links-panel {
+  display: grid;
+  gap: 14px;
+}
+.tender-link-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.tender-link-actions a {
+  text-decoration: none;
+}

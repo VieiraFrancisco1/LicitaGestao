@@ -179,6 +179,7 @@ model Tender {
   platformId             String?               @map("platform_id") @db.Uuid
   platform               Platform?             @relation(fields: [platformId], references: [id], onDelete: Restrict)
   platformLink           String?               @map("platform_link") @db.VarChar(500)
+  seobraLink             String?               @map("seobra_link") @db.VarChar(500)
   spreadsheetReady       Boolean               @default(false) @map("spreadsheet_ready")
   listStatus             TenderListStatus      @default(PENDENTE) @map("list_status")
   createdById            String                @map("created_by_id") @db.Uuid

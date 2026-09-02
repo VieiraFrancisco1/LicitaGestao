@@ -1,6 +1,14 @@
 import { TenderListStatus } from '@prisma/client';
 import { z } from 'zod';
 
+
+const optionalHttpUrl = z
+  .string()
+  .trim()
+  .max(500)
+  .refine((value) => value === '' || /^https?:\/\//i.test(value), 'Informe um link começando com http:// ou https://')
+  .optional();
+
 const date = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, 'Data inválida')
@@ -13,7 +21,9 @@ export const tenderBody = z.object({
   proposalValidityDays: z.coerce.number().int().min(1).max(3650),
   estimatedValue: z.coerce.number().positive(),
   requiresGuaranteeOnePercent: z.boolean(),
-  platformId: z.string().uuid()
+  platformId: z.string().uuid(),
+  platformLink: optionalHttpUrl,
+  seobraLink: optionalHttpUrl
 });
 
 export const createTenderSchema = z.object({ body: tenderBody, params: z.object({}), query: z.object({}) });

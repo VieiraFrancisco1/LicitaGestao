@@ -19,6 +19,7 @@ export type TenderInput = {
   guaranteeValue?: number | null;
   platformId?: string | null;
   platformLink?: string | null;
+  seobraLink?: string | null;
   requiresGuaranteeOnePercent?: boolean;
 };
 
@@ -58,6 +59,7 @@ const clean = (data: TenderInput, referenceValue?: number | Prisma.Decimal | nul
   return {
     ...rest,
     ...(data.platformLink !== undefined ? { platformLink: data.platformLink || null } : {}),
+    ...(data.seobraLink !== undefined ? { seobraLink: data.seobraLink || null } : {}),
     ...(requiresGuaranteeOnePercent !== undefined
       ? {
           guaranteeType: requiresGuaranteeOnePercent
