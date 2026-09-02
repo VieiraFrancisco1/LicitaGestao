@@ -1,4 +1,4 @@
-import { FileText, FilterX, FolderOpen, Link2, Pencil, Search } from 'lucide-react';
+import { ExternalLink, FileText, FilterX, FolderOpen, Link2, Pencil, Search } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -194,7 +194,37 @@ export function BidsPage({ fixedCompanyId }: { fixedCompanyId?: string }) {
                         {optionLabel(progressOptions, bid.progress as BidProgress)}
                       </span>
                     </td>
-                    <td>{bid.tender.platform?.name || '—'}</td>
+                    <td>
+                      <div className="table-platform-cell">
+                        <span>{bid.tender.platform?.name || '—'}</span>
+                        <div className="table-external-links">
+                          {bid.tender.platformLink && (
+                            <a
+                              className="inline-link-button"
+                              href={bid.tender.platformLink}
+                              target="_blank"
+                              rel="noreferrer"
+                              title="Abrir esta licitação na plataforma"
+                            >
+                              <ExternalLink size={13} />
+                              Plataforma
+                            </a>
+                          )}
+                          {bid.tender.seobraLink && (
+                            <a
+                              className="inline-link-button"
+                              href={bid.tender.seobraLink}
+                              target="_blank"
+                              rel="noreferrer"
+                              title="Abrir esta licitação no SEOBRA"
+                            >
+                              <ExternalLink size={13} />
+                              SEOBRA
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    </td>
                     <td>{optionLabel(situationOptions, bid.situation as BidSituation)}</td>
                     <td>
                       <div className="row-actions">

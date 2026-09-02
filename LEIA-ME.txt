@@ -1,0 +1,23 @@
+AJUSTE - Links SEOBRA e Plataforma na área da empresa
+
+Este patch NÃO altera banco de dados e NÃO contém migration.
+Ele apenas corrige a exibição dos links já salvos na licitação geral.
+
+Arquivos alterados:
+- frontend/src/pages/BidsPage.tsx
+- frontend/src/pages/BidDetailsPage.tsx
+- frontend/src/styles.css
+
+Resultado:
+1. Na aba Empresa > Licitações, a coluna Plataforma passa a mostrar atalhos Plataforma e SEOBRA quando os links existirem.
+2. Ao abrir a participação da empresa, o cabeçalho mostra Abrir no SEOBRA e Abrir na plataforma.
+3. Na aba Dados da participação, os dois links também ficam visíveis.
+
+Depois de copiar, execute:
+npm run typecheck
+npm run lint
+npm run build
+
+git add .
+git commit -m "Exibe links SEOBRA e plataforma na area da empresa"
+git push

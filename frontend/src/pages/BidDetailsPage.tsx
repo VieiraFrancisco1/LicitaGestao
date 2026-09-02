@@ -1,4 +1,4 @@
-import { ArrowLeft, CheckCircle2, Download, File as FileIcon, FilePlus2, Pencil, Trash2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Download, ExternalLink, File as FileIcon, FilePlus2, Pencil, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -97,6 +97,28 @@ export function BidDetailsPage() {
           <p>{bid.tender.object}</p>
         </div>
         <div className="details-actions">
+          {bid.tender.seobraLink && (
+            <a
+              className="secondary-button"
+              href={bid.tender.seobraLink}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <ExternalLink size={16} />
+              Abrir no SEOBRA
+            </a>
+          )}
+          {bid.tender.platformLink && (
+            <a
+              className="secondary-button"
+              href={bid.tender.platformLink}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <ExternalLink size={16} />
+              Abrir na plataforma
+            </a>
+          )}
           <span className="status-pill active">{optionLabel(situationOptions, bid.situation)}</span>
           {canEdit && bid.situation !== 'ANEXADA' && (
             <button
@@ -176,6 +198,30 @@ export function BidDetailsPage() {
             <div>
               <dt>Valor da garantia</dt>
               <dd>{formatCurrency(bid.tender.guaranteeValue)}</dd>
+            </div>
+            <div>
+              <dt>Link da plataforma</dt>
+              <dd>
+                {bid.tender.platformLink ? (
+                  <a href={bid.tender.platformLink} target="_blank" rel="noreferrer">
+                    Abrir plataforma
+                  </a>
+                ) : (
+                  '—'
+                )}
+              </dd>
+            </div>
+            <div>
+              <dt>Link do SEOBRA</dt>
+              <dd>
+                {bid.tender.seobraLink ? (
+                  <a href={bid.tender.seobraLink} target="_blank" rel="noreferrer">
+                    Abrir SEOBRA
+                  </a>
+                ) : (
+                  '—'
+                )}
+              </dd>
             </div>
             <div className="full">
               <dt>Observações</dt>

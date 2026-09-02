@@ -2952,3 +2952,27 @@ td small {
 .tender-link-actions a {
   text-decoration: none;
 }
+
+/* Links externos da licitação também na área da empresa */
+.table-platform-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+}
+
+.table-external-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.inline-link-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
