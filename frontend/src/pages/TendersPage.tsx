@@ -296,8 +296,8 @@ export function TendersPage() {
                 <th>Objeto</th>
                 <th>Validade</th>
                 <th>Valor e plataforma</th>
-                <th>Planilha</th>
                 <th>Empresas</th>
+                <th>Planilha</th>
                 <th>Ações</th>
               </tr>
             </thead>
@@ -334,22 +334,55 @@ export function TendersPage() {
                   return (
                     <tr key={tender.id}>
                       <td className="tender-identity-cell compact-license-cell">
-                        <strong>{tender.municipality}</strong>
-                        {tenderLabel && <small>{tenderLabel}</small>}
+                        <div className="tender-cell-content">
+                          <strong>{tender.municipality}</strong>
+                          {tenderLabel && <small>{tenderLabel}</small>}
+                        </div>
                       </td>
                       <td className="tender-date-cell">
-                        <strong>{formatDate(tender.sessionDate)}</strong>
+                        <div className="tender-cell-content">
+                          <strong>{formatDate(tender.sessionDate)}</strong>
+                        </div>
                       </td>
                       <td className="object-cell organized-object-cell">
-                        <strong>{tender.object}</strong>
+                        <div className="tender-cell-content">
+                          <strong>{tender.object}</strong>
+                        </div>
                       </td>
                       <td className="tender-validity-cell">
-                        <strong>{tender.proposalValidityDays ?? '—'} dias</strong>
-                        <small>Validade da proposta</small>
+                        <div className="tender-cell-content">
+                          <strong>{tender.proposalValidityDays ?? '—'} dias</strong>
+                          <small>Validade da proposta</small>
+                        </div>
                       </td>
                       <td className="tender-value-platform-cell">
-                        <strong>{formatCurrency(tender.estimatedValue)}</strong>
-                        <small>{tender.platform?.name || 'Sem plataforma'}</small>
+                        <div className="tender-cell-content">
+                          <strong>{formatCurrency(tender.estimatedValue)}</strong>
+                          <small>{tender.platform?.name || 'Sem plataforma'}</small>
+                        </div>
+                      </td>
+                      <td className="companies-cell organized-companies-cell">
+                        <div className="tender-cell-content tender-companies-content">
+                          <span className="association-count">
+                            <Building2 size={15} />
+                            {tender.attachedCompanies}/{tender._count?.bids ?? 0} anexaram
+                          </span>
+                          {attachedBids.length > 0 && (
+                            <div className="attached-company-list">
+                              {attachedBids.map((bid) => (
+                                <span key={bid.id} className="attached-company-pill">
+                                  {bid.company.tradeName || bid.company.legalName} anexou
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          {attachedBids.length === 0 && pendingBids.length > 0 && (
+                            <small>
+                              Associadas: {pendingBids.map((bid) => bid.company.tradeName || bid.company.legalName).join(', ')}
+                            </small>
+                          )}
+                          {tender.bids.length === 0 && <small>Nenhuma empresa associada</small>}
+                        </div>
                       </td>
                       <td className="spreadsheet-control-cell">
                         <div className="spreadsheet-inline-layout">
@@ -393,25 +426,6 @@ export function TendersPage() {
                             </button>
                           </div>
                         </div>
-                      </td>
-                      <td className="companies-cell organized-companies-cell">
-                        <span className="association-count">
-                          <Building2 size={15} />
-                          {tender.attachedCompanies}/{tender._count?.bids ?? 0} anexaram
-                        </span>
-                        {attachedBids.length > 0 && (
-                          <div className="attached-company-list">
-                            {attachedBids.map((bid) => (
-                              <span key={bid.id} className="attached-company-pill">
-                                {bid.company.tradeName || bid.company.legalName} anexou
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                        {attachedBids.length === 0 && pendingBids.length > 0 && (
-                          <small>Associadas: {pendingBids.map((bid) => bid.company.tradeName || bid.company.legalName).join(', ')}</small>
-                        )}
-                        {tender.bids.length === 0 && <small>Nenhuma empresa associada</small>}
                       </td>
                       <td className="organized-actions-cell">
                         <div className="organized-row-actions paired-row-actions">
