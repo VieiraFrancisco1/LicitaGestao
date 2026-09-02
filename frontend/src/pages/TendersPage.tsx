@@ -1,11 +1,9 @@
 import {
   Building2,
-  CalendarDays,
   CheckCircle2,
-  ChevronLeft,
-  ChevronRight,
   ClipboardCheck,
   FileText,
+  ExternalLink,
   FilterX,
   FolderOpen,
   Link2,
@@ -41,9 +39,19 @@ const monthOptions = [
   { value: '12', label: 'Dezembro' }
 ];
 
-function monthRange(year: number, month: number) {
-  const lastDay = new Date(year, month, 0).getDate();
-  const mm = String(month).padStart(2, '0');
+function dateRange(year: number, month: string, day: string) {
+  if (month === 'all') return {};
+
+  const monthNumber = Number(month);
+  const mm = String(monthNumber).padStart(2, '0');
+
+  if (day !== 'all') {
+    const dd = String(Number(day)).padStart(2, '0');
+    const date = `${year}-${mm}-${dd}`;
+    return { dateFrom: date, dateTo: date };
+  }
+
+  const lastDay = new Date(year, monthNumber, 0).getDate();
   return {
     dateFrom: `${year}-${mm}-01`,
     dateTo: `${year}-${mm}-${String(lastDay).padStart(2, '0')}`
@@ -58,6 +66,7 @@ export function TendersPage() {
   const [companies, setCompanies] = useState<CompanySummary[]>([]);
   const [search, setSearch] = useState('');
   const [listStatus, setListStatus] = useState<'PENDENTE' | 'ANEXADA'>('PENDENTE');
+  const [day, setDay] = useState('all');
   const [month, setMonth] = useState(String(currentMonth));
   const [year, setYear] = useState(currentYear);
   const [page, setPage] = useState(1);
@@ -68,12 +77,14 @@ export function TendersPage() {
   const [notesTender, setNotesTender] = useState<Tender | null>(null);
 
   const yearOptions = Array.from({ length: 8 }, (_, index) => currentYear - 5 + index);
+  const daysInSelectedMonth = month === 'all' ? 31 : new Date(year, Number(month), 0).getDate();
+  const dayOptions = Array.from({ length: daysInSelectedMonth }, (_, index) => index + 1);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const range = month === 'all' ? {} : monthRange(year, Number(month));
+      const range = dateRange(year, month, day);
       const response = await api.get<ApiResponse<Paginated<Tender>>>('/tenders', {
         params: {
           search: search || undefined,
@@ -89,7 +100,7 @@ export function TendersPage() {
     } finally {
       setLoading(false);
     }
-  }, [search, listStatus, month, year, page]);
+  }, [search, listStatus, day, month, year, page]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => void load(), 250);
@@ -163,30 +174,12 @@ export function TendersPage() {
     }
   };
 
-  const changeMonth = (delta: number) => {
-    if (month === 'all') {
-      setMonth(String(currentMonth));
-      setYear(currentYear);
-      setPage(1);
-      return;
-    }
-    let nextMonth = Number(month) + delta;
-    let nextYear = year;
-    if (nextMonth < 1) {
-      nextMonth = 12;
-      nextYear -= 1;
-    }
-    if (nextMonth > 12) {
-      nextMonth = 1;
-      nextYear += 1;
-    }
-    setMonth(String(nextMonth));
-    setYear(nextYear);
-    setPage(1);
-  };
-
-  const selectedMonthLabel =
-    month === 'all' ? `Todos os meses de ${year}` : `${monthOptions.find((item) => item.value === month)?.label} de ${year}`;
+  const selectedDateLabel =
+    month === 'all'
+      ? `todos os meses de ${year}`
+      : day === 'all'
+        ? `${monthOptions.find((item) => item.value === month)?.label} de ${year}`
+        : `${String(Number(day)).padStart(2, '0')}/${String(Number(month)).padStart(2, '0')}/${year}`;
 
   return (
     <div className="page-stack">
@@ -225,50 +218,61 @@ export function TendersPage() {
       </div>
 
       <section className="table-card tender-control-card">
-        <div className="tender-month-bar">
-          <div className="month-navigation">
-            <button className="icon-button" onClick={() => changeMonth(-1)} title="Mês anterior">
-              <ChevronLeft size={17} />
-            </button>
-            <div className="month-title">
-              <CalendarDays size={18} />
-              <span>
-                <small>Sessões de</small>
-                <strong>{selectedMonthLabel}</strong>
-              </span>
-            </div>
-            <button className="icon-button" onClick={() => changeMonth(1)} title="Próximo mês">
-              <ChevronRight size={17} />
-            </button>
-          </div>
-          <div className="month-selectors">
-            <select
-              value={month}
-              onChange={(event) => {
-                setMonth(event.target.value);
-                setPage(1);
-              }}
-            >
-              <option value="all">Todos os meses</option>
-              {monthOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            <select
-              value={year}
-              onChange={(event) => {
-                setYear(Number(event.target.value));
-                setPage(1);
-              }}
-            >
-              {yearOptions.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
+        <div className="tender-date-filter-bar">
+          <div className="tender-date-selectors">
+            <label>
+              <span>Dia</span>
+              <select
+                value={day}
+                disabled={month === 'all'}
+                onChange={(event) => {
+                  setDay(event.target.value);
+                  setPage(1);
+                }}
+              >
+                <option value="all">Todos</option>
+                {dayOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {String(option).padStart(2, '0')}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>Mês</span>
+              <select
+                value={month}
+                onChange={(event) => {
+                  setMonth(event.target.value);
+                  setDay('all');
+                  setPage(1);
+                }}
+              >
+                <option value="all">Todos os meses</option>
+                {monthOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>Ano</span>
+              <select
+                value={year}
+                onChange={(event) => {
+                  setYear(Number(event.target.value));
+                  setDay('all');
+                  setPage(1);
+                }}
+              >
+                {yearOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
         </div>
 
@@ -288,6 +292,7 @@ export function TendersPage() {
             className="secondary-button"
             onClick={() => {
               setSearch('');
+              setDay('all');
               setMonth(String(currentMonth));
               setYear(currentYear);
               setPage(1);
@@ -322,7 +327,7 @@ export function TendersPage() {
                 <tr>
                   <td colSpan={6} className="table-message">
                     <FileText size={28} />
-                    Nenhuma licitação em {selectedMonthLabel.toLowerCase()}.
+                    Nenhuma licitação para {selectedDateLabel.toLowerCase()}.
                   </td>
                 </tr>
               )}
@@ -357,60 +362,72 @@ export function TendersPage() {
                       <td className="tender-value-platform-cell">
                         <strong>{formatCurrency(tender.estimatedValue)}</strong>
                         <small>{tender.platform?.name || 'Sem plataforma'}</small>
+                        {(tender.seobraLink || tender.platformLink) && (
+                          <div className="tender-quick-links">
+                            {tender.seobraLink && (
+                              <a href={tender.seobraLink} target="_blank" rel="noreferrer" title="Abrir no SEOBRA">
+                                <ExternalLink size={12} />
+                                SEOBRA
+                              </a>
+                            )}
+                            {tender.platformLink && (
+                              <a href={tender.platformLink} target="_blank" rel="noreferrer" title="Abrir na plataforma">
+                                <ExternalLink size={12} />
+                                Plataforma
+                              </a>
+                            )}
+                          </div>
+                        )}
                       </td>
                       <td className="spreadsheet-control-cell">
-                        <div className="spreadsheet-status-line">
-                          <span className={`spreadsheet-status-pill ${tender.spreadsheetReady ? 'ready' : ''}`}>
-                            {tender.spreadsheetReady ? <CheckCircle2 size={14} /> : <ClipboardCheck size={14} />}
-                            {tender.spreadsheetReady ? 'Pronta' : 'Em preparação'}
-                          </span>
-                        </div>
-                        <div className="spreadsheet-owner-line">
-                          <UserRoundCheck size={15} />
-                          <span>
-                            <small>Responsável</small>
-                            <strong>{tender.spreadsheetResponsibleUser?.name || 'Não definido'}</strong>
-                          </span>
-                        </div>
-                        {tender.spreadsheetNotes && (
-                          <button className="spreadsheet-note-preview" onClick={() => setNotesTender(tender)}>
-                            <MessageSquareText size={14} />
-                            <span>{tender.spreadsheetNotes}</span>
-                          </button>
-                        )}
-                        <div className="spreadsheet-actions">
-                          {canManageSpreadsheet && !tender.spreadsheetResponsibleUserId && (
-                            <button
-                              className="mini-action-button primary-soft"
-                              disabled={actionId === tender.id}
-                              onClick={() => void toggleResponsibility(tender, true)}
-                            >
-                              <UserRoundCheck size={14} />
-                              Assumir planilha
-                            </button>
-                          )}
-                          {canManageSpreadsheet && tender.spreadsheetResponsibleUserId && canRelease && (
-                            <button
-                              className="mini-action-button"
-                              disabled={actionId === tender.id}
-                              onClick={() => void toggleResponsibility(tender, false)}
-                            >
-                              <UserRoundX size={14} />
-                              Liberar
-                            </button>
-                          )}
-                          {(isResponsible || user?.role === 'ADMIN' || tender.spreadsheetNotes) && (
+                        <div className="spreadsheet-inline-layout">
+                          <div className="spreadsheet-inline-info">
+                            <div className="spreadsheet-status-line">
+                              <span className={`spreadsheet-status-pill ${tender.spreadsheetReady ? 'ready' : ''}`}>
+                                {tender.spreadsheetReady ? <CheckCircle2 size={14} /> : <ClipboardCheck size={14} />}
+                                {tender.spreadsheetReady ? 'Pronta' : 'Em preparação'}
+                              </span>
+                            </div>
+                            <div className="spreadsheet-owner-line">
+                              <UserRoundCheck size={15} />
+                              <span>
+                                <small>Responsável</small>
+                                <strong>{tender.spreadsheetResponsibleUser?.name || 'Não definido'}</strong>
+                              </span>
+                            </div>
+                          </div>
+                          <div className="spreadsheet-action-stack">
+                            {canManageSpreadsheet && !tender.spreadsheetResponsibleUserId && (
+                              <button
+                                className="mini-action-button primary-soft"
+                                disabled={actionId === tender.id}
+                                onClick={() => void toggleResponsibility(tender, true)}
+                              >
+                                <UserRoundCheck size={14} />
+                                Assumir
+                              </button>
+                            )}
+                            {canManageSpreadsheet && tender.spreadsheetResponsibleUserId && canRelease && (
+                              <button
+                                className="mini-action-button"
+                                disabled={actionId === tender.id}
+                                onClick={() => void toggleResponsibility(tender, false)}
+                              >
+                                <UserRoundX size={14} />
+                                Liberar
+                              </button>
+                            )}
                             <button className="mini-action-button" onClick={() => setNotesTender(tender)}>
                               <MessageSquareText size={14} />
-                              Observações
+                              Observação
                             </button>
-                          )}
+                          </div>
                           <button
-                            className={`mini-action-button ${tender.spreadsheetReady ? 'ready' : ''}`}
+                            className={`mini-action-button spreadsheet-ready-button ${tender.spreadsheetReady ? 'ready' : ''}`}
                             disabled={actionId === tender.id}
                             onClick={() => void toggleSpreadsheet(tender)}
                           >
-                            {tender.spreadsheetReady ? 'Marcar não pronta' : 'Marcar pronta'}
+                            {tender.spreadsheetReady ? 'Desmarcar pronta' : 'Marcar pronta'}
                           </button>
                         </div>
                       </td>
@@ -428,54 +445,60 @@ export function TendersPage() {
                         )}
                       </td>
                       <td className="organized-actions-cell">
-                        <div className="row-actions organized-row-actions">
-                          <Link className="action-button" to={`/licitacoes/${tender.id}`}>
-                            <FolderOpen size={15} />
-                            Abrir
-                          </Link>
-                          {companies.some((company) => !tender.bids.some((bid) => bid.companyId === company.id)) && (
-                            <button className="action-button" onClick={() => setAssociating(tender)}>
-                              <Link2 size={15} />
-                              Associar
-                            </button>
-                          )}
-                          {listStatus === 'PENDENTE' ? (
-                            <button
-                              className="action-button move-attached"
-                              disabled={!tender.allCompaniesAttached || actionId === tender.id}
-                              title={
-                                tender.allCompaniesAttached
-                                  ? 'Mover para já anexadas'
-                                  : 'Todas as empresas precisam marcar a participação como ANEXADA'
-                              }
-                              onClick={() => void moveTender(tender, 'ANEXADA')}
-                            >
-                              <CheckCircle2 size={15} />
-                              Já anexada
-                            </button>
-                          ) : (
-                            <button
-                              className="action-button"
-                              disabled={actionId === tender.id}
-                              onClick={() => void moveTender(tender, 'PENDENTE')}
-                            >
-                              <RotateCcw size={15} />
-                              Voltar
-                            </button>
-                          )}
-                          <Link className="action-button icon-only-action" to={`/licitacoes/${tender.id}/editar`} title="Editar">
-                            <Pencil size={15} />
-                          </Link>
-                          {user?.role !== 'EMPRESA' && (
-                            <button
-                              className="action-button icon-only-action danger-action"
-                              disabled={actionId === tender.id}
-                              onClick={() => void deleteTender(tender)}
-                              title="Excluir licitação"
-                            >
-                              <Trash2 size={15} />
-                            </button>
-                          )}
+                        <div className="organized-row-actions">
+                          <div className="primary-action-stack">
+                            <Link className="action-button compact-action-button" to={`/licitacoes/${tender.id}`}>
+                              <FolderOpen size={15} />
+                              Abrir
+                            </Link>
+                            {companies.some((company) => !tender.bids.some((bid) => bid.companyId === company.id)) && (
+                              <button className="action-button compact-action-button" onClick={() => setAssociating(tender)}>
+                                <Link2 size={15} />
+                                Associar
+                              </button>
+                            )}
+                          </div>
+                          <div className="secondary-action-stack">
+                            {listStatus === 'PENDENTE' ? (
+                              <button
+                                className="action-button compact-action-button move-attached"
+                                disabled={!tender.allCompaniesAttached || actionId === tender.id}
+                                title={
+                                  tender.allCompaniesAttached
+                                    ? 'Mover para já anexadas'
+                                    : 'Todas as empresas precisam marcar a participação como ANEXADA'
+                                }
+                                onClick={() => void moveTender(tender, 'ANEXADA')}
+                              >
+                                <CheckCircle2 size={15} />
+                                Já anexada
+                              </button>
+                            ) : (
+                              <button
+                                className="action-button compact-action-button"
+                                disabled={actionId === tender.id}
+                                onClick={() => void moveTender(tender, 'PENDENTE')}
+                              >
+                                <RotateCcw size={15} />
+                                Voltar
+                              </button>
+                            )}
+                            <div className="icon-action-row">
+                              <Link className="action-button icon-only-action" to={`/licitacoes/${tender.id}/editar`} title="Editar">
+                                <Pencil size={15} />
+                              </Link>
+                              {user?.role !== 'EMPRESA' && (
+                                <button
+                                  className="action-button icon-only-action danger-action"
+                                  disabled={actionId === tender.id}
+                                  onClick={() => void deleteTender(tender)}
+                                  title="Excluir licitação"
+                                >
+                                  <Trash2 size={15} />
+                                </button>
+                              )}
+                            </div>
+                          </div>
                         </div>
                       </td>
                     </tr>

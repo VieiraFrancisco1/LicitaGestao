@@ -3565,3 +3565,194 @@ td small {
     justify-content: flex-start;
   }
 }
+
+/* Ajuste fino da listagem de licitações: filtro único por data e linha compacta */
+.tender-date-filter-bar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-end;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+  background: #fbfcfe;
+}
+.tender-date-selectors {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.tender-date-selectors label {
+  display: grid;
+  gap: 4px;
+  color: #6f7c91;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .55px;
+  text-transform: uppercase;
+}
+.tender-date-selectors select {
+  height: 38px;
+  min-width: 86px;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  background: #fff;
+  color: #273247;
+  padding: 0 30px 0 10px;
+  font-size: 12px;
+  font-weight: 700;
+  outline: 0;
+}
+.tender-date-selectors label:nth-child(2) select { min-width: 150px; }
+.tender-date-selectors label:nth-child(3) select { min-width: 96px; }
+.tender-date-selectors select:focus {
+  border-color: #7aa2ed;
+  box-shadow: 0 0 0 3px #e9f0ff;
+}
+.tender-date-selectors select:disabled {
+  background: #f4f6f9;
+  color: #9aa4b4;
+  cursor: not-allowed;
+}
+
+.organized-tenders-table {
+  min-width: 1390px;
+}
+.organized-tenders-table th,
+.organized-tenders-table td {
+  vertical-align: middle;
+}
+.organized-tenders-table td {
+  padding-top: 13px;
+  padding-bottom: 13px;
+}
+.organized-tenders-table th:nth-child(1) { width: 190px; }
+.organized-tenders-table th:nth-child(2) { width: 285px; }
+.organized-tenders-table th:nth-child(3) { width: 175px; }
+.organized-tenders-table th:nth-child(4) { width: 370px; }
+.organized-tenders-table th:nth-child(5) { width: 175px; }
+.organized-tenders-table th:nth-child(6) { width: 195px; }
+
+.tender-value-platform-cell {
+  align-content: center;
+}
+.tender-quick-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 2px;
+}
+.tender-quick-links a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid #dbe5f5;
+  border-radius: 6px;
+  padding: 4px 6px;
+  background: #f6f9ff;
+  color: #315a9e;
+  font-size: 9px;
+  font-weight: 800;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.tender-quick-links a:hover {
+  border-color: #b9cbed;
+  background: #edf4ff;
+}
+
+.spreadsheet-control-cell {
+  display: table-cell;
+}
+.spreadsheet-inline-layout {
+  display: grid;
+  grid-template-columns: auto minmax(105px, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  min-width: 345px;
+}
+.spreadsheet-inline-info {
+  display: contents;
+}
+.spreadsheet-status-line {
+  min-width: 88px;
+}
+.spreadsheet-owner-line {
+  min-width: 105px;
+  align-items: center;
+}
+.spreadsheet-owner-line > span {
+  min-width: 0;
+}
+.spreadsheet-owner-line strong {
+  display: block;
+  max-width: 125px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.spreadsheet-action-stack {
+  display: grid;
+  align-content: center;
+  gap: 5px;
+  min-width: 92px;
+}
+.spreadsheet-action-stack .mini-action-button,
+.spreadsheet-ready-button {
+  width: 100%;
+  justify-content: center;
+  white-space: nowrap;
+}
+.spreadsheet-ready-button {
+  min-width: 92px;
+}
+
+.organized-actions-cell {
+  min-width: 185px;
+}
+.organized-row-actions {
+  display: grid;
+  grid-template-columns: minmax(82px, 1fr) minmax(82px, 1fr);
+  align-items: start;
+  gap: 7px;
+  white-space: normal;
+}
+.primary-action-stack,
+.secondary-action-stack {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+}
+.compact-action-button {
+  width: 100%;
+  min-height: 31px;
+  padding: 6px 8px;
+  justify-content: center;
+  white-space: nowrap;
+}
+.icon-action-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.icon-action-row .icon-only-action {
+  width: 100%;
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .tender-date-filter-bar {
+    justify-content: stretch;
+  }
+  .tender-date-selectors {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 90px minmax(150px, 1fr) 100px;
+  }
+  .tender-date-selectors select,
+  .tender-date-selectors label:nth-child(2) select,
+  .tender-date-selectors label:nth-child(3) select {
+    width: 100%;
+    min-width: 0;
+  }
+}
