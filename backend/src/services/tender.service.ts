@@ -84,6 +84,7 @@ const clean = (data: TenderInput, referenceValue?: number | Prisma.Decimal | nul
 const includeTender = (auth: AuthScope) =>
   ({
     platform: true,
+    spreadsheetResponsibleUser: { select: { id: true, name: true, email: true } },
     bids: {
       where: accessibleParticipationWhere(auth),
       include: { company: true, _count: { select: { documents: true } } },
@@ -208,6 +209,81 @@ const addAttachmentProgress = async <T extends { id: string; _count: { bids: num
       attachedCompanies,
       allCompaniesAttached: item._count.bids > 0 && attachedCompanies === item._count.bids
     };
+  });
+};
+
+export const deleteTender = async (id: string, auth: AuthScope) => {
+  if (auth.role === UserRole.EMPRESA) {
+    throw new AppError('Seu perfil não pode excluir licitações do controle geral', 403);
+  }
+  const tender = await prisma.tender.findUnique({
+    where: { id },
+    include: includeTender(auth)
+  });
+  if (!tender) throw new AppError('Licitação geral não encontrada', 404);
+  await prisma.tender.delete({ where: { id } });
+  return tender;
+};
+
+export const setSpreadsheetResponsibility = async (id: string, responsible: boolean, auth: AuthScope) => {
+  if (auth.role === UserRole.EMPRESA) {
+    throw new AppError('Seu perfil não pode assumir a planilha do controle geral', 403);
+  }
+  const tender = await prisma.tender.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      spreadsheetResponsibleUserId: true,
+      spreadsheetResponsibleUser: { select: { id: true, name: true } }
+    }
+  });
+  if (!tender) throw new AppError('Licitação geral não encontrada', 404);
+
+  if (responsible) {
+    if (tender.spreadsheetResponsibleUserId && tender.spreadsheetResponsibleUserId !== auth.userId) {
+      throw new AppError(
+        `Esta planilha já está sob responsabilidade de ${tender.spreadsheetResponsibleUser?.name ?? 'outro usuário'}`,
+        409
+      );
+    }
+    return prisma.tender.update({
+      where: { id },
+      data: { spreadsheetResponsibleUserId: auth.userId, updatedById: auth.userId },
+      include: includeTender(auth)
+    });
+  }
+
+  if (
+    tender.spreadsheetResponsibleUserId &&
+    tender.spreadsheetResponsibleUserId !== auth.userId &&
+    auth.role !== UserRole.ADMIN
+  ) {
+    throw new AppError('Somente o responsável atual ou um administrador pode liberar esta planilha', 403);
+  }
+  return prisma.tender.update({
+    where: { id },
+    data: { spreadsheetResponsibleUserId: null, updatedById: auth.userId },
+    include: includeTender(auth)
+  });
+};
+
+export const updateSpreadsheetNotes = async (id: string, notes: string | null, auth: AuthScope) => {
+  const tender = await prisma.tender.findUnique({
+    where: { id },
+    select: { id: true, spreadsheetResponsibleUserId: true }
+  });
+  if (!tender) throw new AppError('Licitação geral não encontrada', 404);
+  if (auth.role !== UserRole.ADMIN && tender.spreadsheetResponsibleUserId !== auth.userId) {
+    throw new AppError('Somente o responsável pela planilha pode alterar as observações', 403);
+  }
+  return prisma.tender.update({
+    where: { id },
+    data: {
+      spreadsheetNotes: notes?.trim() || null,
+      spreadsheetNotesUpdatedAt: new Date(),
+      updatedById: auth.userId
+    },
+    include: includeTender(auth)
   });
 };
 

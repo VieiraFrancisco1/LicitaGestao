@@ -72,3 +72,16 @@ export const tenderListStatusSchema = z.object({
   params: z.object({ id: z.string().uuid() }),
   query: z.object({})
 });
+
+
+export const spreadsheetResponsibilitySchema = z.object({
+  body: z.object({ responsible: z.boolean() }),
+  params: z.object({ id: z.string().uuid() }),
+  query: z.object({})
+});
+
+export const spreadsheetNotesSchema = z.object({
+  body: z.object({ notes: z.string().trim().max(10000).nullable() }),
+  params: z.object({ id: z.string().uuid() }),
+  query: z.object({})
+});

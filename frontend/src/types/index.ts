@@ -100,6 +100,10 @@ export type Tender = {
   platformLink: string | null;
   seobraLink: string | null;
   spreadsheetReady: boolean;
+  spreadsheetResponsibleUserId: string | null;
+  spreadsheetResponsibleUser: { id: string; name: string; email: string } | null;
+  spreadsheetNotes: string | null;
+  spreadsheetNotesUpdatedAt: string | null;
   listStatus: 'PENDENTE' | 'ANEXADA';
   attachedCompanies: number;
   allCompaniesAttached: boolean;

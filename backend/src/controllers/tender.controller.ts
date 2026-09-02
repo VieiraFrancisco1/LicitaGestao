@@ -1,10 +1,13 @@
 import type { Request, Response } from 'express';
 import {
   createTender,
+  deleteTender,
   getTender,
   listTenders,
   setSpreadsheetReady,
+  setSpreadsheetResponsibility,
   setTenderListStatus,
+  updateSpreadsheetNotes,
   updateTender
 } from '../services/tender.service.js';
 import { AuditActions, recordAudit } from '../services/audit.service.js';
@@ -80,4 +83,48 @@ export const listStatus = async (req: Request, res: Response) => {
     metadata: { listStatus: req.body.status }
   });
   res.json({ success: true, message: 'Licitação movida para a lista selecionada', data: tender });
+};
+
+
+export const remove = async (req: Request, res: Response) => {
+  const tender = await deleteTender(req.params.id as string, req.auth!);
+  await recordAudit(req.auth!, {
+    action: AuditActions.DELETE,
+    entityType: 'TENDER',
+    entityId: tender.id,
+    entityLabel: tender.noticeNumber || tender.processNumber || tender.municipality,
+    description: 'Licitação excluída do controle geral',
+    metadata: { municipality: tender.municipality, sessionDate: tender.sessionDate.toISOString() }
+  });
+  res.json({ success: true, message: 'Licitação excluída' });
+};
+
+export const spreadsheetResponsibility = async (req: Request, res: Response) => {
+  const tender = await setSpreadsheetResponsibility(req.params.id as string, req.body.responsible, req.auth!);
+  await recordAudit(req.auth!, {
+    action: AuditActions.STATUS_CHANGE,
+    entityType: 'TENDER',
+    entityId: tender.id,
+    entityLabel: tender.noticeNumber || tender.processNumber || tender.municipality,
+    description: req.body.responsible ? 'Usuário assumiu a responsabilidade pela planilha' : 'Responsabilidade pela planilha liberada',
+    metadata: { spreadsheetResponsibleUserId: tender.spreadsheetResponsibleUserId }
+  });
+  res.json({
+    success: true,
+    message: req.body.responsible ? 'Você agora é o responsável pela planilha' : 'Responsabilidade liberada',
+    data: tender
+  });
+};
+
+export const spreadsheetNotes = async (req: Request, res: Response) => {
+  const tender = await updateSpreadsheetNotes(req.params.id as string, req.body.notes, req.auth!);
+  await recordAudit(req.auth!, {
+    action: AuditActions.UPDATE,
+    entityType: 'TENDER',
+    entityId: tender.id,
+    entityLabel: tender.noticeNumber || tender.processNumber || tender.municipality,
+    description: 'Observações da planilha atualizadas',
+    metadata: { hasSpreadsheetNotes: Boolean(tender.spreadsheetNotes) }
+  });
+  res.json({ success: true, message: 'Observações da planilha atualizadas', data: tender });
 };

@@ -101,6 +101,7 @@ model User {
   updatedDiscounts DiscountCalculation[] @relation("DiscountUpdatedBy")
   auditLogs        AuditLog[]
   notificationReads NotificationRead[]
+  spreadsheetResponsibilities Tender[]              @relation("TenderSpreadsheetResponsible")
   createdAt        DateTime              @default(now()) @map("created_at")
   updatedAt        DateTime              @updatedAt @map("updated_at")
 
@@ -183,6 +184,10 @@ model Tender {
   platformLink           String?               @map("platform_link") @db.VarChar(500)
   seobraLink             String?               @map("seobra_link") @db.VarChar(500)
   spreadsheetReady       Boolean               @default(false) @map("spreadsheet_ready")
+  spreadsheetResponsibleUserId String?          @map("spreadsheet_responsible_user_id") @db.Uuid
+  spreadsheetResponsibleUser   User?            @relation("TenderSpreadsheetResponsible", fields: [spreadsheetResponsibleUserId], references: [id], onDelete: SetNull)
+  spreadsheetNotes             String?          @map("spreadsheet_notes") @db.Text
+  spreadsheetNotesUpdatedAt    DateTime?         @map("spreadsheet_notes_updated_at")
   listStatus             TenderListStatus      @default(PENDENTE) @map("list_status")
   createdById            String                @map("created_by_id") @db.Uuid
   createdBy              User                  @relation("TenderCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
@@ -200,6 +205,7 @@ model Tender {
   @@index([noticeNumber])
   @@index([municipality, state])
   @@index([listStatus])
+  @@index([spreadsheetResponsibleUserId])
   @@map("tenders")
 }
 

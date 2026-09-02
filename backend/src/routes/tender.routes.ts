@@ -8,7 +8,9 @@ import { associateTenderSchema } from '../validators/bid.validator.js';
 import {
   createTenderSchema,
   listTendersSchema,
+  spreadsheetNotesSchema,
   spreadsheetReadySchema,
+  spreadsheetResponsibilitySchema,
   tenderIdSchema,
   tenderListStatusSchema,
   updateTenderSchema
@@ -25,12 +27,23 @@ tenderRouter.patch(
   asyncHandler(tenderController.spreadsheetReady)
 );
 tenderRouter.patch(
+  '/:id/spreadsheet-responsibility',
+  validate(spreadsheetResponsibilitySchema),
+  asyncHandler(tenderController.spreadsheetResponsibility)
+);
+tenderRouter.patch(
+  '/:id/spreadsheet-notes',
+  validate(spreadsheetNotesSchema),
+  asyncHandler(tenderController.spreadsheetNotes)
+);
+tenderRouter.patch(
   '/:id/list-status',
   validate(tenderListStatusSchema),
   asyncHandler(tenderController.listStatus)
 );
 tenderRouter.get('/:id', validate(tenderIdSchema), asyncHandler(tenderController.show));
 tenderRouter.put('/:id', validate(updateTenderSchema), asyncHandler(tenderController.update));
+tenderRouter.delete('/:id', validate(tenderIdSchema), asyncHandler(tenderController.remove));
 tenderRouter.post(
   '/:id/participations',
   validate(associateTenderSchema),
