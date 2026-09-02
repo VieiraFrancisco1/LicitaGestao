@@ -1,11 +1,16 @@
 import type { Request, Response } from 'express';
-import { listDeadlineAlerts, markAllDeadlineReads, markDeadlineRead } from '../services/deadline.service.js';
+import { listDeadlineAlerts, listTenderDeadlines, markAllDeadlineReads, markDeadlineRead } from '../services/deadline.service.js';
 
 export const index = async (req: Request, res: Response) => {
   const data = await listDeadlineAlerts(
     req.auth!,
     req.query as unknown as { horizon: number; pastDays: number }
   );
+  res.json({ success: true, data });
+};
+
+export const tender = async (req: Request, res: Response) => {
+  const data = await listTenderDeadlines(req.auth!, req.params.tenderId as string);
   res.json({ success: true, data });
 };
 

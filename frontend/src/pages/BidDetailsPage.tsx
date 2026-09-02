@@ -1,9 +1,9 @@
-import { ArrowLeft, CheckCircle2, Download, ExternalLink, File as FileIcon, FilePlus2, Pencil, Trash2 } from 'lucide-react';
+import { ArrowLeft, CalendarClock, CheckCircle2, Download, ExternalLink, File as FileIcon, FilePlus2, Pencil, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { api, errorMessage } from '../services/api';
-import type { ApiResponse, Bid, BidDocument, DocumentCategory } from '../types';
+import type { ApiResponse, Bid, BidDocument, DeadlineAlert, DocumentCategory } from '../types';
 import {
   documentCategoryOptions,
   formatBytes,
@@ -22,6 +22,9 @@ export function BidDetailsPage() {
   const { user } = useAuth();
   const [bid, setBid] = useState<Bid | null>(null);
   const [documents, setDocuments] = useState<BidDocument[]>([]);
+  const [deadlines, setDeadlines] = useState<DeadlineAlert[]>([]);
+  const [deadlineLoading, setDeadlineLoading] = useState(false);
+  const [deadlineError, setDeadlineError] = useState('');
   const [tab, setTab] = useState<Tab>('summary');
   const [loading, setLoading] = useState(true);
   const [markingAttached, setMarkingAttached] = useState(false);
@@ -45,6 +48,18 @@ export function BidDetailsPage() {
       setError(errorMessage(err));
     }
   }, [id]);
+  const loadDeadlines = useCallback(async (tenderId: string) => {
+    setDeadlineLoading(true);
+    setDeadlineError('');
+    try {
+      const response = await api.get<ApiResponse<DeadlineAlert[]>>(`/deadlines/tender/${tenderId}`);
+      setDeadlines(response.data.data);
+    } catch (err) {
+      setDeadlineError(errorMessage(err));
+    } finally {
+      setDeadlineLoading(false);
+    }
+  }, []);
   useEffect(() => {
     const timer = window.setTimeout(() => void loadBid(), 0);
     return () => window.clearTimeout(timer);
@@ -55,6 +70,12 @@ export function BidDetailsPage() {
     }, 0);
     return () => window.clearTimeout(timer);
   }, [tab, loadDocuments]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      if (tab === 'deadlines' && bid) void loadDeadlines(bid.tenderId);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [tab, bid, loadDeadlines]);
 
   if (loading)
     return (
@@ -245,12 +266,99 @@ export function BidDetailsPage() {
         <FuturePanel text="As convocações desta licitação aparecerão aqui quando a integração de e-mail for ativada." />
       )}
       {tab === 'deadlines' && (
-        <FuturePanel text="Os prazos específicos desta licitação serão adicionados na Fase 3." />
+        <DeadlinesPanel deadlines={deadlines} loading={deadlineLoading} error={deadlineError} />
       )}
       {tab === 'history' && (
         <FuturePanel text="O histórico completo será registrado pelo módulo de auditoria." />
       )}
     </div>
+  );
+}
+function formatDeadlineDate(date: string) {
+  const [year, month, day] = date.split('-');
+  return `${day}/${month}/${year}`;
+}
+
+function deadlineRelativeLabel(days: number) {
+  if (days < 0) return `Vencido há ${Math.abs(days)} dia${Math.abs(days) === 1 ? '' : 's'}`;
+  if (days === 0) return 'Vence hoje';
+  if (days === 1) return 'Vence amanhã';
+  return `Vence em ${days} dias`;
+}
+
+function DeadlinesPanel({
+  deadlines,
+  loading,
+  error
+}: {
+  deadlines: DeadlineAlert[];
+  loading: boolean;
+  error: string;
+}) {
+  if (loading) {
+    return (
+      <section className="detail-panel">
+        <div className="table-message">
+          <span className="spinner" />
+          Carregando prazos...
+        </div>
+      </section>
+    );
+  }
+
+  if (error) return <div className="alert alert-error">{error}</div>;
+
+  if (deadlines.length === 0) {
+    return (
+      <section className="empty-state compact">
+        <CalendarClock size={28} />
+        <p>Nenhum prazo cadastrado para esta licitação.</p>
+      </section>
+    );
+  }
+
+  return (
+    <section className="detail-panel deadline-panel">
+      <div className="section-note">
+        Estes são os mesmos prazos usados pelo sino e pelas notificações do LicitaGestão.
+      </div>
+      <div className="deadline-list">
+        {deadlines.map((item) => (
+          <article key={item.key} className={`deadline-row ${item.severity.toLowerCase()}`}>
+            <span className={`deadline-date-box ${item.severity.toLowerCase()}`}>
+              <strong>{item.date.slice(8, 10)}</strong>
+              <small>
+                {new Intl.DateTimeFormat('pt-BR', { month: 'short', timeZone: 'UTC' })
+                  .format(new Date(`${item.date}T00:00:00Z`))
+                  .replace('.', '')}
+              </small>
+            </span>
+            <span className="deadline-main">
+              <span className="deadline-title-line">
+                <strong>{item.title}</strong>
+                <em>{deadlineRelativeLabel(item.days)}</em>
+              </span>
+              <span>
+                {item.noticeNumber || item.processNumber || 'Licitação sem número'} · {item.municipality}
+                {item.state ? `/${item.state}` : ''}
+              </span>
+              <small>
+                {item.type === 'SESSION'
+                  ? 'Data da sessão cadastrada na licitação.'
+                  : 'Prazo calculado pela validade da proposta cadastrada.'}
+              </small>
+            </span>
+            <span className="deadline-meta">
+              <strong>
+                {formatDeadlineDate(item.date)}
+                {item.type === 'SESSION' && item.sessionTime ? ` às ${item.sessionTime}` : ''}
+              </strong>
+              <small>{item.platform?.name || 'Sem plataforma'}</small>
+            </span>
+          </article>
+        ))}
+      </div>
+    </section>
   );
 }
 

@@ -1,5 +1,6 @@
 import { Prisma, UserRole } from '@prisma/client';
 import { prisma } from '../config/database.js';
+import { AppError } from '../utils/app-error.js';
 import type { AuthScope } from './access.service.js';
 
 export type DeadlineType = 'SESSION' | 'PROPOSAL_EXPIRATION';
@@ -124,6 +125,62 @@ export async function listDeadlineAlerts(auth: AuthScope, query: { horizon: numb
       next30Days: items.filter((item) => item.days > 0 && item.days <= 30).length
     }
   };
+}
+
+export async function listTenderDeadlines(auth: AuthScope, tenderId: string) {
+  const today = localTodayAsUtcDate();
+  const tender = await prisma.tender.findFirst({
+    where: { id: tenderId, ...tenderScope(auth) },
+    include: { platform: { select: { id: true, name: true } } }
+  });
+
+  if (!tender) throw new AppError('Licitação não encontrada', 404);
+
+  const base = {
+    tenderId: tender.id,
+    noticeNumber: tender.noticeNumber,
+    processNumber: tender.processNumber,
+    municipality: tender.municipality,
+    state: tender.state,
+    object: tender.object,
+    sessionTime: tender.sessionTime,
+    platform: tender.platform
+  };
+
+  const items = [
+    {
+      ...base,
+      key: `SESSION:${tender.id}:${dateOnly(tender.sessionDate)}`,
+      type: 'SESSION' as const,
+      title: 'Sessão da licitação',
+      date: dateOnly(tender.sessionDate),
+      days: daysFromToday(tender.sessionDate, today),
+      severity: severity(daysFromToday(tender.sessionDate, today))
+    },
+    ...(tender.proposalExpirationDate
+      ? [
+          {
+            ...base,
+            key: `PROPOSAL_EXPIRATION:${tender.id}:${dateOnly(tender.proposalExpirationDate)}`,
+            type: 'PROPOSAL_EXPIRATION' as const,
+            title: 'Validade da proposta',
+            date: dateOnly(tender.proposalExpirationDate),
+            days: daysFromToday(tender.proposalExpirationDate, today),
+            severity: severity(daysFromToday(tender.proposalExpirationDate, today))
+          }
+        ]
+      : [])
+  ];
+
+  const reads = await (prisma as any).notificationRead.findMany({
+    where: { userId: auth.userId, alertKey: { in: items.map((item) => item.key) } },
+    select: { alertKey: true }
+  });
+  const readKeys = new Set(reads.map((item: { alertKey: string }) => item.alertKey));
+
+  return items
+    .map((item) => ({ ...item, read: readKeys.has(item.key) }))
+    .sort((a, b) => a.days - b.days || a.date.localeCompare(b.date));
 }
 
 export async function markDeadlineRead(userId: string, alertKey: string) {

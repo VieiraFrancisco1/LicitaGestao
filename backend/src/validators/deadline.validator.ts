@@ -10,3 +10,7 @@ export const listDeadlineSchema = z.object({
 export const readDeadlineSchema = z.object({
   body: z.object({ alertKey: z.string().min(1).max(220) })
 });
+
+export const deadlineTenderSchema = z.object({
+  params: z.object({ tenderId: z.string().uuid() })
+});

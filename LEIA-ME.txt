@@ -1,23 +1,24 @@
-AJUSTE - Links SEOBRA e Plataforma na área da empresa
+LicitaGestao - correcao da aba Prazos da participacao
 
-Este patch NÃO altera banco de dados e NÃO contém migration.
-Ele apenas corrige a exibição dos links já salvos na licitação geral.
+O que muda:
+- A aba Prazos em /participacoes/:id deixa de ser placeholder.
+- Ela busca os prazos reais da licitacao vinculada.
+- Exibe sessao e validade da proposta, com data, dias restantes/vencidos e plataforma.
+- Usa os mesmos dados que alimentam os alertas e notificacoes do LicitaGestao.
+- Mantem os botoes SEOBRA e Plataforma na tela da participacao.
+- Nao cria migration, nao altera dados e nao executa seed.
 
-Arquivos alterados:
-- frontend/src/pages/BidsPage.tsx
-- frontend/src/pages/BidDetailsPage.tsx
-- frontend/src/styles.css
+Como aplicar:
+1. Copie backend/ e frontend/ para a raiz do projeto atual, substituindo os arquivos.
+2. Rode:
+   npm run typecheck
+   npm run lint
+   npm run build
+3. Se passar:
+   git add .
+   git commit -m "Exibe prazos na licitacao da empresa"
+   git push
+4. No Render, use Deploy latest commit se necessario.
 
-Resultado:
-1. Na aba Empresa > Licitações, a coluna Plataforma passa a mostrar atalhos Plataforma e SEOBRA quando os links existirem.
-2. Ao abrir a participação da empresa, o cabeçalho mostra Abrir no SEOBRA e Abrir na plataforma.
-3. Na aba Dados da participação, os dois links também ficam visíveis.
-
-Depois de copiar, execute:
-npm run typecheck
-npm run lint
-npm run build
-
-git add .
-git commit -m "Exibe links SEOBRA e plataforma na area da empresa"
-git push
+Observacao:
+Nao e necessario executar db:generate, migrate ou seed para este ajuste.
