@@ -213,9 +213,6 @@ const addAttachmentProgress = async <T extends { id: string; _count: { bids: num
 };
 
 export const deleteTender = async (id: string, auth: AuthScope) => {
-  if (auth.role !== UserRole.ADMIN) {
-    throw new AppError('Somente um administrador pode excluir licitações do controle geral', 403);
-  }
   const tender = await prisma.tender.findUnique({
     where: { id },
     include: includeTender(auth)

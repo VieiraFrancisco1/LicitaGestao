@@ -445,16 +445,14 @@ export function TendersPage() {
                             <Pencil size={15} />
                             Editar
                           </Link>
-                          {user?.role === 'ADMIN' && (
-                            <button
-                              className="action-button compact-action-button danger-soft-button"
-                              disabled={actionId === tender.id}
-                              onClick={() => void deleteTender(tender)}
-                            >
-                              <Trash2 size={15} />
-                              Apagar
-                            </button>
-                          )}
+                          <button
+                            className="action-button compact-action-button danger-soft-button"
+                            disabled={actionId === tender.id}
+                            onClick={() => void deleteTender(tender)}
+                          >
+                            <Trash2 size={15} />
+                            Apagar
+                          </button>
                         </div>
                       </td>
                     </tr>

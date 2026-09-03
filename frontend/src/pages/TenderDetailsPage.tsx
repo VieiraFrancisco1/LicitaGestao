@@ -160,12 +160,10 @@ export function TenderDetailsPage() {
             <Pencil size={16} />
             Editar dados gerais
           </Link>
-          {user?.role === 'ADMIN' && (
-            <button className="secondary-button danger-action" disabled={action} onClick={() => void removeTender()}>
-              <Trash2 size={16} />
-              Excluir
-            </button>
-          )}
+          <button className="secondary-button danger-action" disabled={action} onClick={() => void removeTender()}>
+            <Trash2 size={16} />
+            Excluir
+          </button>
         </div>
       </div>
       {error && <div className="alert alert-error">{error}</div>}
