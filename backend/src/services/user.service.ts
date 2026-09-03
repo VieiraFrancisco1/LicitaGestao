@@ -74,17 +74,26 @@ export const updateUser = async (id: string, actorId: string, data: UserInput) =
   }
 
   const user = await prisma.$transaction(async (tx) => {
+    const passwordHash = data.password !== undefined ? await bcrypt.hash(data.password, 12) : undefined;
     await tx.user.update({
       where: { id },
       data: {
         ...(data.name !== undefined ? { name: data.name } : {}),
         ...(data.email !== undefined ? { email: data.email.toLowerCase() } : {}),
-        ...(data.password !== undefined ? { passwordHash: await bcrypt.hash(data.password, 12) } : {}),
+        ...(passwordHash !== undefined
+          ? { passwordHash, sessionVersion: { increment: 1 } }
+          : {}),
         ...(data.role !== undefined ? { role: data.role } : {}),
         companyId: role === UserRole.EMPRESA ? companyId : null,
         ...(data.active !== undefined ? { active: data.active } : {})
       }
     });
+    if (passwordHash !== undefined) {
+      await tx.refreshToken.updateMany({
+        where: { userId: id, revokedAt: null },
+        data: { revokedAt: new Date() }
+      });
+    }
     if (data.companyIds !== undefined || data.role !== undefined) {
       await tx.companyUser.deleteMany({ where: { userId: id } });
       if (role === UserRole.FUNCIONARIO && companyIds.length > 0) {

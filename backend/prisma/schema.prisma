@@ -91,6 +91,7 @@ model User {
   name             String                @db.VarChar(120)
   email            String                @unique @db.VarChar(180)
   passwordHash     String                @map("password_hash") @db.VarChar(255)
+  sessionVersion   Int                   @default(0) @map("session_version")
   role             UserRole              @default(FUNCIONARIO)
   active           Boolean               @default(true)
   companyId        String?               @map("company_id") @db.Uuid

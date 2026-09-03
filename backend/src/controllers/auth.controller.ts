@@ -1,7 +1,13 @@
 import type { Request, Response } from 'express';
 import { env } from '../config/env.js';
 import { prisma } from '../config/database.js';
-import { authenticateUser, revokeRefreshToken, rotateRefreshToken } from '../services/auth.service.js';
+import {
+  authenticateUser,
+  changeOwnPassword,
+  revokeRefreshToken,
+  rotateRefreshToken
+} from '../services/auth.service.js';
+import { AuditActions, recordAudit } from '../services/audit.service.js';
 import { AppError } from '../utils/app-error.js';
 import { publicUser } from '../utils/public-user.js';
 
@@ -42,4 +48,20 @@ export const me = async (req: Request, res: Response) => {
   });
   if (!user || !user.active) throw new AppError('Usuário sem acesso ao sistema', 403);
   res.json({ success: true, data: publicUser(user) });
+};
+
+export const changePassword = async (req: Request, res: Response) => {
+  const { currentPassword, newPassword } = req.body as {
+    currentPassword: string;
+    newPassword: string;
+  };
+  await changeOwnPassword(req.auth!.userId, currentPassword, newPassword);
+  await recordAudit(req.auth!, {
+    action: AuditActions.UPDATE,
+    entityType: 'USER_SECURITY',
+    entityId: req.auth!.userId,
+    description: 'Senha alterada pelo próprio usuário'
+  });
+  res.clearCookie(cookieName, cookieOptions);
+  res.json({ success: true, message: 'Senha alterada. Entre novamente com a nova senha.' });
 };

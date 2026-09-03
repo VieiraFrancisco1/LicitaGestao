@@ -3,10 +3,12 @@ import type { ReactNode } from 'react';
 
 export function Modal({
   title,
+  eyebrow = 'Cadastro',
   children,
   onClose
 }: {
   title: string;
+  eyebrow?: string;
   children: ReactNode;
   onClose: () => void;
 }) {
@@ -21,7 +23,7 @@ export function Modal({
       >
         <div className="modal-header">
           <div>
-            <span className="eyebrow">Cadastro</span>
+            <span className="eyebrow">{eyebrow}</span>
             <h2>{title}</h2>
           </div>
           <button className="icon-button" type="button" onClick={onClose} aria-label="Fechar">

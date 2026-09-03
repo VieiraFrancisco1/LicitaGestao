@@ -301,9 +301,10 @@ function UserModal({
             value={form.password}
             onChange={(e) => field('password', e.target.value)}
             required={!user}
-            minLength={form.password ? 8 : undefined}
+            minLength={form.password ? 12 : undefined}
             autoComplete="new-password"
           />
+          <small className="field-help">Mínimo de 12 caracteres.</small>
         </label>
         {user && (
           <label className="check-field full">

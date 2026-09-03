@@ -18,6 +18,7 @@ import { useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { DeadlineNotifications } from '../components/DeadlineNotifications';
+import { ChangePasswordModal } from '../components/ChangePasswordModal';
 import licitaGestaoLogo from '../assets/licitagestao-logo.png';
 
 const titles: Record<string, string> = {
@@ -40,6 +41,7 @@ export function AppLayout() {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const companyPath =
     user?.role === 'EMPRESA' && user.companyId ? `/empresas/${user.companyId}` : '/empresas';
   const sections = [
@@ -163,7 +165,16 @@ export function AppLayout() {
               </button>
               {profileOpen && (
                 <div className="profile-menu">
-                  <button onClick={() => void logout()}>Sair do sistema</button>
+                  <button
+                    className="security-option"
+                    onClick={() => {
+                      setProfileOpen(false);
+                      setPasswordModalOpen(true);
+                    }}
+                  >
+                    Alterar minha senha
+                  </button>
+                  <button className="logout-option" onClick={() => void logout()}>Sair do sistema</button>
                 </div>
               )}
             </div>
@@ -173,6 +184,15 @@ export function AppLayout() {
           <Outlet />
         </main>
       </div>
+      {passwordModalOpen && (
+        <ChangePasswordModal
+          onClose={() => setPasswordModalOpen(false)}
+          onPasswordChanged={() => {
+            setPasswordModalOpen(false);
+            void logout();
+          }}
+        />
+      )}
     </div>
   );
 }

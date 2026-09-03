@@ -7,16 +7,20 @@ import { env } from '../config/env.js';
 import { AppError } from '../utils/app-error.js';
 import { publicUser } from '../utils/public-user.js';
 
-type TokenUser = { id: string; role: UserRole; companyId: string | null };
+type TokenUser = { id: string; role: UserRole; companyId: string | null; sessionVersion: number };
 type RefreshPayload = jwt.JwtPayload & { sub: string; type: 'refresh' };
 
 const hashToken = (token: string) => crypto.createHash('sha256').update(token).digest('hex');
 
 const signAccessToken = (user: TokenUser) =>
-  jwt.sign({ role: user.role, companyId: user.companyId, type: 'access' }, env.JWT_SECRET, {
+  jwt.sign(
+    { role: user.role, companyId: user.companyId, sessionVersion: user.sessionVersion, type: 'access' },
+    env.JWT_SECRET,
+    {
     subject: user.id,
     expiresIn: env.ACCESS_TOKEN_EXPIRES_IN as SignOptions['expiresIn']
-  });
+    }
+  );
 
 const signRefreshToken = (userId: string) =>
   jwt.sign({ type: 'refresh' }, env.JWT_REFRESH_SECRET, {
@@ -86,4 +90,28 @@ export const revokeRefreshToken = async (token?: string) => {
     where: { tokenHash: hashToken(token), revokedAt: null },
     data: { revokedAt: new Date() }
   });
+};
+
+export const changeOwnPassword = async (userId: string, currentPassword: string, newPassword: string) => {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user?.active) throw new AppError('Usuário sem acesso ao sistema', 403);
+  if (!(await bcrypt.compare(currentPassword, user.passwordHash))) {
+    throw new AppError('A senha atual está incorreta', 422);
+  }
+  if (await bcrypt.compare(newPassword, user.passwordHash)) {
+    throw new AppError('A nova senha precisa ser diferente da senha atual', 422);
+  }
+
+  const passwordHash = await bcrypt.hash(newPassword, 12);
+  const revokedAt = new Date();
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash, sessionVersion: { increment: 1 } }
+    }),
+    prisma.refreshToken.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt }
+    })
+  ]);
 };

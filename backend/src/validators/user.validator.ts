@@ -9,7 +9,7 @@ export const createUserSchema = z.object({
         .string()
         .email()
         .transform((value) => value.trim().toLowerCase()),
-      password: z.string().min(8).max(128),
+      password: z.string().min(12, 'A senha deve possuir pelo menos 12 caracteres').max(128),
       role: z.nativeEnum(UserRole),
       companyId: z.string().uuid().nullable().optional(),
       companyIds: z.array(z.string().uuid()).max(100).optional().default([]),
@@ -51,7 +51,7 @@ export const updateUserSchema = z.object({
         .email()
         .transform((value) => value.trim().toLowerCase())
         .optional(),
-      password: z.string().min(8).max(128).optional(),
+      password: z.string().min(12, 'A senha deve possuir pelo menos 12 caracteres').max(128).optional(),
       role: z.nativeEnum(UserRole).optional(),
       companyId: z.string().uuid().nullable().optional(),
       companyIds: z.array(z.string().uuid()).max(100).optional(),

@@ -9,6 +9,7 @@ type AccessPayload = jwt.JwtPayload & {
   sub: string;
   role: UserRole;
   companyId: string | null;
+  sessionVersion: number;
   type: 'access';
 };
 
@@ -26,6 +27,9 @@ export const authenticate: RequestHandler = (req, _res, next) => {
       .then((user) => {
         if (!user?.active || (user.role === 'EMPRESA' && !user.company?.active)) {
           return next(new AppError('Usuário sem acesso ao sistema', 403));
+        }
+        if (payload.sessionVersion !== user.sessionVersion) {
+          return next(new AppError('Sessão inválida ou encerrada', 401));
         }
         req.auth = { userId: user.id, role: user.role, companyId: user.companyId };
         next();

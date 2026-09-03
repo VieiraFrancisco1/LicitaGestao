@@ -4,7 +4,7 @@ import * as controller from '../controllers/auth.controller.js';
 import { authenticate } from '../middlewares/auth.js';
 import { validate } from '../middlewares/validate.js';
 import { asyncHandler } from '../utils/async-handler.js';
-import { loginSchema } from '../validators/auth.validator.js';
+import { changePasswordSchema, loginSchema } from '../validators/auth.validator.js';
 
 export const authRouter = Router();
 
@@ -20,3 +20,9 @@ authRouter.post('/login', loginLimiter, validate(loginSchema), asyncHandler(cont
 authRouter.post('/refresh', asyncHandler(controller.refresh));
 authRouter.post('/logout', asyncHandler(controller.logout));
 authRouter.get('/me', authenticate, asyncHandler(controller.me));
+authRouter.post(
+  '/change-password',
+  authenticate,
+  validate(changePasswordSchema),
+  asyncHandler(controller.changePassword)
+);

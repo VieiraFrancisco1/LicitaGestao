@@ -559,10 +559,19 @@ p {
   background: transparent;
   padding: 9px;
   border-radius: 6px;
-  color: #a72d36;
+  color: #344054;
   font-size: 12px;
 }
 .profile-menu button:hover {
+  background: #f2f6fc;
+}
+.profile-menu .security-option {
+  color: #245abc;
+}
+.profile-menu .logout-option {
+  color: #a72d36;
+}
+.profile-menu .logout-option:hover {
   background: #fff0f1;
 }
 .content {
@@ -946,6 +955,42 @@ td small {
   margin-top: 5px;
   padding-top: 16px;
   border-top: 1px solid var(--line);
+}
+
+.password-change-form {
+  grid-template-columns: 1fr;
+}
+.password-change-intro {
+  margin: 0;
+  color: #667085;
+  font-size: 13px;
+  line-height: 1.55;
+}
+.password-change-success {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 28px 24px;
+}
+.password-change-success > span {
+  width: 50px;
+  height: 50px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 14px;
+  color: #18794e;
+  background: #edfbf3;
+}
+.password-change-success strong {
+  color: #243047;
+  font-size: 16px;
+}
+.password-change-success p {
+  margin: 5px 0 0;
+  color: #667085;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .row-actions {
