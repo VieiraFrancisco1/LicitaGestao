@@ -1,4 +1,4 @@
-import { Bell, CheckCheck, MailWarning, MonitorCheck } from 'lucide-react';
+import { Bell, CheckCheck, MailWarning, MonitorCheck, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
@@ -48,7 +48,9 @@ function loadDesktopNotificationHistory() {
     const raw = window.localStorage.getItem(DESKTOP_NOTIFIED_STORAGE_KEY);
     if (!raw) return new Set<string>();
     const values = JSON.parse(raw) as unknown;
-    return new Set(Array.isArray(values) ? values.filter((value): value is string => typeof value === 'string') : []);
+    return new Set(
+      Array.isArray(values) ? values.filter((value): value is string => typeof value === 'string') : []
+    );
   } catch {
     return new Set<string>();
   }
@@ -145,8 +147,14 @@ export function DeadlineNotifications() {
           notification.onclick = () => {
             window.focus();
             notification.close();
-            void api.post('/integrations/gmail/alerts/read', { messageId: item.messageId }).catch(() => undefined);
-            navigate(item.bidId ? `/participacoes/${item.bidId}?tab=convocations&message=${item.messageId}` : `/empresas/${item.companyId}?tab=convocations&message=${item.messageId}`);
+            void api
+              .post('/integrations/gmail/alerts/read', { messageId: item.messageId })
+              .catch(() => undefined);
+            navigate(
+              item.bidId
+                ? `/participacoes/${item.bidId}?tab=convocations&message=${item.messageId}`
+                : `/empresas/${item.companyId}?tab=convocations&message=${item.messageId}`
+            );
           };
           history.add(notificationKey);
           changed = true;
@@ -207,7 +215,10 @@ export function DeadlineNotifications() {
       current
         ? {
             ...current,
-            unread: Math.max(0, current.unread - (current.items.find((item) => item.key === key)?.read ? 0 : 1)),
+            unread: Math.max(
+              0,
+              current.unread - (current.items.find((item) => item.key === key)?.read ? 0 : 1)
+            ),
             items: current.items.map((item) => (item.key === key ? { ...item, read: true } : item))
           }
         : current
@@ -231,17 +242,62 @@ export function DeadlineNotifications() {
     );
     setOpen(false);
     void api.post('/integrations/gmail/alerts/read', { messageId: item.messageId }).catch(() => undefined);
-    navigate(item.bidId ? `/participacoes/${item.bidId}?tab=convocations&message=${item.messageId}` : `/empresas/${item.companyId}?tab=convocations&message=${item.messageId}`);
+    navigate(
+      item.bidId
+        ? `/participacoes/${item.bidId}?tab=convocations&message=${item.messageId}`
+        : `/empresas/${item.companyId}?tab=convocations&message=${item.messageId}`
+    );
   };
 
   const markAll = async () => {
-    await Promise.allSettled([api.post('/deadlines/read-all'), api.post('/integrations/gmail/alerts/read-all')]);
+    await Promise.allSettled([
+      api.post('/deadlines/read-all'),
+      api.post('/integrations/gmail/alerts/read-all')
+    ]);
     setDeadlines((current) =>
-      current ? { ...current, unread: 0, items: current.items.map((item) => ({ ...item, read: true })) } : current
+      current
+        ? { ...current, unread: 0, items: current.items.map((item) => ({ ...item, read: true })) }
+        : current
     );
     setGmailAlerts((current) =>
-      current ? { ...current, unread: 0, items: current.items.map((item) => ({ ...item, read: true })) } : current
+      current
+        ? { ...current, unread: 0, items: current.items.map((item) => ({ ...item, read: true })) }
+        : current
     );
+  };
+
+  const dismissGmailAlert = async (item: GmailConvocationAlert) => {
+    try {
+      await api.delete(`/integrations/gmail/alerts/${item.messageId}`);
+      setGmailAlerts((current) =>
+        current
+          ? {
+              ...current,
+              unread: Math.max(0, current.unread - (item.read ? 0 : 1)),
+              items: current.items.filter((currentItem) => currentItem.messageId !== item.messageId)
+            }
+          : current
+      );
+    } catch {
+      await loadAlerts();
+    }
+  };
+
+  const dismissDeadline = async (item: DeadlineAlert) => {
+    try {
+      await api.post('/deadlines/dismiss', { alertKey: item.key });
+      setDeadlines((current) =>
+        current
+          ? {
+              ...current,
+              unread: Math.max(0, current.unread - (item.read ? 0 : 1)),
+              items: current.items.filter((currentItem) => currentItem.key !== item.key)
+            }
+          : current
+      );
+    } catch {
+      await loadAlerts();
+    }
   };
 
   const deadlineItems = deadlines?.items.slice(0, 5) ?? [];
@@ -267,52 +323,111 @@ export function DeadlineNotifications() {
       {open && (
         <div className="notification-popover">
           <div className="notification-popover-header">
-            <div><strong>Alertas</strong><small>{unread} não lido(s)</small></div>
-            {!!unread && <button onClick={() => void markAll()} title="Marcar todos como lidos"><CheckCheck size={17} /></button>}
+            <div>
+              <strong>Alertas</strong>
+              <small>{unread} não lido(s)</small>
+            </div>
+            {!!unread && (
+              <button onClick={() => void markAll()} title="Marcar todos como lidos">
+                <CheckCheck size={17} />
+              </button>
+            )}
           </div>
 
           {desktopPermission === 'default' && (
             <button className="desktop-notification-enable" onClick={() => void requestDesktopPermission()}>
               <MonitorCheck size={17} />
-              <span><strong>Ativar notificações no computador</strong><small>{permissionDescription}</small></span>
+              <span>
+                <strong>Ativar notificações no computador</strong>
+                <small>{permissionDescription}</small>
+              </span>
             </button>
           )}
           {desktopPermission === 'granted' && (
-            <div className="desktop-notification-status enabled"><MonitorCheck size={16} /><span>Notificações do computador ativadas</span></div>
+            <div className="desktop-notification-status enabled">
+              <MonitorCheck size={16} />
+              <span>Notificações do computador ativadas</span>
+            </div>
           )}
           {desktopPermission === 'denied' && (
-            <div className="desktop-notification-status blocked">As notificações estão bloqueadas no navegador. Libere a permissão deste site para receber pop-ups.</div>
+            <div className="desktop-notification-status blocked">
+              As notificações estão bloqueadas no navegador. Libere a permissão deste site para receber
+              pop-ups.
+            </div>
           )}
           {desktopPermission === 'unsupported' && (
-            <div className="desktop-notification-status blocked">Este navegador não disponibilizou notificações do computador para esta página.</div>
+            <div className="desktop-notification-status blocked">
+              Este navegador não disponibilizou notificações do computador para esta página.
+            </div>
           )}
 
           <div className="notification-list">
             {!hasItems && <div className="notification-empty">Nenhum alerta urgente no momento.</div>}
-            {gmailItems.length > 0 && <div className="notification-section-label"><MailWarning size={14} /> E-mail</div>}
+            {gmailItems.length > 0 && (
+              <div className="notification-section-label">
+                <MailWarning size={14} /> E-mail
+              </div>
+            )}
             {gmailItems.map((item) => (
-              <button key={item.key} className={`notification-item gmail ${item.read ? 'read' : 'unread'}`} onClick={() => void openGmailAlert(item)}>
-                <span className="deadline-dot urgent" />
-                <span>
-                  <strong>{item.subject || 'Aviso importante'}</strong>
-                  <small>{item.companyName} · {formatDateTime(item.receivedAt)}</small>
-                  <em>{item.bidId ? 'Aviso vinculado à licitação' : 'Aviso importante recebido por e-mail'}</em>
-                </span>
-              </button>
+              <div key={item.key} className={`notification-item gmail ${item.read ? 'read' : 'unread'}`}>
+                <button className="notification-item-open" onClick={() => void openGmailAlert(item)}>
+                  <span className="deadline-dot urgent" />
+                  <span>
+                    <strong>{item.subject || 'Aviso importante'}</strong>
+                    <small>
+                      {item.companyName} · {formatDateTime(item.receivedAt)}
+                    </small>
+                    <em>
+                      {item.bidId ? 'Aviso vinculado à licitação' : 'Aviso importante recebido por e-mail'}
+                    </em>
+                  </span>
+                </button>
+                <button
+                  className="notification-dismiss"
+                  title="Apagar notificação"
+                  aria-label={`Apagar notificação ${item.subject || 'Aviso importante'}`}
+                  onClick={() => void dismissGmailAlert(item)}
+                >
+                  <Trash2 size={15} />
+                </button>
+              </div>
             ))}
             {deadlineItems.length > 0 && <div className="notification-section-label">Prazos</div>}
             {deadlineItems.map((item) => (
-              <button key={item.key} className={`notification-item ${item.read ? 'read' : 'unread'}`} onClick={() => void openDeadline(item.key, item.tenderId)}>
-                <span className={`deadline-dot ${item.severity.toLowerCase()}`} />
-                <span>
-                  <strong>{item.title}</strong>
-                  <small>{item.noticeNumber || item.processNumber || item.municipality} · {formatDate(item.date)}</small>
-                  <em>{relativeLabel(item.days)}</em>
-                </span>
-              </button>
+              <div key={item.key} className={`notification-item ${item.read ? 'read' : 'unread'}`}>
+                <button
+                  className="notification-item-open"
+                  onClick={() => void openDeadline(item.key, item.tenderId)}
+                >
+                  <span className={`deadline-dot ${item.severity.toLowerCase()}`} />
+                  <span>
+                    <strong>{item.title}</strong>
+                    <small>
+                      {item.noticeNumber || item.processNumber || item.municipality} · {formatDate(item.date)}
+                    </small>
+                    <em>{relativeLabel(item.days)}</em>
+                  </span>
+                </button>
+                <button
+                  className="notification-dismiss"
+                  title="Apagar notificação"
+                  aria-label={`Apagar notificação ${item.title}`}
+                  onClick={() => void dismissDeadline(item)}
+                >
+                  <Trash2 size={15} />
+                </button>
+              </div>
             ))}
           </div>
-          <button className="notification-view-all" onClick={() => { setOpen(false); navigate('/prazos'); }}>Ver todos os prazos</button>
+          <button
+            className="notification-view-all"
+            onClick={() => {
+              setOpen(false);
+              navigate('/prazos');
+            }}
+          >
+            Ver todos os prazos
+          </button>
         </div>
       )}
     </div>

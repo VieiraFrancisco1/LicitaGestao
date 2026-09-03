@@ -4,7 +4,13 @@ import { prisma } from '../config/database.js';
 import { env } from '../config/env.js';
 import { AppError } from '../utils/app-error.js';
 import { assertCompanyPortalAccess, type AuthScope } from './access.service.js';
-import { decryptSecret, detectPotentialConvocation, encryptSecret, extractGmailText, type GmailPayloadPart } from './gmail-utils.js';
+import {
+  decryptSecret,
+  detectPotentialConvocation,
+  encryptSecret,
+  extractGmailText,
+  type GmailPayloadPart
+} from './gmail-utils.js';
 
 const GMAIL_SCOPE = 'https://www.googleapis.com/auth/gmail.readonly';
 const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
@@ -65,10 +71,10 @@ type GmailMessageResponse = {
 function gmailConfigured() {
   return Boolean(
     env.GOOGLE_CLIENT_ID &&
-      env.GOOGLE_CLIENT_SECRET &&
-      env.GOOGLE_REDIRECT_URI &&
-      env.GOOGLE_OAUTH_STATE_SECRET &&
-      env.GOOGLE_TOKEN_ENCRYPTION_KEY
+    env.GOOGLE_CLIENT_SECRET &&
+    env.GOOGLE_REDIRECT_URI &&
+    env.GOOGLE_OAUTH_STATE_SECRET &&
+    env.GOOGLE_TOKEN_ENCRYPTION_KEY
   );
 }
 
@@ -103,10 +109,7 @@ function verifyState(state: string) {
   requireGmailConfig();
   const [body, signature] = state.split('.');
   if (!body || !signature) throw new AppError('Estado OAuth inválido', 400);
-  const expected = crypto
-    .createHmac('sha256', env.GOOGLE_OAUTH_STATE_SECRET!)
-    .update(body)
-    .digest();
+  const expected = crypto.createHmac('sha256', env.GOOGLE_OAUTH_STATE_SECRET!).update(body).digest();
   const received = Buffer.from(signature, 'base64url');
   if (expected.length !== received.length || !crypto.timingSafeEqual(expected, received)) {
     throw new AppError('Estado OAuth inválido', 400);
@@ -191,7 +194,6 @@ function headerValue(payload: GmailPayloadPart | undefined, name: string) {
   return payload?.headers?.find((header) => header.name?.toLowerCase() === name.toLowerCase())?.value ?? null;
 }
 
-
 function gmailSearchDate(date: Date) {
   const year = date.getUTCFullYear();
   const month = String(date.getUTCMonth() + 1).padStart(2, '0');
@@ -212,7 +214,6 @@ function emailAccessWhere(auth: AuthScope): Record<string, unknown> {
   }
   return { company: { staffLinks: { some: { userId: auth.userId } } } };
 }
-
 
 type MatchCandidate = {
   id: string;
@@ -270,8 +271,23 @@ function meaningfulPlatformTokens(name: string | null | undefined) {
 
 function objectKeywords(value: string | null | undefined) {
   const ignored = new Set([
-    'contratacao', 'empresa', 'execucao', 'municipio', 'secretaria', 'servicos', 'atraves',
-    'objeto', 'publica', 'publico', 'para', 'com', 'dos', 'das', 'uma', 'obra', 'obras'
+    'contratacao',
+    'empresa',
+    'execucao',
+    'municipio',
+    'secretaria',
+    'servicos',
+    'atraves',
+    'objeto',
+    'publica',
+    'publico',
+    'para',
+    'com',
+    'dos',
+    'das',
+    'uma',
+    'obra',
+    'obras'
   ]);
   return Array.from(new Set(normalizeForMatch(value).split(' ')))
     .filter((token) => token.length >= 6 && !ignored.has(token))
@@ -317,7 +333,10 @@ function evaluateCandidate(candidate: MatchCandidate, message: MatchMessage) {
   return { score, method, eligible };
 }
 
-async function findBestConvocationMatch(companyId: string, message: MatchMessage): Promise<ConvocationMatch | null> {
+async function findBestConvocationMatch(
+  companyId: string,
+  message: MatchMessage
+): Promise<ConvocationMatch | null> {
   const candidates = (await db.bid.findMany({
     where: { companyId },
     select: {
@@ -397,7 +416,10 @@ export async function autoLinkConvocationMessage(messageId: string) {
 }
 
 export async function relinkPotentialConvocationsForTender(tenderId: string) {
-  const bids = (await db.bid.findMany({ where: { tenderId }, select: { id: true, companyId: true } })) as Array<{
+  const bids = (await db.bid.findMany({
+    where: { tenderId },
+    select: { id: true, companyId: true }
+  })) as Array<{
     id: string;
     companyId: string;
   }>;
@@ -526,9 +548,13 @@ export async function completeGmailOAuth(code: string, state: string) {
   if (!tokens.access_token) throw new AppError('Google não retornou token de acesso', 502);
 
   const existing = await db.emailIntegration.findUnique({ where: { companyId: payload.companyId } });
-  const refreshToken = tokens.refresh_token ?? (existing ? decryptGoogleRefreshToken(existing.refreshTokenEncrypted) : null);
+  const refreshToken =
+    tokens.refresh_token ?? (existing ? decryptGoogleRefreshToken(existing.refreshTokenEncrypted) : null);
   if (!refreshToken) {
-    throw new AppError('Google não forneceu autorização offline. Desconecte o acesso no Google e tente novamente.', 400);
+    throw new AppError(
+      'Google não forneceu autorização offline. Desconecte o acesso no Google e tente novamente.',
+      400
+    );
   }
 
   const profile = await gmailGet<GmailProfile>('/users/me/profile', tokens.access_token);
@@ -671,7 +697,9 @@ export async function syncGmailIntegration(companyId: string) {
       data: {
         ...(listed.complete ? { lastSyncedAt: syncStartedAt } : {}),
         lastSuccessfulSyncAt: new Date(),
-        lastError: listed.complete ? null : 'Sincronização parcial: volume de mensagens acima do limite por ciclo.'
+        lastError: listed.complete
+          ? null
+          : 'Sincronização parcial: volume de mensagens acima do limite por ciclo.'
       }
     });
     return { found: listed.refs.length, inserted, convocations, complete: listed.complete };
@@ -695,12 +723,17 @@ export async function syncAllGmailIntegrations() {
   if (!gmailConfigured() || pollRunning) return;
   pollRunning = true;
   try {
-    const integrations = (await db.emailIntegration.findMany({ select: { companyId: true } })) as Array<{ companyId: string }>;
+    const integrations = (await db.emailIntegration.findMany({ select: { companyId: true } })) as Array<{
+      companyId: string;
+    }>;
     for (const integration of integrations) {
       try {
         await syncGmailIntegration(integration.companyId);
       } catch (error) {
-        console.error(`Falha ao sincronizar Gmail da empresa ${integration.companyId}:`, safeGoogleError(error));
+        console.error(
+          `Falha ao sincronizar Gmail da empresa ${integration.companyId}:`,
+          safeGoogleError(error)
+        );
       }
     }
   } catch (error) {
@@ -740,7 +773,7 @@ export async function listCompanyEmailMessages(
     const bid = await db.bid.findFirst({ where: { id: query.bidId, companyId }, select: { id: true } });
     if (!bid) throw new AppError('Participação não encontrada nesta empresa', 404);
   }
-  return db.emailMessage.findMany({
+  const messages = await db.emailMessage.findMany({
     where: {
       companyId,
       ...(query.convocationsOnly ? { isPotentialConvocation: true } : {}),
@@ -774,6 +807,14 @@ export async function listCompanyEmailMessages(
     orderBy: { receivedAt: 'desc' },
     take: query.limit
   });
+  if (!query.convocationsOnly || messages.length === 0) return messages;
+  const keys = messages.map((message: { id: string }) => `GMAIL_CONVOCATION:${message.id}`);
+  const dismissed = await db.notificationRead.findMany({
+    where: { userId: auth.userId, alertKey: { in: keys }, dismissedAt: { not: null } },
+    select: { alertKey: true }
+  });
+  const dismissedKeys = new Set(dismissed.map((item: { alertKey: string }) => item.alertKey));
+  return messages.filter((message: { id: string }) => !dismissedKeys.has(`GMAIL_CONVOCATION:${message.id}`));
 }
 
 export async function linkGmailConvocationToBid(messageId: string, bidId: string | null, auth: AuthScope) {
@@ -833,37 +874,52 @@ export async function listGmailConvocationAlerts(auth: AuthScope) {
     orderBy: { receivedAt: 'desc' },
     take: 50
   })) as Array<{
-    id: string; companyId: string; provider: 'GMAIL' | 'OUTLOOK'; sender: string; subject: string | null; receivedAt: Date; snippet: string | null;
-    tenderId: string | null; bidId: string | null;
-    tender: { modality: string | null; noticeNumber: string | null; processNumber: string | null; municipality: string } | null;
+    id: string;
+    companyId: string;
+    provider: 'GMAIL' | 'OUTLOOK';
+    sender: string;
+    subject: string | null;
+    receivedAt: Date;
+    snippet: string | null;
+    tenderId: string | null;
+    bidId: string | null;
+    tender: {
+      modality: string | null;
+      noticeNumber: string | null;
+      processNumber: string | null;
+      municipality: string;
+    } | null;
     company: { legalName: string; tradeName: string | null };
   }>;
   const alertKeys = messages.map((message) => `GMAIL_CONVOCATION:${message.id}`);
   const reads = alertKeys.length
-    ? (await db.notificationRead.findMany({
+    ? ((await db.notificationRead.findMany({
         where: { userId: auth.userId, alertKey: { in: alertKeys } },
-        select: { alertKey: true }
-      })) as Array<{ alertKey: string }>
+        select: { alertKey: true, dismissedAt: true }
+      })) as Array<{ alertKey: string; dismissedAt: Date | null }>)
     : [];
-  const readKeys = new Set(reads.map((item: { alertKey: string }) => item.alertKey));
-  const items = messages.map((message) => {
-    const key = `GMAIL_CONVOCATION:${message.id}`;
-    return {
-      key,
-      messageId: message.id,
-      companyId: message.companyId,
-      provider: message.provider,
-      companyName: message.company.tradeName || message.company.legalName,
-      sender: message.sender,
-      subject: message.subject,
-      receivedAt: message.receivedAt,
-      snippet: message.snippet,
-      tenderId: message.tenderId,
-      bidId: message.bidId,
-      tender: message.tender,
-      read: readKeys.has(key)
-    };
-  });
+  const readKeys = new Set(reads.map((item) => item.alertKey));
+  const dismissedKeys = new Set(reads.filter((item) => item.dismissedAt).map((item) => item.alertKey));
+  const items = messages
+    .filter((message) => !dismissedKeys.has(`GMAIL_CONVOCATION:${message.id}`))
+    .map((message) => {
+      const key = `GMAIL_CONVOCATION:${message.id}`;
+      return {
+        key,
+        messageId: message.id,
+        companyId: message.companyId,
+        provider: message.provider,
+        companyName: message.company.tradeName || message.company.legalName,
+        sender: message.sender,
+        subject: message.subject,
+        receivedAt: message.receivedAt,
+        snippet: message.snippet,
+        tenderId: message.tenderId,
+        bidId: message.bidId,
+        tender: message.tender,
+        read: readKeys.has(key)
+      };
+    });
   return { items, unread: items.filter((item) => !item.read).length };
 }
 
@@ -894,4 +950,18 @@ export async function markAllGmailConvocationsRead(auth: AuthScope) {
     )
   );
   return { count: current.items.length };
+}
+
+export async function dismissGmailConvocationAlert(auth: AuthScope, messageId: string) {
+  const message = await db.emailMessage.findFirst({
+    where: { id: messageId, ...emailAccessWhere(auth), isPotentialConvocation: true },
+    select: { id: true }
+  });
+  if (!message) throw new AppError('Notificação não encontrada', 404);
+  const alertKey = `GMAIL_CONVOCATION:${message.id}`;
+  await db.notificationRead.upsert({
+    where: { userId_alertKey: { userId: auth.userId, alertKey } },
+    create: { userId: auth.userId, alertKey, dismissedAt: new Date() },
+    update: { readAt: new Date(), dismissedAt: new Date() }
+  });
 }

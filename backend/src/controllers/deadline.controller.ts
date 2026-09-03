@@ -1,5 +1,11 @@
 import type { Request, Response } from 'express';
-import { listDeadlineAlerts, listTenderDeadlines, markAllDeadlineReads, markDeadlineRead } from '../services/deadline.service.js';
+import {
+  dismissDeadlineAlert,
+  listDeadlineAlerts,
+  listTenderDeadlines,
+  markAllDeadlineReads,
+  markDeadlineRead
+} from '../services/deadline.service.js';
 
 export const index = async (req: Request, res: Response) => {
   const data = await listDeadlineAlerts(
@@ -22,4 +28,9 @@ export const read = async (req: Request, res: Response) => {
 export const readAll = async (req: Request, res: Response) => {
   const data = await markAllDeadlineReads(req.auth!);
   res.json({ success: true, message: 'Notificações marcadas como lidas', data });
+};
+
+export const dismiss = async (req: Request, res: Response) => {
+  await dismissDeadlineAlert(req.auth!, req.body.alertKey);
+  res.json({ success: true, message: 'Notificação apagada' });
 };

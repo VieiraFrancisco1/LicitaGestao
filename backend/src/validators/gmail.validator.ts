@@ -20,6 +20,10 @@ export const gmailReadAlertSchema = z.object({
   body: z.object({ messageId: uuid })
 });
 
+export const gmailDismissAlertSchema = z.object({
+  params: z.object({ messageId: uuid })
+});
+
 export const gmailLinkMessageSchema = z.object({
   params: z.object({ messageId: uuid }),
   body: z.object({ bidId: uuid.nullable() })

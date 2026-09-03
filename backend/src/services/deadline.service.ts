@@ -92,12 +92,18 @@ export async function listDeadlineAlerts(auth: AuthScope, query: { horizon: numb
   const reads = alerts.length
     ? await (prisma as any).notificationRead.findMany({
         where: { userId: auth.userId, alertKey: { in: alerts.map((alert) => alert.key) } },
-        select: { alertKey: true }
+        select: { alertKey: true, dismissedAt: true }
       })
     : [];
   const readKeys = new Set(reads.map((item: { alertKey: string }) => item.alertKey));
+  const dismissedKeys = new Set(
+    reads
+      .filter((item: { dismissedAt: Date | null }) => item.dismissedAt)
+      .map((item: { alertKey: string }) => item.alertKey)
+  );
 
   const items = alerts
+    .filter((alert) => !dismissedKeys.has(alert.key))
     .map((alert) => ({ ...alert, read: readKeys.has(alert.key) }))
     .sort((a, b) => a.days - b.days || a.date.localeCompare(b.date));
 
@@ -177,4 +183,16 @@ export async function markAllDeadlineReads(auth: AuthScope) {
     )
   );
   return { count: current.items.length };
+}
+
+export async function dismissDeadlineAlert(auth: AuthScope, alertKey: string) {
+  const current = await listDeadlineAlerts(auth, { horizon: 90, pastDays: 90 });
+  if (!current.items.some((item) => item.key === alertKey)) {
+    throw new AppError('Notificação não encontrada', 404);
+  }
+  return (prisma as any).notificationRead.upsert({
+    where: { userId_alertKey: { userId: auth.userId, alertKey } },
+    create: { userId: auth.userId, alertKey, dismissedAt: new Date() },
+    update: { readAt: new Date(), dismissedAt: new Date() }
+  });
 }

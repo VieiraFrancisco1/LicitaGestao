@@ -87,29 +87,29 @@ enum DocumentCategory {
 }
 
 model User {
-  id               String                @id @default(uuid()) @db.Uuid
-  name             String                @db.VarChar(120)
-  email            String                @unique @db.VarChar(180)
-  passwordHash     String                @map("password_hash") @db.VarChar(255)
-  sessionVersion   Int                   @default(0) @map("session_version")
-  role             UserRole              @default(FUNCIONARIO)
-  active           Boolean               @default(true)
-  companyId        String?               @map("company_id") @db.Uuid
-  company          Company?              @relation(fields: [companyId], references: [id], onDelete: Restrict)
-  companyLinks     CompanyUser[]
-  refreshTokens    RefreshToken[]
-  createdTenders   Tender[]              @relation("TenderCreatedBy")
-  updatedTenders   Tender[]              @relation("TenderUpdatedBy")
-  createdBids      Bid[]                 @relation("BidCreatedBy")
-  updatedBids      Bid[]                 @relation("BidUpdatedBy")
-  documents        Document[]
-  createdDiscounts DiscountCalculation[] @relation("DiscountCreatedBy")
-  updatedDiscounts DiscountCalculation[] @relation("DiscountUpdatedBy")
-  auditLogs        AuditLog[]
-  notificationReads NotificationRead[]
+  id                          String                @id @default(uuid()) @db.Uuid
+  name                        String                @db.VarChar(120)
+  email                       String                @unique @db.VarChar(180)
+  passwordHash                String                @map("password_hash") @db.VarChar(255)
+  sessionVersion              Int                   @default(0) @map("session_version")
+  role                        UserRole              @default(FUNCIONARIO)
+  active                      Boolean               @default(true)
+  companyId                   String?               @map("company_id") @db.Uuid
+  company                     Company?              @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  companyLinks                CompanyUser[]
+  refreshTokens               RefreshToken[]
+  createdTenders              Tender[]              @relation("TenderCreatedBy")
+  updatedTenders              Tender[]              @relation("TenderUpdatedBy")
+  createdBids                 Bid[]                 @relation("BidCreatedBy")
+  updatedBids                 Bid[]                 @relation("BidUpdatedBy")
+  documents                   Document[]
+  createdDiscounts            DiscountCalculation[] @relation("DiscountCreatedBy")
+  updatedDiscounts            DiscountCalculation[] @relation("DiscountUpdatedBy")
+  auditLogs                   AuditLog[]
+  notificationReads           NotificationRead[]
   spreadsheetResponsibilities Tender[]              @relation("TenderSpreadsheetResponsible")
-  createdAt        DateTime              @default(now()) @map("created_at")
-  updatedAt        DateTime              @updatedAt @map("updated_at")
+  createdAt                   DateTime              @default(now()) @map("created_at")
+  updatedAt                   DateTime              @updatedAt @map("updated_at")
 
   @@index([companyId])
   @@index([role, active])
@@ -117,25 +117,25 @@ model User {
 }
 
 model Company {
-  id           String                @id @default(uuid()) @db.Uuid
-  legalName    String                @map("legal_name") @db.VarChar(180)
-  tradeName    String?               @map("trade_name") @db.VarChar(180)
-  cnpj         String                @unique @db.Char(14)
-  email        String?               @db.VarChar(180)
-  phone        String?               @db.VarChar(30)
-  contactName  String?               @map("contact_name") @db.VarChar(120)
-  observations String?               @db.Text
-  megaFolderPath String?              @map("mega_folder_path") @db.VarChar(1000)
-  active       Boolean               @default(true)
-  users        User[]
-  staffLinks   CompanyUser[]
-  bids         Bid[]
-  discounts    DiscountCalculation[]
+  id                 String                @id @default(uuid()) @db.Uuid
+  legalName          String                @map("legal_name") @db.VarChar(180)
+  tradeName          String?               @map("trade_name") @db.VarChar(180)
+  cnpj               String                @unique @db.Char(14)
+  email              String?               @db.VarChar(180)
+  phone              String?               @db.VarChar(30)
+  contactName        String?               @map("contact_name") @db.VarChar(120)
+  observations       String?               @db.Text
+  megaFolderPath     String?               @map("mega_folder_path") @db.VarChar(1000)
+  active             Boolean               @default(true)
+  users              User[]
+  staffLinks         CompanyUser[]
+  bids               Bid[]
+  discounts          DiscountCalculation[]
   emailIntegration   EmailIntegration?
   outlookIntegration OutlookIntegration?
   emailMessages      EmailMessage[]
-  createdAt    DateTime              @default(now()) @map("created_at")
-  updatedAt    DateTime              @updatedAt @map("updated_at")
+  createdAt          DateTime              @default(now()) @map("created_at")
+  updatedAt          DateTime              @updatedAt @map("updated_at")
 
   @@index([legalName])
   @@index([active])
@@ -169,42 +169,42 @@ model Platform {
 }
 
 model Tender {
-  id                     String                @id @default(uuid()) @db.Uuid
-  modality               String?               @db.VarChar(80)
-  noticeNumber           String?               @map("notice_number") @db.VarChar(120)
-  processNumber          String?               @map("process_number") @db.VarChar(120)
-  municipality           String                @db.VarChar(120)
-  state                  String?               @db.Char(2)
-  agency                 String?               @db.VarChar(180)
-  sessionDate            DateTime              @map("session_date") @db.Date
-  sessionTime            String?               @map("session_time") @db.VarChar(5)
-  object                 String                @db.Text
-  executionTerm          String?               @map("execution_term") @db.VarChar(120)
-  proposalValidityDays   Int?                  @map("proposal_validity_days")
-  proposalExpirationDate DateTime?             @map("proposal_expiration_date") @db.Date
-  estimatedValue         Decimal?              @map("estimated_value") @db.Decimal(15, 2)
-  guaranteeType          GuaranteeType         @default(NAO_EXIGIDA) @map("guarantee_type")
-  guaranteePercentage    Decimal?              @map("guarantee_percentage") @db.Decimal(5, 2)
-  guaranteeValue         Decimal?              @map("guarantee_value") @db.Decimal(15, 2)
-  platformId             String?               @map("platform_id") @db.Uuid
-  platform               Platform?             @relation(fields: [platformId], references: [id], onDelete: Restrict)
-  platformLink           String?               @map("platform_link") @db.VarChar(500)
-  seobraLink             String?               @map("seobra_link") @db.VarChar(500)
-  spreadsheetReady       Boolean               @default(false) @map("spreadsheet_ready")
-  spreadsheetResponsibleUserId String?          @map("spreadsheet_responsible_user_id") @db.Uuid
-  spreadsheetResponsibleUser   User?            @relation("TenderSpreadsheetResponsible", fields: [spreadsheetResponsibleUserId], references: [id], onDelete: SetNull)
-  spreadsheetNotes             String?          @map("spreadsheet_notes") @db.Text
-  spreadsheetNotesUpdatedAt    DateTime?         @map("spreadsheet_notes_updated_at")
-  listStatus             TenderListStatus      @default(PENDENTE) @map("list_status")
-  createdById            String                @map("created_by_id") @db.Uuid
-  createdBy              User                  @relation("TenderCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  updatedById            String                @map("updated_by_id") @db.Uuid
-  updatedBy              User                  @relation("TenderUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
-  createdAt              DateTime              @default(now()) @map("created_at")
-  updatedAt              DateTime              @updatedAt @map("updated_at")
-  bids                   Bid[]
-  discounts              DiscountCalculation[]
-  emailMessages          EmailMessage[]         @relation("EmailMatchedTender")
+  id                           String                @id @default(uuid()) @db.Uuid
+  modality                     String?               @db.VarChar(80)
+  noticeNumber                 String?               @map("notice_number") @db.VarChar(120)
+  processNumber                String?               @map("process_number") @db.VarChar(120)
+  municipality                 String                @db.VarChar(120)
+  state                        String?               @db.Char(2)
+  agency                       String?               @db.VarChar(180)
+  sessionDate                  DateTime              @map("session_date") @db.Date
+  sessionTime                  String?               @map("session_time") @db.VarChar(5)
+  object                       String                @db.Text
+  executionTerm                String?               @map("execution_term") @db.VarChar(120)
+  proposalValidityDays         Int?                  @map("proposal_validity_days")
+  proposalExpirationDate       DateTime?             @map("proposal_expiration_date") @db.Date
+  estimatedValue               Decimal?              @map("estimated_value") @db.Decimal(15, 2)
+  guaranteeType                GuaranteeType         @default(NAO_EXIGIDA) @map("guarantee_type")
+  guaranteePercentage          Decimal?              @map("guarantee_percentage") @db.Decimal(5, 2)
+  guaranteeValue               Decimal?              @map("guarantee_value") @db.Decimal(15, 2)
+  platformId                   String?               @map("platform_id") @db.Uuid
+  platform                     Platform?             @relation(fields: [platformId], references: [id], onDelete: Restrict)
+  platformLink                 String?               @map("platform_link") @db.VarChar(500)
+  seobraLink                   String?               @map("seobra_link") @db.VarChar(500)
+  spreadsheetReady             Boolean               @default(false) @map("spreadsheet_ready")
+  spreadsheetResponsibleUserId String?               @map("spreadsheet_responsible_user_id") @db.Uuid
+  spreadsheetResponsibleUser   User?                 @relation("TenderSpreadsheetResponsible", fields: [spreadsheetResponsibleUserId], references: [id], onDelete: SetNull)
+  spreadsheetNotes             String?               @map("spreadsheet_notes") @db.Text
+  spreadsheetNotesUpdatedAt    DateTime?             @map("spreadsheet_notes_updated_at")
+  listStatus                   TenderListStatus      @default(PENDENTE) @map("list_status")
+  createdById                  String                @map("created_by_id") @db.Uuid
+  createdBy                    User                  @relation("TenderCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedById                  String                @map("updated_by_id") @db.Uuid
+  updatedBy                    User                  @relation("TenderUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  createdAt                    DateTime              @default(now()) @map("created_at")
+  updatedAt                    DateTime              @updatedAt @map("updated_at")
+  bids                         Bid[]
+  discounts                    DiscountCalculation[]
+  emailMessages                EmailMessage[]        @relation("EmailMatchedTender")
 
   @@index([platformId])
   @@index([sessionDate])
@@ -217,23 +217,23 @@ model Tender {
 }
 
 model Bid {
-  id            String       @id @default(uuid()) @db.Uuid
-  tenderId      String       @map("tender_id") @db.Uuid
-  tender        Tender       @relation(fields: [tenderId], references: [id], onDelete: Cascade)
-  companyId     String       @map("company_id") @db.Uuid
-  company       Company      @relation(fields: [companyId], references: [id], onDelete: Restrict)
-  proposalValue Decimal?     @map("proposal_value") @db.Decimal(15, 2)
-  progress      BidProgress  @default(NAO_INICIADA)
-  situation     BidSituation @default(PENDENTE)
-  observations  String?      @db.Text
-  createdById   String       @map("created_by_id") @db.Uuid
-  createdBy     User         @relation("BidCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
-  updatedById   String       @map("updated_by_id") @db.Uuid
-  updatedBy     User         @relation("BidUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
-  createdAt     DateTime     @default(now()) @map("created_at")
-  updatedAt     DateTime     @updatedAt @map("updated_at")
+  id            String         @id @default(uuid()) @db.Uuid
+  tenderId      String         @map("tender_id") @db.Uuid
+  tender        Tender         @relation(fields: [tenderId], references: [id], onDelete: Cascade)
+  companyId     String         @map("company_id") @db.Uuid
+  company       Company        @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  proposalValue Decimal?       @map("proposal_value") @db.Decimal(15, 2)
+  progress      BidProgress    @default(NAO_INICIADA)
+  situation     BidSituation   @default(PENDENTE)
+  observations  String?        @db.Text
+  createdById   String         @map("created_by_id") @db.Uuid
+  createdBy     User           @relation("BidCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedById   String         @map("updated_by_id") @db.Uuid
+  updatedBy     User           @relation("BidUpdatedBy", fields: [updatedById], references: [id], onDelete: Restrict)
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
   documents     Document[]
-  emailMessages  EmailMessage[] @relation("EmailMatchedBid")
+  emailMessages EmailMessage[] @relation("EmailMatchedBid")
 
   @@unique([tenderId, companyId])
   @@index([tenderId])
@@ -244,21 +244,21 @@ model Bid {
 }
 
 model Document {
-  id           String           @id @default(uuid()) @db.Uuid
-  bidId        String           @map("bid_id") @db.Uuid
-  bid          Bid              @relation(fields: [bidId], references: [id], onDelete: Cascade)
-  originalName String           @map("original_name") @db.VarChar(255)
-  fileName     String           @map("file_name") @db.VarChar(255)
-  mimeType     String           @map("mime_type") @db.VarChar(150)
-  size         Int
-  category     DocumentCategory @default(OUTRO)
-  path         String           @db.VarChar(1000)
-  storageProvider String        @default("LOCAL") @map("storage_provider") @db.VarChar(20)
-  remoteNodeId String?          @map("remote_node_id") @db.VarChar(120)
-  remotePath   String?          @map("remote_path") @db.VarChar(1000)
-  uploadedById String           @map("uploaded_by_id") @db.Uuid
-  uploadedBy   User             @relation(fields: [uploadedById], references: [id], onDelete: Restrict)
-  createdAt    DateTime         @default(now()) @map("created_at")
+  id              String           @id @default(uuid()) @db.Uuid
+  bidId           String           @map("bid_id") @db.Uuid
+  bid             Bid              @relation(fields: [bidId], references: [id], onDelete: Cascade)
+  originalName    String           @map("original_name") @db.VarChar(255)
+  fileName        String           @map("file_name") @db.VarChar(255)
+  mimeType        String           @map("mime_type") @db.VarChar(150)
+  size            Int
+  category        DocumentCategory @default(OUTRO)
+  path            String           @db.VarChar(1000)
+  storageProvider String           @default("LOCAL") @map("storage_provider") @db.VarChar(20)
+  remoteNodeId    String?          @map("remote_node_id") @db.VarChar(120)
+  remotePath      String?          @map("remote_path") @db.VarChar(1000)
+  uploadedById    String           @map("uploaded_by_id") @db.Uuid
+  uploadedBy      User             @relation(fields: [uploadedById], references: [id], onDelete: Restrict)
+  createdAt       DateTime         @default(now()) @map("created_at")
 
   @@index([bidId])
   @@index([uploadedById])
@@ -304,17 +304,17 @@ model ProposalLetterTemplate {
 }
 
 model EmailIntegration {
-  id                    String   @id @default(uuid()) @db.Uuid
-  companyId             String   @unique @map("company_id") @db.Uuid
-  company               Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  googleEmail           String   @map("google_email") @db.VarChar(180)
-  refreshTokenEncrypted String   @map("refresh_token_encrypted") @db.Text
-  connectedAt           DateTime @default(now()) @map("connected_at")
+  id                    String    @id @default(uuid()) @db.Uuid
+  companyId             String    @unique @map("company_id") @db.Uuid
+  company               Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  googleEmail           String    @map("google_email") @db.VarChar(180)
+  refreshTokenEncrypted String    @map("refresh_token_encrypted") @db.Text
+  connectedAt           DateTime  @default(now()) @map("connected_at")
   lastSyncedAt          DateTime? @map("last_synced_at")
   lastSuccessfulSyncAt  DateTime? @map("last_successful_sync_at")
-  lastError             String?  @map("last_error") @db.VarChar(500)
-  createdAt             DateTime @default(now()) @map("created_at")
-  updatedAt             DateTime @updatedAt @map("updated_at")
+  lastError             String?   @map("last_error") @db.VarChar(500)
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
 
   @@index([lastSyncedAt])
   @@map("email_integrations")
@@ -338,29 +338,29 @@ model OutlookIntegration {
 }
 
 model EmailMessage {
-  id                    String                @id @default(uuid()) @db.Uuid
-  companyId             String                @map("company_id") @db.Uuid
-  company               Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  gmailMessageId        String                @map("gmail_message_id") @db.VarChar(180)
-  threadId              String                @map("thread_id") @db.VarChar(180)
-  provider              EmailProvider         @default(GMAIL)
-  sender                String                @db.VarChar(500)
-  subject               String?               @db.VarChar(500)
-  receivedAt            DateTime              @map("received_at")
-  snippet               String?               @db.Text
-  textContent           String?               @map("text_content") @db.Text
-  processingStatus      EmailProcessingStatus @default(PENDENTE) @map("processing_status")
-  isPotentialConvocation Boolean               @default(false) @map("is_potential_convocation")
-  convocationReason     String?               @map("convocation_reason") @db.VarChar(255)
-  tenderId              String?               @map("tender_id") @db.Uuid
-  tender                Tender?               @relation("EmailMatchedTender", fields: [tenderId], references: [id], onDelete: SetNull)
-  bidId                 String?               @map("bid_id") @db.Uuid
-  bid                   Bid?                  @relation("EmailMatchedBid", fields: [bidId], references: [id], onDelete: SetNull)
-  convocationMatchMethod String?              @map("convocation_match_method") @db.VarChar(40)
-  convocationMatchConfidence Int?             @map("convocation_match_confidence")
-  convocationMatchedAt  DateTime?             @map("convocation_matched_at")
-  createdAt             DateTime              @default(now()) @map("created_at")
-  updatedAt             DateTime              @updatedAt @map("updated_at")
+  id                         String                @id @default(uuid()) @db.Uuid
+  companyId                  String                @map("company_id") @db.Uuid
+  company                    Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  gmailMessageId             String                @map("gmail_message_id") @db.VarChar(180)
+  threadId                   String                @map("thread_id") @db.VarChar(180)
+  provider                   EmailProvider         @default(GMAIL)
+  sender                     String                @db.VarChar(500)
+  subject                    String?               @db.VarChar(500)
+  receivedAt                 DateTime              @map("received_at")
+  snippet                    String?               @db.Text
+  textContent                String?               @map("text_content") @db.Text
+  processingStatus           EmailProcessingStatus @default(PENDENTE) @map("processing_status")
+  isPotentialConvocation     Boolean               @default(false) @map("is_potential_convocation")
+  convocationReason          String?               @map("convocation_reason") @db.VarChar(255)
+  tenderId                   String?               @map("tender_id") @db.Uuid
+  tender                     Tender?               @relation("EmailMatchedTender", fields: [tenderId], references: [id], onDelete: SetNull)
+  bidId                      String?               @map("bid_id") @db.Uuid
+  bid                        Bid?                  @relation("EmailMatchedBid", fields: [bidId], references: [id], onDelete: SetNull)
+  convocationMatchMethod     String?               @map("convocation_match_method") @db.VarChar(40)
+  convocationMatchConfidence Int?                  @map("convocation_match_confidence")
+  convocationMatchedAt       DateTime?             @map("convocation_matched_at")
+  createdAt                  DateTime              @default(now()) @map("created_at")
+  updatedAt                  DateTime              @updatedAt @map("updated_at")
 
   @@unique([companyId, gmailMessageId])
   @@index([companyId, receivedAt])
@@ -386,18 +386,17 @@ model RefreshToken {
   @@map("refresh_tokens")
 }
 
-
 model AuditLog {
-  id         String      @id @default(uuid()) @db.Uuid
-  actorId    String?     @map("actor_id") @db.Uuid
-  actor      User?       @relation(fields: [actorId], references: [id], onDelete: SetNull)
-  action     AuditAction
-  entityType String      @map("entity_type") @db.VarChar(80)
-  entityId   String?     @map("entity_id") @db.VarChar(120)
-  entityLabel String?    @map("entity_label") @db.VarChar(255)
-  description String     @db.VarChar(500)
-  metadata   Json?
-  createdAt  DateTime    @default(now()) @map("created_at")
+  id          String      @id @default(uuid()) @db.Uuid
+  actorId     String?     @map("actor_id") @db.Uuid
+  actor       User?       @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  action      AuditAction
+  entityType  String      @map("entity_type") @db.VarChar(80)
+  entityId    String?     @map("entity_id") @db.VarChar(120)
+  entityLabel String?     @map("entity_label") @db.VarChar(255)
+  description String      @db.VarChar(500)
+  metadata    Json?
+  createdAt   DateTime    @default(now()) @map("created_at")
 
   @@index([createdAt])
   @@index([actorId])
@@ -407,12 +406,14 @@ model AuditLog {
 }
 
 model NotificationRead {
-  userId    String   @map("user_id") @db.Uuid
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  alertKey  String   @map("alert_key") @db.VarChar(220)
-  readAt    DateTime @default(now()) @map("read_at")
+  userId      String    @map("user_id") @db.Uuid
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  alertKey    String    @map("alert_key") @db.VarChar(220)
+  readAt      DateTime  @default(now()) @map("read_at")
+  dismissedAt DateTime? @map("dismissed_at")
 
   @@id([userId, alertKey])
   @@index([readAt])
+  @@index([dismissedAt])
   @@map("notification_reads")
 }

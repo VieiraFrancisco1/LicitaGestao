@@ -1,4 +1,4 @@
-import { AlertTriangle, CheckCircle2, Link2, Mail, RefreshCw, Unlink } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Link2, Mail, RefreshCw, Trash2, Unlink } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, errorMessage } from '../services/api';
@@ -86,6 +86,23 @@ export function CompanyConvocationsPanel({
     }
   };
 
+  const dismissMessage = async (item: EmailMessage) => {
+    const confirmed = window.confirm(
+      'Apagar esta notificação da sua lista? O e-mail original continuará preservado na conta conectada.'
+    );
+    if (!confirmed) return;
+    setSavingId(item.id);
+    setError('');
+    try {
+      await api.delete(`/integrations/gmail/alerts/${item.id}`);
+      await load();
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setSavingId(null);
+    }
+  };
+
   return (
     <section className="detail-panel company-convocations-panel">
       {showHeading && (
@@ -93,7 +110,8 @@ export function CompanyConvocationsPanel({
           <div>
             <strong>Avisos identificados nos e-mails</strong>
             <small>
-              O LicitaGestão tenta relacionar convocações e avisos das plataformas pelo processo e número da licitação.
+              O LicitaGestão tenta relacionar convocações e avisos das plataformas pelo processo e número da
+              licitação.
             </small>
           </div>
           <button className="secondary-button" onClick={() => void load()} disabled={loading}>
@@ -104,12 +122,17 @@ export function CompanyConvocationsPanel({
       {error && <div className="alert alert-error">{error}</div>}
       {loading ? (
         <div className="app-loader compact-loader">
-          <span className="spinner" />Carregando avisos...
+          <span className="spinner" />
+          Carregando avisos...
         </div>
       ) : items.length === 0 ? (
         <div className="empty-state compact">
           <Mail size={30} />
-          <p>{bidId ? 'Nenhum aviso foi vinculado a esta licitação.' : 'Nenhuma convocação ou aviso de plataforma foi identificado nos e-mails desta empresa.'}</p>
+          <p>
+            {bidId
+              ? 'Nenhum aviso foi vinculado a esta licitação.'
+              : 'Nenhuma convocação ou aviso de plataforma foi identificado nos e-mails desta empresa.'}
+          </p>
           <small>
             {bidId
               ? 'Quando o processo ou número da licitação for identificado no e-mail, o aviso aparecerá aqui.'
@@ -123,13 +146,17 @@ export function CompanyConvocationsPanel({
             const match = matchLabel(item);
             return (
               <article key={item.id} className={`convocation-card ${item.bidId ? 'matched' : 'unmatched'}`}>
-                <span className="convocation-icon"><AlertTriangle size={20} /></span>
+                <span className="convocation-icon">
+                  <AlertTriangle size={20} />
+                </span>
                 <div className="convocation-content">
                   <div className="convocation-title-row">
                     <strong>{item.subject || 'E-mail sem assunto'}</strong>
                     <time>{formatDateTime(item.receivedAt)}</time>
                   </div>
-                  <small>{item.provider === 'OUTLOOK' ? 'Outlook' : 'Gmail'} · De: {item.sender}</small>
+                  <small>
+                    {item.provider === 'OUTLOOK' ? 'Outlook' : 'Gmail'} · De: {item.sender}
+                  </small>
                   {item.snippet && <p>{item.snippet}</p>}
                   {item.convocationReason && <em>{item.convocationReason}</em>}
 
@@ -139,7 +166,9 @@ export function CompanyConvocationsPanel({
                       <span>
                         <strong>Vinculada à licitação</strong>
                         <small>
-                          {[item.tender.modality, item.tender.noticeNumber].filter(Boolean).join(' ') || 'Licitação'} · {item.tender.municipality}
+                          {[item.tender.modality, item.tender.noticeNumber].filter(Boolean).join(' ') ||
+                            'Licitação'}{' '}
+                          · {item.tender.municipality}
                           {match ? ` · ${match}` : ''}
                         </small>
                       </span>
@@ -162,14 +191,22 @@ export function CompanyConvocationsPanel({
                       <Link2 size={16} />
                       <span>
                         <strong>Não vinculada a uma licitação</strong>
-                        <small>Selecione manualmente caso o e-mail não traga identificadores suficientes.</small>
+                        <small>
+                          Selecione manualmente caso o e-mail não traga identificadores suficientes.
+                        </small>
                       </span>
                       <select
                         value={selection[item.id] ?? ''}
-                        onChange={(event) => setSelection((current) => ({ ...current, [item.id]: event.target.value }))}
+                        onChange={(event) =>
+                          setSelection((current) => ({ ...current, [item.id]: event.target.value }))
+                        }
                       >
                         <option value="">Selecionar licitação</option>
-                        {bids.map((bid) => <option key={bid.id} value={bid.id}>{bidLabel(bid)}</option>)}
+                        {bids.map((bid) => (
+                          <option key={bid.id} value={bid.id}>
+                            {bidLabel(bid)}
+                          </option>
+                        ))}
                       </select>
                       <button
                         type="button"
@@ -190,6 +227,15 @@ export function CompanyConvocationsPanel({
                     </details>
                   )}
                   {linkedBid && !item.tender && <small>{bidLabel(linkedBid)}</small>}
+                  <button
+                    type="button"
+                    className="text-action danger convocation-dismiss-action"
+                    disabled={savingId === item.id}
+                    onClick={() => void dismissMessage(item)}
+                  >
+                    <Trash2 size={14} />
+                    {savingId === item.id ? 'Apagando...' : 'Apagar notificação'}
+                  </button>
                 </div>
               </article>
             );

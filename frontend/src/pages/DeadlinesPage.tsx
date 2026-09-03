@@ -1,4 +1,4 @@
-import { AlertTriangle, CalendarClock, CalendarDays, Clock3 } from 'lucide-react';
+import { AlertTriangle, CalendarClock, CalendarDays, Clock3, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, errorMessage } from '../services/api';
@@ -21,6 +21,7 @@ export function DeadlinesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [type, setType] = useState<'ALL' | DeadlineAlert['type']>('ALL');
+  const [removingKey, setRemovingKey] = useState('');
 
   useEffect(() => {
     void (async () => {
@@ -39,6 +40,39 @@ export function DeadlinesPage() {
     () => data?.items.filter((item) => type === 'ALL' || item.type === type) ?? [],
     [data, type]
   );
+
+  const dismiss = async (item: DeadlineAlert) => {
+    if (
+      !window.confirm('Apagar este alerta de prazo da sua lista? A data da licitação continuará preservada.')
+    )
+      return;
+    setRemovingKey(item.key);
+    setError('');
+    try {
+      await api.post('/deadlines/dismiss', { alertKey: item.key });
+      setData((current) => {
+        if (!current) return current;
+        const remaining = current.items.filter((currentItem) => currentItem.key !== item.key);
+        return {
+          ...current,
+          items: remaining,
+          unread: Math.max(0, current.unread - (item.read ? 0 : 1)),
+          summary: {
+            overdue: remaining.filter((currentItem) => currentItem.days < 0).length,
+            today: remaining.filter((currentItem) => currentItem.days === 0).length,
+            next7Days: remaining.filter((currentItem) => currentItem.days > 0 && currentItem.days <= 7)
+              .length,
+            next30Days: remaining.filter((currentItem) => currentItem.days > 0 && currentItem.days <= 30)
+              .length
+          }
+        };
+      });
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setRemovingKey('');
+    }
+  };
 
   return (
     <div className="page-stack">
@@ -105,38 +139,49 @@ export function DeadlinesPage() {
         ) : (
           <div className="deadline-list">
             {items.map((item) => (
-              <Link
-                to={`/licitacoes/${item.tenderId}`}
+              <article
                 key={item.key}
-                className={`deadline-row ${item.severity.toLowerCase()}`}
+                className={`deadline-row deadline-row-dismissible ${item.severity.toLowerCase()}`}
               >
-                <span className={`deadline-date-box ${item.severity.toLowerCase()}`}>
-                  <strong>{item.date.slice(8, 10)}</strong>
-                  <small>
-                    {new Intl.DateTimeFormat('pt-BR', { month: 'short', timeZone: 'UTC' })
-                      .format(new Date(`${item.date}T00:00:00Z`))
-                      .replace('.', '')}
-                  </small>
-                </span>
-                <span className="deadline-main">
-                  <span className="deadline-title-line">
-                    <strong>{item.title}</strong>
-                    <em>{relativeLabel(item.days)}</em>
+                <Link to={`/licitacoes/${item.tenderId}`} className="deadline-row-link">
+                  <span className={`deadline-date-box ${item.severity.toLowerCase()}`}>
+                    <strong>{item.date.slice(8, 10)}</strong>
+                    <small>
+                      {new Intl.DateTimeFormat('pt-BR', { month: 'short', timeZone: 'UTC' })
+                        .format(new Date(`${item.date}T00:00:00Z`))
+                        .replace('.', '')}
+                    </small>
                   </span>
-                  <span>
-                    {item.noticeNumber || item.processNumber || 'Licitação sem número'} · {item.municipality}
-                    {item.state ? `/${item.state}` : ''}
+                  <span className="deadline-main">
+                    <span className="deadline-title-line">
+                      <strong>{item.title}</strong>
+                      <em>{relativeLabel(item.days)}</em>
+                    </span>
+                    <span>
+                      {item.noticeNumber || item.processNumber || 'Licitação sem número'} ·{' '}
+                      {item.municipality}
+                      {item.state ? `/${item.state}` : ''}
+                    </span>
+                    <small>{item.object}</small>
                   </span>
-                  <small>{item.object}</small>
-                </span>
-                <span className="deadline-meta">
-                  <strong>
-                    {dateFormat(item.date)}
-                    {item.type === 'SESSION' && item.sessionTime ? ` às ${item.sessionTime}` : ''}
-                  </strong>
-                  <small>{item.platform?.name || 'Sem plataforma'}</small>
-                </span>
-              </Link>
+                  <span className="deadline-meta">
+                    <strong>
+                      {dateFormat(item.date)}
+                      {item.type === 'SESSION' && item.sessionTime ? ` às ${item.sessionTime}` : ''}
+                    </strong>
+                    <small>{item.platform?.name || 'Sem plataforma'}</small>
+                  </span>
+                </Link>
+                <button
+                  className="deadline-dismiss-button"
+                  disabled={removingKey === item.key}
+                  title="Apagar alerta"
+                  onClick={() => void dismiss(item)}
+                >
+                  <Trash2 size={16} />
+                  <span>{removingKey === item.key ? 'Apagando...' : 'Apagar'}</span>
+                </button>
+              </article>
             ))}
           </div>
         )}

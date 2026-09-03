@@ -5,6 +5,7 @@ import {
   completeGmailOAuth,
   createGmailAuthorizationUrl,
   disconnectGmail,
+  dismissGmailConvocationAlert,
   getGmailStatus,
   listCompanyEmailMessages,
   listGmailConvocationAlerts,
@@ -28,7 +29,9 @@ export const callback = async (req: Request, res: Response) => {
   const companyIdFromState = (() => {
     try {
       const raw = String(req.query.state ?? '').split('.')[0];
-      return raw ? (JSON.parse(Buffer.from(raw, 'base64url').toString('utf8')) as { companyId?: string }).companyId : undefined;
+      return raw
+        ? (JSON.parse(Buffer.from(raw, 'base64url').toString('utf8')) as { companyId?: string }).companyId
+        : undefined;
     } catch {
       return undefined;
     }
@@ -99,15 +102,30 @@ export const readAllAlerts = async (req: Request, res: Response) => {
   res.json({ success: true, data });
 };
 
+export const dismissAlert = async (req: Request, res: Response) => {
+  await dismissGmailConvocationAlert(req.auth!, req.params.messageId as string);
+  res.json({ success: true, message: 'Notificação apagada' });
+};
+
 export const linkMessage = async (req: Request, res: Response) => {
-  const result = await linkGmailConvocationToBid(req.params.messageId as string, req.body.bidId ?? null, req.auth!);
+  const result = await linkGmailConvocationToBid(
+    req.params.messageId as string,
+    req.body.bidId ?? null,
+    req.auth!
+  );
   await recordAudit(req.auth!, {
     action: AuditActions.UPDATE,
     entityType: 'EMAIL_MESSAGE',
     entityId: result.id,
     entityLabel: result.subject ?? 'Convocação por e-mail',
-    description: req.body.bidId ? 'Convocação vinculada manualmente a uma licitação' : 'Vínculo manual da convocação removido',
+    description: req.body.bidId
+      ? 'Convocação vinculada manualmente a uma licitação'
+      : 'Vínculo manual da convocação removido',
     metadata: { bidId: req.body.bidId ?? null, companyId: result.companyId }
   });
-  res.json({ success: true, message: req.body.bidId ? 'Convocação vinculada à licitação' : 'Vínculo removido', data: result });
+  res.json({
+    success: true,
+    message: req.body.bidId ? 'Convocação vinculada à licitação' : 'Vínculo removido',
+    data: result
+  });
 };
