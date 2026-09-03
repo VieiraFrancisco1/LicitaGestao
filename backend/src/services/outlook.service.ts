@@ -427,7 +427,8 @@ export async function syncOutlookIntegration(companyId: string) {
       const subject = message.subject?.slice(0, 500) ?? null;
       const snippet = cleanText(message.bodyPreview).slice(0, 4_000) || null;
       const textContent = cleanText(message.body?.content);
-      const detection = detectPotentialConvocation({ subject, snippet, text: textContent });
+      const sender = senderLabel(message);
+      const detection = detectPotentialConvocation({ sender, subject, snippet, text: textContent });
 
       try {
         const created = await db.emailMessage.create({
@@ -436,7 +437,7 @@ export async function syncOutlookIntegration(companyId: string) {
             gmailMessageId: externalId,
             threadId: messageKey(message.conversationId || message.id),
             provider: 'OUTLOOK',
-            sender: senderLabel(message),
+            sender,
             subject,
             receivedAt,
             snippet,

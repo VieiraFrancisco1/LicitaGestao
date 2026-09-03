@@ -210,7 +210,7 @@ export function BidDetailsPage() {
             ['data', 'Dados'],
             ['discount', 'Baixa'],
             ['documents', `Documentos (${bid._count?.documents ?? documents.length})`],
-            ['convocations', 'Convocações'],
+            ['convocations', 'Avisos por e-mail'],
             ['deadlines', 'Prazos'],
             ['history', 'Histórico']
           ] as Array<[Tab, string]>

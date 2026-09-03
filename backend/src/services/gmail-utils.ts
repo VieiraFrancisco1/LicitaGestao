@@ -128,8 +128,41 @@ const PROCUREMENT_CONTEXT_TERMS = [
   'processo licitatorio'
 ];
 
-export function detectPotentialConvocation(input: { subject?: string | null; snippet?: string | null; text?: string | null }) {
+const PLATFORM_SENDERS = [
+  { name: 'Licita+Brasil', domains: ['licitamaisbrasil.com.br'] },
+  { name: 'BLL Compras', domains: ['bllcompras.com', 'bll.org.br'] },
+  { name: 'M2A Compras', domains: ['m2atecnologia.com.br'] }
+];
+
+const PLATFORM_ALERT_TERMS = [
+  { terms: ['alteracao do edital', 'alteracoes do edital'], label: 'alteração do edital' },
+  { terms: ['resposta de impugnacao'], label: 'resposta de impugnação' },
+  { terms: ['resposta de esclarecimento', 'aviso de esclarecimento'], label: 'esclarecimento' },
+  { terms: ['nova mensagem no forum', 'mensagem no forum do processo'], label: 'nova mensagem no fórum' },
+  { terms: ['mudanca de vencedor'], label: 'mudança de vencedor' },
+  { terms: ['aviso de prorrogacao', 'prorrogacao do certame'], label: 'prorrogação do certame' },
+  { terms: ['aviso de anulacao', 'anulacao do certame'], label: 'anulação do certame' },
+  { terms: ['aviso de revogacao', 'revogacao do certame'], label: 'revogação do certame' }
+];
+
+export function detectPotentialConvocation(input: {
+  sender?: string | null;
+  subject?: string | null;
+  snippet?: string | null;
+  text?: string | null;
+}) {
   const combined = normalizeText([input.subject, input.snippet, input.text].filter(Boolean).join('\n'));
+  const normalizedSender = normalizeText(input.sender ?? '');
+  const platform = PLATFORM_SENDERS.find((candidate) =>
+    candidate.domains.some((domain) => normalizedSender.includes(`@${domain}`))
+  );
+  const platformAlert = PLATFORM_ALERT_TERMS.find((candidate) =>
+    candidate.terms.some((term) => combined.includes(term))
+  );
+  if (platform && platformAlert) {
+    return { detected: true, reason: `Aviso da ${platform.name}: ${platformAlert.label}` };
+  }
+
   const explicit = CONVOCATION_TERMS.find((candidate) => combined.includes(candidate));
   if (explicit) return { detected: true, reason: `Termo de convocação identificado: ${explicit}` };
 

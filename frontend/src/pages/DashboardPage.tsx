@@ -82,7 +82,7 @@ export function DashboardPage() {
       <section className="dashboard-metrics">
         <Metric icon={<Gavel />} label="Em andamento" value={data?.metrics.activeBids ?? 0} detail="participações ativas" />
         <Metric icon={<CalendarClock />} label="Próximas sessões" value={data?.metrics.upcomingSessions ?? 0} detail="nos próximos 7 dias" />
-        <Metric icon={<BellRing />} label="Convocações" value={data?.metrics.pendingConvocations ?? 0} detail="pendentes de leitura" />
+        <Metric icon={<BellRing />} label="Avisos por e-mail" value={data?.metrics.pendingConvocations ?? 0} detail="pendentes de leitura" />
         <Metric icon={<TriangleAlert />} label="Sessões críticas" value={data?.metrics.criticalDeadlines ?? 0} detail="sessões vencidas ou em até 3 dias" />
       </section>
 
@@ -121,13 +121,13 @@ export function DashboardPage() {
 
       <section className="dashboard-grid-secondary">
         <article className="dashboard-panel">
-          <div className="dashboard-panel-heading"><div><span className="eyebrow">E-mail</span><h3>Convocações recentes</h3></div><Link to="/convocacoes">Ver todas</Link></div>
+          <div className="dashboard-panel-heading"><div><span className="eyebrow">E-mail</span><h3>Avisos recentes</h3></div><Link to="/convocacoes">Ver todos</Link></div>
           <div className="dashboard-compact-list convocations">
-            {!data?.recentConvocations.length && <div className="dashboard-empty">Nenhuma convocação recente.</div>}
+            {!data?.recentConvocations.length && <div className="dashboard-empty">Nenhum aviso recente.</div>}
             {data?.recentConvocations.map((item) => (
               <Link key={item.messageId} to={item.bidId ? `/participacoes/${item.bidId}?tab=convocations` : `/empresas/${item.companyId}?tab=convocations`}>
                 <span className={`dashboard-mail-dot ${item.read ? 'read' : ''}`} />
-                <span><strong>{item.tender?.municipality || item.subject || 'Possível convocação'}</strong><small>{item.companyName} · {new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeStyle:'short'}).format(new Date(item.receivedAt))}</small></span>
+                <span><strong>{item.tender?.municipality || item.subject || 'Aviso importante'}</strong><small>{item.companyName} · {new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeStyle:'short'}).format(new Date(item.receivedAt))}</small></span>
                 <em>{item.read ? 'Lida' : 'Pendente'}</em>
               </Link>
             ))}
@@ -151,7 +151,7 @@ export function DashboardPage() {
               <button key={company.id} onClick={() => setCompanyId(company.id)}>
                 <span className="company-card-icon"><Building2 size={19} /></span>
                 <span className="company-card-copy"><strong>{company.name}</strong><small>{company.activeBids} em andamento · {company.upcomingSessions} próximas sessões</small></span>
-                {company.pendingConvocations > 0 && <em>{company.pendingConvocations} convocação{company.pendingConvocations === 1 ? '' : 'ões'}</em>}
+                {company.pendingConvocations > 0 && <em>{company.pendingConvocations} aviso{company.pendingConvocations === 1 ? '' : 's'}</em>}
                 <ChevronRight size={18} />
               </button>
             ))}

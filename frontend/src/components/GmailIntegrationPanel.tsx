@@ -61,7 +61,7 @@ export function GmailIntegrationPanel({ companyId }: { companyId: string }) {
         ApiResponse<{ found: number; inserted: number; convocations: number; complete?: boolean }>
       >(`/integrations/gmail/${companyId}/sync`);
       setMessage(
-        `${response.data.data.inserted} e-mail(s) novo(s) recebido(s); ${response.data.data.convocations} possível(is) convocação(ões).`
+        `${response.data.data.inserted} e-mail(s) novo(s) recebido(s); ${response.data.data.convocations} aviso(s) importante(s).`
       );
       await load();
     } catch (err) {

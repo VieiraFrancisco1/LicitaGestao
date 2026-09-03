@@ -137,7 +137,7 @@ export function DeadlineNotifications() {
         .forEach((item) => {
           const notificationKey = `${item.key}:${day}`;
           if (history.has(notificationKey)) return;
-          const notification = new Notification(`Possível convocação — ${item.companyName}`, {
+          const notification = new Notification(`Alerta de licitação — ${item.companyName}`, {
             body: gmailDesktopBody(item),
             tag: item.key,
             requireInteraction: true
@@ -194,7 +194,7 @@ export function DeadlineNotifications() {
     setDesktopPermission(permission);
     if (permission === 'granted') {
       new Notification('LicitaGestão', {
-        body: 'Notificações ativadas. Você será avisado sobre prazos urgentes e possíveis convocações.',
+        body: 'Notificações ativadas. Você será avisado sobre prazos, convocações e avisos das plataformas.',
         tag: 'licitagestao-notifications-enabled'
       });
       if (deadlines) showDesktopDeadlineAlerts(deadlines, permission);
@@ -249,7 +249,7 @@ export function DeadlineNotifications() {
   const unread = (deadlines?.unread ?? 0) + (gmailAlerts?.unread ?? 0);
   const hasItems = deadlineItems.length > 0 || gmailItems.length > 0;
   const permissionDescription = useMemo(
-    () => 'Receba pop-ups do Windows para prazos urgentes e possíveis convocações por e-mail.',
+    () => 'Receba pop-ups do Windows para prazos, convocações e avisos importantes das plataformas.',
     []
   );
 
@@ -294,9 +294,9 @@ export function DeadlineNotifications() {
               <button key={item.key} className={`notification-item gmail ${item.read ? 'read' : 'unread'}`} onClick={() => void openGmailAlert(item)}>
                 <span className="deadline-dot urgent" />
                 <span>
-                  <strong>{item.subject || 'Possível convocação'}</strong>
+                  <strong>{item.subject || 'Aviso importante'}</strong>
                   <small>{item.companyName} · {formatDateTime(item.receivedAt)}</small>
-                  <em>{item.bidId ? 'Convocação vinculada à licitação' : 'Possível convocação recebida por e-mail'}</em>
+                  <em>{item.bidId ? 'Aviso vinculado à licitação' : 'Aviso importante recebido por e-mail'}</em>
                 </span>
               </button>
             ))}

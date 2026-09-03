@@ -51,8 +51,8 @@ export function ConvocationsPage() {
       <div className="page-heading">
         <div>
           <span className="eyebrow">E-mail</span>
-          <h2>Convocações</h2>
-          <p>Possíveis convocações identificadas automaticamente nos e-mails novos das empresas.</p>
+          <h2>Avisos por e-mail</h2>
+          <p>Convocações e avisos importantes identificados automaticamente nos e-mails das plataformas.</p>
         </div>
         <div className="page-heading-actions">
           {!!data.unread && (
@@ -73,12 +73,12 @@ export function ConvocationsPage() {
 
       {error && <div className="alert alert-error">{error}</div>}
       {loading ? (
-        <div className="app-loader"><span className="spinner" />Carregando convocações...</div>
+        <div className="app-loader"><span className="spinner" />Carregando avisos...</div>
       ) : data.items.length === 0 ? (
         <section className="empty-state">
           <MailWarning size={36} />
-          <h2>Nenhuma possível convocação encontrada</h2>
-          <p>Quando uma conta Gmail ou Outlook conectada receber um e-mail com termos de convocação, o alerta aparecerá aqui.</p>
+          <h2>Nenhum aviso importante encontrado</h2>
+          <p>Quando o Gmail ou Outlook receber uma convocação ou aviso das plataformas monitoradas, o alerta aparecerá aqui.</p>
         </section>
       ) : (
         <section className="convocation-list global-convocation-list">
@@ -87,7 +87,7 @@ export function ConvocationsPage() {
               <span className="convocation-icon"><MailWarning size={20} /></span>
               <div className="convocation-content">
                 <div className="convocation-title-row">
-                  <strong>{item.subject || 'Possível convocação'}</strong>
+                  <strong>{item.subject || 'Aviso importante'}</strong>
                   <time>{formatDateTime(item.receivedAt)}</time>
                 </div>
                 <small>{item.provider === 'OUTLOOK' ? 'Outlook' : 'Gmail'} · {item.companyName} · De: {item.sender}</small>

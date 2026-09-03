@@ -126,7 +126,7 @@ export function CompanyDetailsPage() {
             ['platforms', 'Plataformas'],
             ['discounts', 'Baixas'],
             ['integrations', 'Integrações'],
-            ['convocations', 'Convocações']
+            ['convocations', 'Avisos por e-mail']
           ] as Array<[Tab, string]>
         ).map(([value, label]) => (
           <button key={value} className={tab === value ? 'active' : ''} onClick={() => setTab(value)}>

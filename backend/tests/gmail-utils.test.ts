@@ -18,6 +18,25 @@ describe('integração Gmail', () => {
     expect(detectPotentialConvocation({ subject: 'Nota fiscal disponível' }).detected).toBe(false);
   });
 
+  it.each([
+    ['naoresponder@licitamaisbrasil.com.br', 'Licita+Brasil - Alteração do Edital'],
+    ['naoresponder@licitamaisbrasil.com.br', 'Licita+Brasil - Resposta de Impugnação'],
+    ['naoresponder@licitamaisbrasil.com.br', 'Nova Mensagem no Fórum do Processo - 001/2026'],
+    ['avisos@bllcompras.com', 'Aviso de mudança de vencedor'],
+    ['compras@m2atecnologia.com.br', 'Aviso de Prorrogação do certame Nº 003/2026'],
+    ['compras@m2atecnologia.com.br', 'Aviso de anulação do certame'],
+    ['compras@m2atecnologia.com.br', 'Aviso de esclarecimento'],
+    ['compras@m2atecnologia.com.br', 'Aviso de revogação do certame']
+  ])('identifica aviso de plataforma enviado por %s', (sender, subject) => {
+    const result = detectPotentialConvocation({ sender, subject });
+    expect(result.detected).toBe(true);
+    expect(result.reason).toContain('Aviso da');
+  });
+
+  it('não transforma assunto genérico de remetente desconhecido em alerta', () => {
+    expect(detectPotentialConvocation({ sender: 'contato@exemplo.com', subject: 'Alteração do edital interno' }).detected).toBe(false);
+  });
+
   it('extrai conteúdo textual base64url de mensagem do Gmail', () => {
     const data = Buffer.from('Empresa convocada para apresentar proposta').toString('base64url');
     expect(extractGmailText({ mimeType: 'text/plain', body: { data } })).toContain('Empresa convocada');

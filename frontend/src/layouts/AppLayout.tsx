@@ -24,7 +24,7 @@ const titles: Record<string, string> = {
   '/': 'Dashboard',
   '/licitacoes': 'Licitações',
   '/empresas': 'Empresas',
-  '/convocacoes': 'Convocações',
+  '/convocacoes': 'Avisos por e-mail',
   '/prazos': 'Prazos',
   '/documentos': 'Documentos',
   '/plataformas': 'Plataformas',
@@ -53,7 +53,7 @@ export function AppLayout() {
           label: user?.role === 'EMPRESA' ? 'Minha empresa' : 'Empresas',
           icon: Building2
         },
-        { to: '/convocacoes', label: 'Convocações', icon: Bell },
+        { to: '/convocacoes', label: 'Avisos por e-mail', icon: Bell },
         { to: '/prazos', label: 'Prazos', icon: CalendarClock },
         { to: '/documentos', label: 'Documentos', icon: FileText }
       ]
@@ -112,7 +112,7 @@ export function AppLayout() {
         </nav>
         <div className="sidebar-footer">
           <span>Fase 5</span>
-          <strong>E-mail e convocações</strong>
+          <strong>E-mails e alertas</strong>
         </div>
       </aside>
       <div className="app-main">

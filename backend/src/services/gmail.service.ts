@@ -418,6 +418,37 @@ export async function relinkPotentialConvocationsForTender(tenderId: string) {
 }
 
 export async function relinkUnmatchedConvocations() {
+  const recentUnclassified = (await db.emailMessage.findMany({
+    where: {
+      isPotentialConvocation: false,
+      receivedAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60_000) }
+    },
+    select: { id: true, sender: true, subject: true, snippet: true, textContent: true },
+    orderBy: { receivedAt: 'desc' },
+    take: 1000
+  })) as Array<{
+    id: string;
+    sender: string;
+    subject: string | null;
+    snippet: string | null;
+    textContent: string | null;
+  }>;
+  let reclassified = 0;
+  for (const message of recentUnclassified) {
+    const detection = detectPotentialConvocation({
+      sender: message.sender,
+      subject: message.subject,
+      snippet: message.snippet,
+      text: message.textContent
+    });
+    if (!detection.detected) continue;
+    await db.emailMessage.update({
+      where: { id: message.id },
+      data: { isPotentialConvocation: true, convocationReason: detection.reason }
+    });
+    reclassified += 1;
+  }
+
   const messages = (await db.emailMessage.findMany({
     where: { isPotentialConvocation: true, bidId: null },
     select: { id: true },
@@ -425,7 +456,7 @@ export async function relinkUnmatchedConvocations() {
     take: 500
   })) as Array<{ id: string }>;
   for (const message of messages) await autoLinkConvocationMessage(message.id);
-  return { checked: messages.length };
+  return { checked: messages.length, reclassified };
 }
 
 export async function getGmailStatus(companyId: string, auth: AuthScope): Promise<GmailStatus> {
@@ -604,7 +635,7 @@ export async function syncGmailIntegration(companyId: string) {
       const subject = headerValue(message.payload, 'Subject')?.slice(0, 500) ?? null;
       const textContent = extractGmailText(message.payload);
       const snippet = message.snippet?.slice(0, 4_000) ?? null;
-      const detection = detectPotentialConvocation({ subject, snippet, text: textContent });
+      const detection = detectPotentialConvocation({ sender, subject, snippet, text: textContent });
 
       try {
         const created = await db.emailMessage.create({

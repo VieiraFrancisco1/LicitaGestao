@@ -141,7 +141,7 @@ export function BidFormPage() {
               <option value="Leilão Eletrônico">Leilão Eletrônico</option>
               <option value="Outro">Outro</option>
             </select>
-            <small className="field-help">Ajuda a relacionar convocações recebidas por e-mail.</small>
+            <small className="field-help">Ajuda a relacionar convocações e avisos recebidos por e-mail.</small>
           </label>
           <label>
             Número da licitação

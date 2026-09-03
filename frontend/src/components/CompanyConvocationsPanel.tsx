@@ -91,9 +91,9 @@ export function CompanyConvocationsPanel({
       {showHeading && (
         <div className="section-heading-inline">
           <div>
-            <strong>Convocações identificadas nos e-mails</strong>
+            <strong>Avisos identificados nos e-mails</strong>
             <small>
-              O LicitaGestão tenta relacionar cada convocação pelo processo administrativo e pelo número da licitação, sem IA.
+              O LicitaGestão tenta relacionar convocações e avisos das plataformas pelo processo e número da licitação.
             </small>
           </div>
           <button className="secondary-button" onClick={() => void load()} disabled={loading}>
@@ -104,16 +104,16 @@ export function CompanyConvocationsPanel({
       {error && <div className="alert alert-error">{error}</div>}
       {loading ? (
         <div className="app-loader compact-loader">
-          <span className="spinner" />Carregando convocações...
+          <span className="spinner" />Carregando avisos...
         </div>
       ) : items.length === 0 ? (
         <div className="empty-state compact">
           <Mail size={30} />
-          <p>{bidId ? 'Nenhuma convocação foi vinculada a esta licitação.' : 'Nenhuma possível convocação foi identificada nos e-mails novos desta empresa.'}</p>
+          <p>{bidId ? 'Nenhum aviso foi vinculado a esta licitação.' : 'Nenhuma convocação ou aviso de plataforma foi identificado nos e-mails desta empresa.'}</p>
           <small>
             {bidId
-              ? 'Quando o processo ou número da licitação for identificado no e-mail, a convocação aparecerá aqui.'
-              : 'Convocações sem correspondência segura continuam disponíveis aqui para vinculação manual.'}
+              ? 'Quando o processo ou número da licitação for identificado no e-mail, o aviso aparecerá aqui.'
+              : 'Avisos sem correspondência segura continuam disponíveis aqui para vinculação manual.'}
           </small>
         </div>
       ) : (
