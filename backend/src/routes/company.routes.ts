@@ -82,7 +82,7 @@ companyRouter.post(
 );
 companyRouter.put(
   '/:id',
-  authorize(UserRole.ADMIN, UserRole.FUNCIONARIO, UserRole.EMPRESA),
+  authorize(UserRole.ADMIN),
   validate(updateCompanySchema),
   asyncHandler(controller.update)
 );

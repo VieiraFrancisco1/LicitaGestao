@@ -1,7 +1,8 @@
 import { Router } from 'express';
+import { UserRole } from '@prisma/client';
 import * as bidController from '../controllers/bid.controller.js';
 import * as tenderController from '../controllers/tender.controller.js';
-import { authenticate } from '../middlewares/auth.js';
+import { authenticate, authorize } from '../middlewares/auth.js';
 import { validate } from '../middlewares/validate.js';
 import { asyncHandler } from '../utils/async-handler.js';
 import { associateTenderSchema } from '../validators/bid.validator.js';
@@ -43,7 +44,12 @@ tenderRouter.patch(
 );
 tenderRouter.get('/:id', validate(tenderIdSchema), asyncHandler(tenderController.show));
 tenderRouter.put('/:id', validate(updateTenderSchema), asyncHandler(tenderController.update));
-tenderRouter.delete('/:id', validate(tenderIdSchema), asyncHandler(tenderController.remove));
+tenderRouter.delete(
+  '/:id',
+  authorize(UserRole.ADMIN),
+  validate(tenderIdSchema),
+  asyncHandler(tenderController.remove)
+);
 tenderRouter.post(
   '/:id/participations',
   validate(associateTenderSchema),

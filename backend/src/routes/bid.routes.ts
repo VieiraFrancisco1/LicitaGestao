@@ -1,7 +1,8 @@
 import { Router } from 'express';
+import { UserRole } from '@prisma/client';
 import * as bidController from '../controllers/bid.controller.js';
 import * as documentController from '../controllers/document.controller.js';
-import { authenticate } from '../middlewares/auth.js';
+import { authenticate, authorize } from '../middlewares/auth.js';
 import { uploadDocument } from '../middlewares/upload.js';
 import { validate } from '../middlewares/validate.js';
 import { asyncHandler } from '../utils/async-handler.js';
@@ -25,7 +26,12 @@ bidRouter.get('/', validate(listBidsSchema), asyncHandler(bidController.index));
 bidRouter.post('/', validate(createBidSchema), asyncHandler(bidController.create));
 bidRouter.get('/:id', validate(bidIdSchema), asyncHandler(bidController.show));
 bidRouter.put('/:id', validate(updateBidSchema), asyncHandler(bidController.update));
-bidRouter.delete('/:id', validate(bidIdSchema), asyncHandler(bidController.remove));
+bidRouter.delete(
+  '/:id',
+  authorize(UserRole.ADMIN, UserRole.FUNCIONARIO),
+  validate(bidIdSchema),
+  asyncHandler(bidController.remove)
+);
 bidRouter.get('/:bidId/documents', validate(documentBidIdSchema), asyncHandler(documentController.index));
 bidRouter.post(
   '/:bidId/documents',

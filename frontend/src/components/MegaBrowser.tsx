@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
 import { api, errorMessage } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 import type { ApiResponse, MegaBrowseData, MegaItem, MegaStatus } from '../types';
 import { formatBytes, formatDate } from '../utils/bid';
 
@@ -23,6 +24,7 @@ type Props = {
 };
 
 export function MegaBrowser({ companyId, compact = false }: Props) {
+  const { user } = useAuth();
   const [status, setStatus] = useState<MegaStatus | null>(null);
   const [data, setData] = useState<MegaBrowseData | null>(null);
   const [path, setPath] = useState('');
@@ -333,12 +335,16 @@ export function MegaBrowser({ companyId, compact = false }: Props) {
                       <Download size={16} />
                     </button>
                   )}
-                  <button className="icon-action" title="Renomear" disabled={busy} onClick={() => rename(item)}>
-                    <Pencil size={15} />
-                  </button>
-                  <button className="icon-action danger" title="Mover para lixeira" disabled={busy} onClick={() => remove(item)}>
-                    <Trash2 size={16} />
-                  </button>
+                  {(item.type === 'file' || user?.role === 'ADMIN') && (
+                    <button className="icon-action" title="Renomear" disabled={busy} onClick={() => rename(item)}>
+                      <Pencil size={15} />
+                    </button>
+                  )}
+                  {(item.type === 'file' || user?.role === 'ADMIN') && (
+                    <button className="icon-action danger" title="Mover para lixeira" disabled={busy} onClick={() => remove(item)}>
+                      <Trash2 size={16} />
+                    </button>
+                  )}
                 </div>
               </article>
             ))}

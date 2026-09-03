@@ -139,11 +139,10 @@ export function TendersPage() {
 
   const deleteTender = async (tender: Tender) => {
     const label = tender.noticeNumber ? `${tender.municipality} · ${tender.noticeNumber}` : tender.municipality;
-    if (
-      !window.confirm(
-        `Excluir definitivamente a licitação ${label}? As participações e registros vinculados a ela também serão removidos do banco.`
-      )
-    ) {
+    const confirmation = window.prompt(
+      `ATENÇÃO: excluir ${label} também remove as participações e os registros vinculados.\n\nDigite EXCLUIR para confirmar:`
+    );
+    if (confirmation?.trim().toUpperCase() !== 'EXCLUIR') {
       return;
     }
     setActionId(tender.id);
@@ -446,7 +445,7 @@ export function TendersPage() {
                             <Pencil size={15} />
                             Editar
                           </Link>
-                          {user?.role !== 'EMPRESA' ? (
+                          {user?.role === 'ADMIN' && (
                             <button
                               className="action-button compact-action-button danger-soft-button"
                               disabled={actionId === tender.id}
@@ -455,11 +454,6 @@ export function TendersPage() {
                               <Trash2 size={15} />
                               Apagar
                             </button>
-                          ) : (
-                            <span className="action-button compact-action-button ghost-disabled">
-                              <Trash2 size={15} />
-                              Apagar
-                            </span>
                           )}
                         </div>
                       </td>

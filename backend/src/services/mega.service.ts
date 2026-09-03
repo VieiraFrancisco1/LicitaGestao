@@ -333,6 +333,9 @@ export async function renameMegaNode(auth: AuthScope, companyId: string | undefi
   if (companyId) await assertCompanyWriteAccess(companyId, auth);
   if (!companyId && auth.role !== UserRole.ADMIN) throw new AppError('Selecione uma empresa', 422);
   const found = await resolveNodeForAction(auth, companyId, nodeId);
+  if (found.node.directory && auth.role !== UserRole.ADMIN) {
+    throw new AppError('Somente um administrador pode renomear pastas', 403);
+  }
   const cleanName = assertSafeName(name);
   await found.node.rename(cleanName);
   return { id: found.node.nodeId, name: cleanName };
@@ -342,6 +345,9 @@ export async function deleteMegaNode(auth: AuthScope, companyId: string | undefi
   if (companyId) await assertCompanyWriteAccess(companyId, auth);
   if (!companyId && auth.role !== UserRole.ADMIN) throw new AppError('Selecione uma empresa', 422);
   const found = await resolveNodeForAction(auth, companyId, nodeId);
+  if (found.node.directory && auth.role !== UserRole.ADMIN) {
+    throw new AppError('Somente um administrador pode mover pastas inteiras para a lixeira', 403);
+  }
   await found.node.delete(false);
   return { id: nodeId, name: found.node.name ?? 'Arquivo', type: found.node.directory ? 'folder' : 'file' };
 }

@@ -99,6 +99,7 @@ export function BidDetailsPage() {
     user?.role === 'EMPRESA' ||
     user?.assignedCompanies.some((company) => company.id === bid.companyId)
   );
+  const canRemoveAssociation = canEdit && user?.role !== 'EMPRESA';
   const markAttached = async () => {
     setMarkingAttached(true);
     setError('');
@@ -183,7 +184,7 @@ export function BidDetailsPage() {
               {markingAttached ? 'Marcando...' : 'Marcar como anexada'}
             </button>
           )}
-          {canEdit && (
+          {canRemoveAssociation && (
             <button
               className="secondary-button compact-header-action danger-outline"
               disabled={removingAssociation}

@@ -39,7 +39,6 @@ export const create = async (req: Request, res: Response) => {
 
 export const update = async (req: Request, res: Response) => {
   await getCompany(req.params.id as string, req.auth!);
-  if (req.auth!.role !== 'ADMIN') delete req.body.active;
   const company = await updateCompany(req.params.id as string, req.body);
   await recordAudit(req.auth!, {
     action: AuditActions.UPDATE,

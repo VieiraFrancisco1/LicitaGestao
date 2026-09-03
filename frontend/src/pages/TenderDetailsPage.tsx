@@ -105,7 +105,10 @@ export function TenderDetailsPage() {
   const removeTender = async () => {
     if (!tender) return;
     const label = tender.noticeNumber ? `${tender.municipality} · ${tender.noticeNumber}` : tender.municipality;
-    if (!window.confirm(`Excluir definitivamente a licitação ${label}?`)) return;
+    const confirmation = window.prompt(
+      `ATENÇÃO: excluir ${label} também remove as participações e os registros vinculados.\n\nDigite EXCLUIR para confirmar:`
+    );
+    if (confirmation?.trim().toUpperCase() !== 'EXCLUIR') return;
     setAction(true);
     try {
       await api.delete(`/tenders/${tender.id}`);
@@ -157,7 +160,7 @@ export function TenderDetailsPage() {
             <Pencil size={16} />
             Editar dados gerais
           </Link>
-          {user?.role !== 'EMPRESA' && (
+          {user?.role === 'ADMIN' && (
             <button className="secondary-button danger-action" disabled={action} onClick={() => void removeTender()}>
               <Trash2 size={16} />
               Excluir
