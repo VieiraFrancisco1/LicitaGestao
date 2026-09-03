@@ -121,7 +121,7 @@ export function DashboardPage() {
 
       <section className="dashboard-grid-secondary">
         <article className="dashboard-panel">
-          <div className="dashboard-panel-heading"><div><span className="eyebrow">Gmail</span><h3>Convocações recentes</h3></div><Link to="/convocacoes">Ver todas</Link></div>
+          <div className="dashboard-panel-heading"><div><span className="eyebrow">E-mail</span><h3>Convocações recentes</h3></div><Link to="/convocacoes">Ver todas</Link></div>
           <div className="dashboard-compact-list convocations">
             {!data?.recentConvocations.length && <div className="dashboard-empty">Nenhuma convocação recente.</div>}
             {data?.recentConvocations.map((item) => (

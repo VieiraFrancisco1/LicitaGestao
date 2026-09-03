@@ -15,7 +15,7 @@ function encryptionKey(secret: string) {
   const hex = /^[0-9a-f]{64}$/i.test(trimmed) ? Buffer.from(trimmed, 'hex') : null;
   const decoded = hex ?? Buffer.from(trimmed, 'base64');
   if (decoded.length !== 32) {
-    throw new AppError('GOOGLE_TOKEN_ENCRYPTION_KEY deve representar exatamente 32 bytes', 500);
+    throw new AppError('A chave de criptografia deve representar exatamente 32 bytes', 500);
   }
   return decoded;
 }
@@ -32,7 +32,7 @@ export function encryptSecret(value: string, secret: string) {
 export function decryptSecret(value: string, secret: string) {
   const [version, ivValue, tagValue, cipherValue] = value.split(':');
   if (version !== 'v1' || !ivValue || !tagValue || !cipherValue) {
-    throw new AppError('Credencial Google armazenada em formato inválido', 500);
+    throw new AppError('Credencial de e-mail armazenada em formato inválido', 500);
   }
   const key = encryptionKey(secret);
   const decipher = crypto.createDecipheriv('aes-256-gcm', key, Buffer.from(ivValue, 'base64url'));

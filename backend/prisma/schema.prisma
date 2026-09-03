@@ -65,6 +65,11 @@ enum EmailProcessingStatus {
   ERRO
 }
 
+enum EmailProvider {
+  GMAIL
+  OUTLOOK
+}
+
 enum DocumentCategory {
   EDITAL
   ANEXO
@@ -125,8 +130,9 @@ model Company {
   staffLinks   CompanyUser[]
   bids         Bid[]
   discounts    DiscountCalculation[]
-  emailIntegration EmailIntegration?
-  emailMessages EmailMessage[]
+  emailIntegration   EmailIntegration?
+  outlookIntegration OutlookIntegration?
+  emailMessages      EmailMessage[]
   createdAt    DateTime              @default(now()) @map("created_at")
   updatedAt    DateTime              @updatedAt @map("updated_at")
 
@@ -313,12 +319,30 @@ model EmailIntegration {
   @@map("email_integrations")
 }
 
+model OutlookIntegration {
+  id                    String    @id @default(uuid()) @db.Uuid
+  companyId             String    @unique @map("company_id") @db.Uuid
+  company               Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  microsoftEmail        String    @map("microsoft_email") @db.VarChar(180)
+  refreshTokenEncrypted String    @map("refresh_token_encrypted") @db.Text
+  connectedAt           DateTime  @default(now()) @map("connected_at")
+  lastSyncedAt          DateTime? @map("last_synced_at")
+  lastSuccessfulSyncAt  DateTime? @map("last_successful_sync_at")
+  lastError             String?   @map("last_error") @db.VarChar(500)
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  @@index([lastSyncedAt])
+  @@map("outlook_integrations")
+}
+
 model EmailMessage {
   id                    String                @id @default(uuid()) @db.Uuid
   companyId             String                @map("company_id") @db.Uuid
   company               Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
   gmailMessageId        String                @map("gmail_message_id") @db.VarChar(180)
   threadId              String                @map("thread_id") @db.VarChar(180)
+  provider              EmailProvider         @default(GMAIL)
   sender                String                @db.VarChar(500)
   subject               String?               @db.VarChar(500)
   receivedAt            DateTime              @map("received_at")
@@ -339,6 +363,7 @@ model EmailMessage {
 
   @@unique([companyId, gmailMessageId])
   @@index([companyId, receivedAt])
+  @@index([companyId, provider, receivedAt])
   @@index([companyId, isPotentialConvocation, receivedAt])
   @@index([tenderId, receivedAt])
   @@index([bidId, receivedAt])

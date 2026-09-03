@@ -112,7 +112,7 @@ export function AppLayout() {
         </nav>
         <div className="sidebar-footer">
           <span>Fase 5</span>
-          <strong>Gmail e convocações</strong>
+          <strong>E-mail e convocações</strong>
         </div>
       </aside>
       <div className="app-main">

@@ -249,6 +249,10 @@ export type GmailIntegrationStatus = {
   pollingIntervalSeconds: number;
 };
 
+export type OutlookIntegrationStatus = GmailIntegrationStatus;
+
+export type EmailProvider = 'GMAIL' | 'OUTLOOK';
+
 export type EmailProcessingStatus = 'PENDENTE' | 'PROCESSADO' | 'ERRO';
 
 export type EmailMessage = {
@@ -256,6 +260,7 @@ export type EmailMessage = {
   companyId: string;
   gmailMessageId: string;
   threadId: string;
+  provider: EmailProvider;
   sender: string;
   subject: string | null;
   receivedAt: string;
@@ -278,6 +283,7 @@ export type GmailConvocationAlert = {
   key: string;
   messageId: string;
   companyId: string;
+  provider: EmailProvider;
   companyName: string;
   sender: string;
   subject: string | null;

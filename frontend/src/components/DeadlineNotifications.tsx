@@ -249,7 +249,7 @@ export function DeadlineNotifications() {
   const unread = (deadlines?.unread ?? 0) + (gmailAlerts?.unread ?? 0);
   const hasItems = deadlineItems.length > 0 || gmailItems.length > 0;
   const permissionDescription = useMemo(
-    () => 'Receba pop-ups do Windows para prazos urgentes e possíveis convocações do Gmail.',
+    () => 'Receba pop-ups do Windows para prazos urgentes e possíveis convocações por e-mail.',
     []
   );
 
@@ -289,7 +289,7 @@ export function DeadlineNotifications() {
 
           <div className="notification-list">
             {!hasItems && <div className="notification-empty">Nenhum alerta urgente no momento.</div>}
-            {gmailItems.length > 0 && <div className="notification-section-label"><MailWarning size={14} /> Gmail</div>}
+            {gmailItems.length > 0 && <div className="notification-section-label"><MailWarning size={14} /> E-mail</div>}
             {gmailItems.map((item) => (
               <button key={item.key} className={`notification-item gmail ${item.read ? 'read' : 'unread'}`} onClick={() => void openGmailAlert(item)}>
                 <span className="deadline-dot urgent" />

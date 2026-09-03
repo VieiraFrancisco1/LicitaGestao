@@ -10,6 +10,7 @@ import { deadlineRouter } from './deadline.routes.js';
 import { auditRouter } from './audit.routes.js';
 import { megaRouter } from './mega.routes.js';
 import { gmailRouter } from './gmail.routes.js';
+import { outlookRouter } from './outlook.routes.js';
 import { dashboardRouter } from './dashboard.routes.js';
 
 export const apiRouter = Router();
@@ -34,5 +35,6 @@ apiRouter.use('/deadlines', deadlineRouter);
 apiRouter.use('/audit', auditRouter);
 apiRouter.use('/mega', megaRouter);
 apiRouter.use('/integrations/gmail', gmailRouter);
+apiRouter.use('/integrations/outlook', outlookRouter);
 
 apiRouter.use('/dashboard', dashboardRouter);

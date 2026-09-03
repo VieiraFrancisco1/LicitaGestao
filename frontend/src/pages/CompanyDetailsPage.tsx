@@ -5,6 +5,7 @@ import { BidsPage } from './BidsPage';
 import { MegaBrowser } from '../components/MegaBrowser';
 import { CompanyDiscountsPanel } from './CompanyDiscountsPanel';
 import { GmailIntegrationPanel } from '../components/GmailIntegrationPanel';
+import { OutlookIntegrationPanel } from '../components/OutlookIntegrationPanel';
 import { CompanyConvocationsPanel } from '../components/CompanyConvocationsPanel';
 import { api, errorMessage } from '../services/api';
 import type { ApiResponse, BidDocument, BidProgress, Company } from '../types';
@@ -243,7 +244,12 @@ export function CompanyDetailsPage() {
         </section>
       )}
       {tab === 'discounts' && <CompanyDiscountsPanel companyId={company.id} />}
-      {tab === 'integrations' && <GmailIntegrationPanel companyId={company.id} />}
+      {tab === 'integrations' && (
+        <div className="page-stack">
+          <GmailIntegrationPanel companyId={company.id} />
+          <OutlookIntegrationPanel companyId={company.id} />
+        </div>
+      )}
       {tab === 'convocations' && <CompanyConvocationsPanel companyId={company.id} />}
     </div>
   );

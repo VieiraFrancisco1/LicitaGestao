@@ -21,7 +21,13 @@ const envSchema = z.object({
   GOOGLE_REDIRECT_URI: z.string().url().optional(),
   GOOGLE_OAUTH_STATE_SECRET: z.string().min(32).optional(),
   GOOGLE_TOKEN_ENCRYPTION_KEY: z.string().min(32).optional(),
-  GMAIL_POLL_INTERVAL_MS: z.coerce.number().int().min(60_000).max(120_000).default(90_000)
+  GMAIL_POLL_INTERVAL_MS: z.coerce.number().int().min(60_000).max(120_000).default(90_000),
+  MICROSOFT_CLIENT_ID: z.string().trim().min(1).optional(),
+  MICROSOFT_CLIENT_SECRET: z.string().trim().min(1).optional(),
+  MICROSOFT_REDIRECT_URI: z.string().url().optional(),
+  MICROSOFT_OAUTH_STATE_SECRET: z.string().min(32).optional(),
+  MICROSOFT_TOKEN_ENCRYPTION_KEY: z.string().min(32).optional(),
+  OUTLOOK_POLL_INTERVAL_MS: z.coerce.number().int().min(60_000).max(900_000).default(120_000)
 });
 
 const parsed = envSchema.safeParse(process.env);

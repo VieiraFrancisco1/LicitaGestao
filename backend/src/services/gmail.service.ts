@@ -364,7 +364,7 @@ async function findBestConvocationMatch(companyId: string, message: MatchMessage
   };
 }
 
-async function autoLinkConvocationMessage(messageId: string) {
+export async function autoLinkConvocationMessage(messageId: string) {
   const message = (await db.emailMessage.findUnique({
     where: { id: messageId },
     select: {
@@ -612,6 +612,7 @@ export async function syncGmailIntegration(companyId: string) {
             companyId,
             gmailMessageId: message.id,
             threadId: message.threadId,
+            provider: 'GMAIL',
             sender,
             subject,
             receivedAt,
@@ -719,6 +720,7 @@ export async function listCompanyEmailMessages(
       companyId: true,
       gmailMessageId: true,
       threadId: true,
+      provider: true,
       sender: true,
       subject: true,
       receivedAt: true,
@@ -787,6 +789,7 @@ export async function listGmailConvocationAlerts(auth: AuthScope) {
     select: {
       id: true,
       companyId: true,
+      provider: true,
       sender: true,
       subject: true,
       receivedAt: true,
@@ -799,7 +802,7 @@ export async function listGmailConvocationAlerts(auth: AuthScope) {
     orderBy: { receivedAt: 'desc' },
     take: 50
   })) as Array<{
-    id: string; companyId: string; sender: string; subject: string | null; receivedAt: Date; snippet: string | null;
+    id: string; companyId: string; provider: 'GMAIL' | 'OUTLOOK'; sender: string; subject: string | null; receivedAt: Date; snippet: string | null;
     tenderId: string | null; bidId: string | null;
     tender: { modality: string | null; noticeNumber: string | null; processNumber: string | null; municipality: string } | null;
     company: { legalName: string; tradeName: string | null };
@@ -818,6 +821,7 @@ export async function listGmailConvocationAlerts(auth: AuthScope) {
       key,
       messageId: message.id,
       companyId: message.companyId,
+      provider: message.provider,
       companyName: message.company.tradeName || message.company.legalName,
       sender: message.sender,
       subject: message.subject,

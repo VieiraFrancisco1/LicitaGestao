@@ -91,7 +91,7 @@ export function CompanyConvocationsPanel({
       {showHeading && (
         <div className="section-heading-inline">
           <div>
-            <strong>Convocações identificadas no Gmail</strong>
+            <strong>Convocações identificadas nos e-mails</strong>
             <small>
               O LicitaGestão tenta relacionar cada convocação pelo processo administrativo e pelo número da licitação, sem IA.
             </small>
@@ -129,7 +129,7 @@ export function CompanyConvocationsPanel({
                     <strong>{item.subject || 'E-mail sem assunto'}</strong>
                     <time>{formatDateTime(item.receivedAt)}</time>
                   </div>
-                  <small>De: {item.sender}</small>
+                  <small>{item.provider === 'OUTLOOK' ? 'Outlook' : 'Gmail'} · De: {item.sender}</small>
                   {item.snippet && <p>{item.snippet}</p>}
                   {item.convocationReason && <em>{item.convocationReason}</em>}
 

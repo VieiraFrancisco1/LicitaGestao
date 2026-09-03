@@ -50,7 +50,7 @@ export function ConvocationsPage() {
     <div className="page-stack">
       <div className="page-heading">
         <div>
-          <span className="eyebrow">Gmail</span>
+          <span className="eyebrow">E-mail</span>
           <h2>Convocações</h2>
           <p>Possíveis convocações identificadas automaticamente nos e-mails novos das empresas.</p>
         </div>
@@ -78,7 +78,7 @@ export function ConvocationsPage() {
         <section className="empty-state">
           <MailWarning size={36} />
           <h2>Nenhuma possível convocação encontrada</h2>
-          <p>Quando um Gmail conectado receber um e-mail com termos explícitos de convocação, o alerta aparecerá aqui.</p>
+          <p>Quando uma conta Gmail ou Outlook conectada receber um e-mail com termos de convocação, o alerta aparecerá aqui.</p>
         </section>
       ) : (
         <section className="convocation-list global-convocation-list">
@@ -90,7 +90,7 @@ export function ConvocationsPage() {
                   <strong>{item.subject || 'Possível convocação'}</strong>
                   <time>{formatDateTime(item.receivedAt)}</time>
                 </div>
-                <small>{item.companyName} · De: {item.sender}</small>
+                <small>{item.provider === 'OUTLOOK' ? 'Outlook' : 'Gmail'} · {item.companyName} · De: {item.sender}</small>
                 {item.tender ? (
                   <div className="convocation-inline-match matched">
                     Vinculada: {[item.tender.modality, item.tender.noticeNumber].filter(Boolean).join(' ') || 'Licitação'} · {item.tender.municipality}
