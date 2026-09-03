@@ -33,8 +33,22 @@ describe('integração Gmail', () => {
     expect(result.reason).toContain('Aviso da');
   });
 
-  it('não transforma assunto genérico de remetente desconhecido em alerta', () => {
-    expect(detectPotentialConvocation({ sender: 'contato@exemplo.com', subject: 'Alteração do edital interno' }).detected).toBe(false);
+  it('classifica aviso de licitação mesmo quando o remetente é desconhecido', () => {
+    const result = detectPotentialConvocation({
+      sender: 'contato@exemplo.com',
+      subject: 'Aviso de revogação do certame Nº 002/2026-CE'
+    });
+    expect(result.detected).toBe(true);
+    expect(result.reason).toContain('revogação do certame');
+  });
+
+  it('classifica conteúdo geral de licitação independentemente do remetente', () => {
+    const result = detectPotentialConvocation({
+      sender: 'pessoa@exemplo.com',
+      subject: 'Informações importantes',
+      text: 'Comunicado referente à licitação nº 001/2026.'
+    });
+    expect(result.detected).toBe(true);
   });
 
   it('extrai conteúdo textual base64url de mensagem do Gmail', () => {
