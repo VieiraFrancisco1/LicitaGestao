@@ -3225,6 +3225,55 @@ td small {
   font-size: 22px;
   color: #6d4710;
 }
+.company-alert-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 3px 2px 7px;
+  scrollbar-width: thin;
+}
+.company-alert-tabs > button {
+  min-height: 44px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #dbe2ec;
+  border-radius: 10px;
+  background: #fff;
+  padding: 0 13px;
+  color: #536179;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.company-alert-tabs > button:hover {
+  border-color: #b8c8e2;
+  background: #f8fbff;
+}
+.company-alert-tabs > button.active {
+  border-color: #8eb1ed;
+  background: #edf4ff;
+  color: #1e55ad;
+  box-shadow: inset 0 -2px 0 #2f6fed;
+}
+.company-alert-badge {
+  min-width: 20px;
+  height: 20px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #d92d20;
+  color: #fff;
+  font-size: 10px;
+  line-height: 1;
+  box-shadow: 0 0 0 2px #fff;
+}
+.company-alert-tabs > button.active .company-alert-badge {
+  box-shadow: 0 0 0 2px #edf4ff;
+}
 .global-convocation-list {
   background: transparent;
 }
