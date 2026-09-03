@@ -51,6 +51,15 @@ describe('integração Gmail', () => {
     expect(result.detected).toBe(true);
   });
 
+  it('classifica esclarecimento mesmo quando o assunto é curto', () => {
+    const result = detectPotentialConvocation({
+      sender: 'pessoa@exemplo.com',
+      subject: 'Esclarecimento'
+    });
+    expect(result.detected).toBe(true);
+    expect(result.reason).toContain('esclarecimento');
+  });
+
   it('extrai conteúdo textual base64url de mensagem do Gmail', () => {
     const data = Buffer.from('Empresa convocada para apresentar proposta').toString('base64url');
     expect(extractGmailText({ mimeType: 'text/plain', body: { data } })).toContain('Empresa convocada');

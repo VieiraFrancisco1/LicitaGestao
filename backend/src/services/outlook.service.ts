@@ -19,7 +19,10 @@ const MICROSOFT_SCOPES = [
   'https://graph.microsoft.com/Mail.Read'
 ].join(' ');
 const STATE_TTL_MS = 10 * 60_000;
-const SYNC_OVERLAP_MS = 2 * 60_000;
+// A API do Outlook pode levar alguns minutos para disponibilizar uma mensagem que
+// já aparece na Caixa de Entrada. Uma margem maior evita que ela fique para trás;
+// mensagens repetidas continuam protegidas pela chave única no banco.
+const SYNC_OVERLAP_MS = 60 * 60_000;
 const MAX_OUTLOOK_PAGES = 20;
 const MAX_BODY_CHARS = 30_000;
 
