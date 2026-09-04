@@ -370,8 +370,7 @@ export function TendersPage() {
                             title={attachedBids.length ? 'Ver empresas que anexaram' : 'Nenhuma empresa anexou'}
                           >
                             <Building2 size={15} />
-                            {attachedBids.length}{' '}
-                            {attachedBids.length === 1 ? 'empresa anexou' : 'empresas anexaram'}
+                            {attachedBids.length} {attachedBids.length === 1 ? 'anexou' : 'anexaram'}
                           </button>
                         </div>
                       </td>
