@@ -234,6 +234,38 @@ export type BackupRestoreResult = {
   emailMessages: number;
 };
 
+export type HealthStatus = 'OPERATIONAL' | 'WARNING' | 'UNAVAILABLE' | 'NOT_CONFIGURED';
+
+type HealthServiceBase = {
+  status: HealthStatus;
+  message: string;
+};
+
+type EmailHealthService = HealthServiceBase & {
+  configured: boolean;
+  connectedAccounts: number;
+  accountsWithError: number;
+  delayedAccounts: number;
+  lastSuccessfulSyncAt: string | null;
+  pollingIntervalSeconds: number;
+};
+
+export type SystemHealth = {
+  checkedAt: string;
+  overall: HealthStatus;
+  api: HealthServiceBase & { uptimeSeconds: number };
+  database: HealthServiceBase & { latencyMs: number | null };
+  mega: HealthServiceBase & {
+    configured: boolean;
+    connected: boolean;
+    rootFolder: string;
+    spaceUsed: number | null;
+    spaceTotal: number | null;
+  };
+  gmail: EmailHealthService;
+  outlook: EmailHealthService;
+};
+
 export type MegaStatus = {
   configured: boolean;
   connected: boolean;

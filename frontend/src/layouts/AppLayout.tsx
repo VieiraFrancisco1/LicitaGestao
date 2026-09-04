@@ -1,5 +1,6 @@
 import {
   Bell,
+  Activity,
   Building2,
   CalendarClock,
   ChevronDown,
@@ -33,6 +34,7 @@ const titles: Record<string, string> = {
   '/usuarios': 'Usuários',
   '/auditoria': 'Auditoria',
   '/backups': 'Backup e recuperação',
+  '/saude-sistema': 'Saúde do sistema',
   '/relatorios': 'Relatórios',
   '/configuracoes': 'Configurações'
 };
@@ -68,6 +70,7 @@ export function AppLayout() {
         { to: '/usuarios', label: 'Usuários', icon: Users, adminOnly: true },
         { to: '/auditoria', label: 'Auditoria', icon: History, adminOnly: true },
         { to: '/backups', label: 'Backup', icon: DatabaseBackup, adminOnly: true },
+        { to: '/saude-sistema', label: 'Saúde do sistema', icon: Activity, adminOnly: true },
         { to: '/relatorios', label: 'Relatórios', icon: FileBarChart },
         { to: '/configuracoes', label: 'Configurações', icon: Settings }
       ]

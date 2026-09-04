@@ -19,6 +19,7 @@ import { AuditPage } from './pages/AuditPage';
 import { DocumentsPage } from './pages/DocumentsPage';
 import { ConvocationsPage } from './pages/ConvocationsPage';
 import { BackupsPage } from './pages/BackupsPage';
+import { SystemHealthPage } from './pages/SystemHealthPage';
 
 export default function App() {
   return (
@@ -51,6 +52,9 @@ export default function App() {
               </Route>
               <Route path="backups" element={<ProtectedRoute roles={['ADMIN']} />}>
                 <Route index element={<BackupsPage />} />
+              </Route>
+              <Route path="saude-sistema" element={<ProtectedRoute roles={['ADMIN']} />}>
+                <Route index element={<SystemHealthPage />} />
               </Route>
               <Route path="relatorios" element={<PlaceholderPage title="Relatórios" phase="a Fase 7" />} />
               <Route

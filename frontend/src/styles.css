@@ -5589,3 +5589,242 @@ td small {
     padding: 20px;
   }
 }
+
+/* Monitoramento administrativo */
+.system-health-heading p {
+  max-width: 680px;
+}
+
+.system-health-overview {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 18px 20px;
+  border: 1px solid #c5e2d0;
+  border-radius: 14px;
+  background: #f0faf4;
+  color: #23784d;
+}
+
+.system-health-overview.status-warning {
+  border-color: #ecd9a5;
+  background: #fff9e9;
+  color: #a16a08;
+}
+
+.system-health-overview.status-unavailable {
+  border-color: #edc5c1;
+  background: #fff3f2;
+  color: #bd4337;
+}
+
+.system-health-overview > span {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.system-health-overview > div {
+  display: grid;
+  gap: 4px;
+}
+
+.system-health-overview strong {
+  color: currentColor;
+  font-size: 17px;
+}
+
+.system-health-overview small {
+  color: #65778b;
+  font-size: 12px;
+}
+
+.system-health-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 15px;
+}
+
+.system-health-card {
+  display: flex;
+  min-width: 0;
+  min-height: 235px;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px;
+  border: 1px solid #dce4ee;
+  border-top: 3px solid #38a169;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(25, 44, 73, 0.055);
+}
+
+.system-health-card.status-warning {
+  border-top-color: #dda72a;
+}
+
+.system-health-card.status-unavailable {
+  border-top-color: #d65a4d;
+}
+
+.system-health-card.status-not-configured {
+  border-top-color: #98a2b3;
+}
+
+.system-health-card-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.system-health-card-heading > div {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  gap: 9px;
+}
+
+.system-health-card-heading h3 {
+  margin: 0;
+  color: #1c304c;
+  font-size: 16px;
+}
+
+.system-health-card-icon {
+  display: grid;
+  width: 39px;
+  height: 39px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 10px;
+  background: #eaf7ef;
+  color: #278354;
+}
+
+.status-warning .system-health-card-icon {
+  background: #fff6df;
+  color: #a8710c;
+}
+
+.status-unavailable .system-health-card-icon {
+  background: #fff0ef;
+  color: #c14a3e;
+}
+
+.status-not-configured .system-health-card-icon {
+  background: #f0f2f5;
+  color: #6f7c90;
+}
+
+.system-health-status {
+  flex: 0 0 auto;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: #e9f7ef;
+  color: #24764c;
+  font-size: 10px;
+  font-weight: 850;
+}
+
+.status-warning .system-health-status {
+  background: #fff3d7;
+  color: #96630a;
+}
+
+.status-unavailable .system-health-status {
+  background: #ffebe9;
+  color: #b33f35;
+}
+
+.status-not-configured .system-health-status {
+  background: #edf0f4;
+  color: #68758a;
+}
+
+.system-health-card > p {
+  min-height: 40px;
+  margin: 0;
+  color: #637188;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.system-health-card dl {
+  display: grid;
+  gap: 9px;
+  margin: auto 0 0;
+}
+
+.system-health-card dl > div {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 9px;
+  border-top: 1px solid #edf0f4;
+}
+
+.system-health-card dt,
+.system-health-card dd {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.system-health-card dt {
+  color: #7b8799;
+}
+
+.system-health-card dd {
+  max-width: 58%;
+  color: #30445f;
+  font-weight: 800;
+  text-align: right;
+  word-break: break-word;
+}
+
+.system-health-security-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 18px;
+  border: 1px solid #d6e2f2;
+  border-radius: 12px;
+  background: #f5f8fd;
+  color: #3569ad;
+}
+
+.system-health-security-note strong {
+  display: block;
+  margin-bottom: 3px;
+  color: #294f81;
+}
+
+.system-health-security-note p {
+  margin: 0;
+  color: #62748d;
+  font-size: 13px;
+}
+
+@media (max-width: 1180px) {
+  .system-health-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .system-health-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .system-health-card {
+    min-height: 0;
+  }
+}

@@ -14,6 +14,7 @@ import { outlookRouter } from './outlook.routes.js';
 import { emailSyncRouter } from './email-sync.routes.js';
 import { dashboardRouter } from './dashboard.routes.js';
 import { backupRouter } from './backup.routes.js';
+import { systemRouter } from './system.routes.js';
 
 export const apiRouter = Router();
 
@@ -42,3 +43,4 @@ apiRouter.use('/integrations/email', emailSyncRouter);
 
 apiRouter.use('/dashboard', dashboardRouter);
 apiRouter.use('/backups', backupRouter);
+apiRouter.use('/system', systemRouter);
