@@ -6,22 +6,10 @@ import { env } from '../config/env.js';
 import { AppError } from '../utils/app-error.js';
 import { assertCompanyWriteAccess, type AuthScope } from './access.service.js';
 import { getBid } from './bid.service.js';
+import { assertSafeUploadFile } from './file-security.service.js';
 import { getMegaNodeById, removeMegaNodeById, saveBidFileToMega } from './mega.service.js';
 
 const storageRoot = path.resolve(process.cwd(), env.STORAGE_PATH);
-
-const allowedFiles: Record<string, string[]> = {
-  '.pdf': ['application/pdf'],
-  '.doc': ['application/msword'],
-  '.docx': ['application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
-  '.xls': ['application/vnd.ms-excel'],
-  '.xlsx': ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
-  '.csv': ['text/csv', 'application/vnd.ms-excel', 'text/plain'],
-  '.jpg': ['image/jpeg'],
-  '.jpeg': ['image/jpeg'],
-  '.png': ['image/png'],
-  '.zip': ['application/zip', 'application/x-zip-compressed']
-};
 
 const resolveStoredPath = (relativePath: string) => {
   const fullPath = path.resolve(storageRoot, relativePath);
@@ -29,13 +17,6 @@ const resolveStoredPath = (relativePath: string) => {
     throw new AppError('Caminho de documento inválido', 400);
   }
   return fullPath;
-};
-
-const assertAllowedFile = (file: Express.Multer.File) => {
-  const extension = path.extname(file.originalname).toLowerCase();
-  if (!allowedFiles[extension]?.includes(file.mimetype)) {
-    throw new AppError('Tipo de arquivo não permitido', 422);
-  }
 };
 
 export const listDocuments = async (bidId: string, auth: AuthScope) => {
@@ -56,7 +37,7 @@ export const saveDocument = async (
   if (!file) throw new AppError('Selecione um arquivo', 422);
   const bid = await getBid(bidId, auth);
   await assertCompanyWriteAccess(bid.companyId, auth);
-  assertAllowedFile(file);
+  assertSafeUploadFile(file);
 
   const remote = await saveBidFileToMega({
     companyId: bid.companyId,

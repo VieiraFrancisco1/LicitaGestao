@@ -17,6 +17,7 @@ import { api, errorMessage } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import type { ApiResponse, MegaBrowseData, MegaItem, MegaStatus } from '../types';
 import { formatBytes, formatDate } from '../utils/bid';
+import { DOCUMENT_UPLOAD_ACCEPT, validateDocumentUpload } from '../utils/upload';
 
 type Props = {
   companyId?: string | null;
@@ -118,6 +119,13 @@ export function MegaBrowser({ companyId, compact = false }: Props) {
 
   const uploadFiles = async (files: File[]) => {
     if (!files.length) return;
+    const invalid = files.map((file) => ({ file, error: validateDocumentUpload(file) })).find((item) => item.error);
+    if (invalid) {
+      setMessage('');
+      setError(`${invalid.file.name}: ${invalid.error}`);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
     setBusy(true);
     setError('');
     setMessage('');
@@ -268,6 +276,7 @@ export function MegaBrowser({ companyId, compact = false }: Props) {
             className="mega-hidden-input"
             type="file"
             multiple
+            accept={DOCUMENT_UPLOAD_ACCEPT}
             onChange={(event) => void uploadFiles(Array.from(event.target.files ?? []))}
           />
         </div>

@@ -11,6 +11,7 @@ import {
   uploadMegaFile
 } from '../services/mega.service.js';
 import { AuditActions, recordAudit } from '../services/audit.service.js';
+import { safeResponseFileName } from '../services/file-security.service.js';
 
 import path from 'node:path';
 
@@ -92,7 +93,10 @@ export const remove = async (req: Request, res: Response) => {
 export const download = async (req: Request, res: Response) => {
   const companyId = (req.query as { companyId?: string }).companyId;
   const data = await getMegaDownload(req.auth!, companyId, req.params.id as string);
-  res.attachment(data.name);
+  res.setHeader('Cache-Control', 'private, no-store');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.attachment(safeResponseFileName(data.name));
+  res.setHeader('Content-Type', 'application/octet-stream');
   if (data.size) res.setHeader('Content-Length', String(data.size));
   await pipeline(data.stream as NodeJS.ReadableStream, res);
 };
@@ -119,8 +123,10 @@ export const preview = async (req: Request, res: Response) => {
     res.status(415).json({ success: false, message: 'Pré-visualização disponível apenas para PDF, PNG e JPG' });
     return;
   }
+  res.setHeader('Cache-Control', 'private, no-store');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Content-Type', mime);
-  res.setHeader('Content-Disposition', `inline; filename*=UTF-8''${encodeURIComponent(data.name)}`);
+  res.setHeader('Content-Disposition', `inline; filename*=UTF-8''${encodeURIComponent(safeResponseFileName(data.name))}`);
   if (data.size) res.setHeader('Content-Length', String(data.size));
   await pipeline(data.stream as NodeJS.ReadableStream, res);
 };

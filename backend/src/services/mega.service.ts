@@ -4,6 +4,7 @@ import { prisma } from '../config/database.js';
 import { env } from '../config/env.js';
 import { AppError } from '../utils/app-error.js';
 import { assertCompanyPortalAccess, assertCompanyWriteAccess, type AuthScope } from './access.service.js';
+import { assertSafeUploadFile, assertSafeUploadName } from './file-security.service.js';
 
 type MegaNode = {
   nodeId: string;
@@ -309,6 +310,7 @@ export async function uploadMegaFile(
   file: Express.Multer.File | undefined
 ) {
   if (!file) throw new AppError('Selecione um arquivo', 422);
+  assertSafeUploadFile(file);
   if (companyId) await assertCompanyWriteAccess(companyId, auth);
   if (!companyId && auth.role !== UserRole.ADMIN) throw new AppError('Selecione uma empresa', 422);
   const { folder } = await resolveFolderForAction(auth, companyId, relativePath);
@@ -337,6 +339,7 @@ export async function renameMegaNode(auth: AuthScope, companyId: string | undefi
     throw new AppError('Somente um administrador pode renomear pastas', 403);
   }
   const cleanName = assertSafeName(name);
+  if (!found.node.directory) assertSafeUploadName(cleanName);
   await found.node.rename(cleanName);
   return { id: found.node.nodeId, name: cleanName };
 }
@@ -388,6 +391,7 @@ export async function saveBidFileToMega(input: {
   bidId: string;
   file: Express.Multer.File;
 }) {
+  assertSafeUploadFile(input.file);
   const storage = await getMegaStorage();
   const root = await configuredRoot(storage);
   const year = input.sessionDate.getUTCFullYear();

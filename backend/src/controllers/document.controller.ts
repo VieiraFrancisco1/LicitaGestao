@@ -8,6 +8,7 @@ import {
   saveDocument
 } from '../services/document.service.js';
 import { AuditActions, recordAudit } from '../services/audit.service.js';
+import { safeResponseFileName } from '../services/file-security.service.js';
 
 export const index = async (req: Request, res: Response) => {
   const documents = await listDocuments(req.params.bidId as string, req.auth!);
@@ -34,12 +35,15 @@ export const upload = async (req: Request, res: Response) => {
 
 export const download = async (req: Request, res: Response) => {
   const payload = await getDocumentDownload(req.params.id as string, req.auth!);
+  const fileName = safeResponseFileName(payload.document.originalName);
+  res.setHeader('Cache-Control', 'private, no-store');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
   if (payload.mode === 'local') {
-    res.download(payload.fullPath, payload.document.originalName);
+    res.download(payload.fullPath, fileName);
     return;
   }
 
-  res.attachment(payload.document.originalName);
+  res.attachment(fileName);
   res.setHeader('Content-Type', payload.document.mimeType || 'application/octet-stream');
   if (payload.document.size) res.setHeader('Content-Length', String(payload.document.size));
   await pipeline(payload.stream as NodeJS.ReadableStream, res);

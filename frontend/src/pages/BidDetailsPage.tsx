@@ -1,5 +1,5 @@
 import { ArrowLeft, CalendarClock, CheckCircle2, Download, ExternalLink, File as FileIcon, FilePlus2, Percent, Pencil, Trash2, Unlink } from 'lucide-react';
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { CompanyConvocationsPanel } from '../components/CompanyConvocationsPanel';
@@ -15,6 +15,7 @@ import {
   progressOptions,
   situationOptions
 } from '../utils/bid';
+import { DOCUMENT_UPLOAD_ACCEPT, validateDocumentUpload } from '../utils/upload';
 
 type Tab = 'summary' | 'data' | 'discount' | 'documents' | 'convocations' | 'deadlines' | 'history';
 
@@ -526,6 +527,7 @@ function DocumentsPanel({
   const [category, setCategory] = useState<DocumentCategory>('OUTRO');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const upload = async (event: FormEvent) => {
     event.preventDefault();
@@ -538,6 +540,7 @@ function DocumentsPanel({
     try {
       await api.post(`/bids/${bidId}/documents`, form);
       setFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
       onChanged();
     } catch (err) {
       setError(errorMessage(err));
@@ -584,7 +587,19 @@ function DocumentsPanel({
               </option>
             ))}
           </select>
-          <input type="file" required onChange={(event) => setFile(event.target.files?.[0] ?? null)} />
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={DOCUMENT_UPLOAD_ACCEPT}
+            required
+            onChange={(event) => {
+              const selected = event.target.files?.[0] ?? null;
+              const validationError = selected ? validateDocumentUpload(selected) : null;
+              setError(validationError ?? '');
+              setFile(validationError ? null : selected);
+              if (validationError) event.target.value = '';
+            }}
+          />
           <button className="primary-button" disabled={sending || !file}>
             {sending ? 'Enviando...' : 'Fazer upload'}
           </button>
