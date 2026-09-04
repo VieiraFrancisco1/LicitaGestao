@@ -105,6 +105,14 @@ const CONVOCATION_TERMS = [
 
 const PROCUREMENT_ACTION_TERMS = [
   'proposta readequada',
+  'readequacao da proposta',
+  'mandar a readequada',
+  'mandar readequada',
+  'mandar adequada',
+  'enviar a readequada',
+  'enviar readequada',
+  'enviar proposta',
+  'apresentar a readequada',
   'proposta ajustada',
   'documentos de habilitacao',
   'apresentar documentos',
@@ -220,12 +228,12 @@ export function detectPotentialConvocation(input: {
     };
   }
 
+  const action = PROCUREMENT_ACTION_TERMS.find((candidate) => combined.includes(candidate));
   const explicit = CONVOCATION_TERMS.find((candidate) => combined.includes(candidate));
-  if (explicit && (platform || context)) {
+  if (explicit && (platform || context || action)) {
     return { detected: true, reason: `Termo de convocação identificado: ${explicit}` };
   }
 
-  const action = PROCUREMENT_ACTION_TERMS.find((candidate) => combined.includes(candidate));
   if (action && context) {
     return { detected: true, reason: `Ação licitatória identificada: ${action}` };
   }

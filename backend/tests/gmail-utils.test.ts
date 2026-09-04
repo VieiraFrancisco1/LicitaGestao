@@ -27,6 +27,14 @@ describe('integração Gmail', () => {
   });
 
   it.each([
+    'Convocado a mandar a Readequada',
+    'Empresa convocada para enviar proposta',
+    'Convocada a apresentar a readequada'
+  ])('identifica convocação para proposta escrita como “%s”', (subject) => {
+    expect(detectPotentialConvocation({ sender: 'pessoa@exemplo.com', subject }).detected).toBe(true);
+  });
+
+  it.each([
     ['naoresponder@licitamaisbrasil.com.br', 'Licita+Brasil - Alteração do Edital'],
     ['naoresponder@licitamaisbrasil.com.br', 'Licita+Brasil - Resposta de Impugnação'],
     ['naoresponder@licitamaisbrasil.com.br', 'Nova Mensagem no Fórum do Processo - 001/2026'],
