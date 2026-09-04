@@ -3,6 +3,7 @@ import {
   Building2,
   CalendarClock,
   ChevronDown,
+  DatabaseBackup,
   FileBarChart,
   FileText,
   Gavel,
@@ -15,7 +16,7 @@ import {
   X
 } from 'lucide-react';
 import { useState } from 'react';
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { DeadlineNotifications } from '../components/DeadlineNotifications';
 import { ChangePasswordModal } from '../components/ChangePasswordModal';
@@ -31,6 +32,7 @@ const titles: Record<string, string> = {
   '/plataformas': 'Plataformas',
   '/usuarios': 'Usuários',
   '/auditoria': 'Auditoria',
+  '/backups': 'Backup e recuperação',
   '/relatorios': 'Relatórios',
   '/configuracoes': 'Configurações'
 };
@@ -38,7 +40,6 @@ const titles: Record<string, string> = {
 export function AppLayout() {
   const { user, logout, activeCompanyId, setActiveCompanyId } = useAuth();
   const location = useLocation();
-  const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
@@ -66,6 +67,7 @@ export function AppLayout() {
         { to: '/plataformas', label: 'Plataformas', icon: Gavel },
         { to: '/usuarios', label: 'Usuários', icon: Users, adminOnly: true },
         { to: '/auditoria', label: 'Auditoria', icon: History, adminOnly: true },
+        { to: '/backups', label: 'Backup', icon: DatabaseBackup, adminOnly: true },
         { to: '/relatorios', label: 'Relatórios', icon: FileBarChart },
         { to: '/configuracoes', label: 'Configurações', icon: Settings }
       ]
@@ -138,7 +140,6 @@ export function AppLayout() {
                   onChange={(event) => {
                     const companyId = event.target.value;
                     setActiveCompanyId(companyId);
-                    navigate(`/empresas/${companyId}`);
                   }}
                 >
                   {activeAssignments.map((company) => (
@@ -174,7 +175,9 @@ export function AppLayout() {
                   >
                     Alterar minha senha
                   </button>
-                  <button className="logout-option" onClick={() => void logout()}>Sair do sistema</button>
+                  <button className="logout-option" onClick={() => void logout()}>
+                    Sair do sistema
+                  </button>
                 </div>
               )}
             </div>

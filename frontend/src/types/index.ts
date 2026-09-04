@@ -212,6 +212,27 @@ export type AuditLog = {
   actor: { id: string; name: string; email: string } | null;
 };
 
+export type BackupSummary = {
+  companies: number;
+  users: number;
+  tenders: number;
+  bids: number;
+  documents: number;
+  emailMessages: number;
+  lastBackup: { createdAt: string; actor: { name: string } | null } | null;
+};
+
+export type BackupRestoreResult = {
+  companies: number;
+  companyUsers: number;
+  platforms: number;
+  tenders: number;
+  bids: number;
+  documents: number;
+  discounts: number;
+  proposalLetterTemplates: number;
+  emailMessages: number;
+};
 
 export type MegaStatus = {
   configured: boolean;

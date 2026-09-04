@@ -12,6 +12,7 @@ import { megaRouter } from './mega.routes.js';
 import { gmailRouter } from './gmail.routes.js';
 import { outlookRouter } from './outlook.routes.js';
 import { dashboardRouter } from './dashboard.routes.js';
+import { backupRouter } from './backup.routes.js';
 
 export const apiRouter = Router();
 
@@ -38,3 +39,4 @@ apiRouter.use('/integrations/gmail', gmailRouter);
 apiRouter.use('/integrations/outlook', outlookRouter);
 
 apiRouter.use('/dashboard', dashboardRouter);
+apiRouter.use('/backups', backupRouter);

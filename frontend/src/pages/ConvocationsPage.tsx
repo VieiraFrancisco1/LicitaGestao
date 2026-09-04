@@ -40,9 +40,9 @@ export function ConvocationsPage() {
       setData(alerts);
       setCompanies(options);
       setSelectedCompanyId((current) => {
-        if (options.some((company) => company.id === current)) return current;
         if (activeCompanyId && options.some((company) => company.id === activeCompanyId))
           return activeCompanyId;
+        if (options.some((company) => company.id === current)) return current;
         return options[0]?.id ?? '';
       });
       setError('');
