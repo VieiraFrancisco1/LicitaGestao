@@ -69,6 +69,15 @@ describe('integração Gmail', () => {
     expect(result.reason).toContain('esclarecimento');
   });
 
+  it('classifica um aviso de esclarecimento mesmo sem domínio conhecido', () => {
+    const result = detectPotentialConvocation({
+      sender: 'pessoa@exemplo.com',
+      subject: 'Aviso de esclarecimento'
+    });
+    expect(result.detected).toBe(true);
+    expect(result.reason).toContain('esclarecimento');
+  });
+
   it.each([
     {
       sender: 'news@shein.com',

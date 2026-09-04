@@ -439,13 +439,22 @@ export async function relinkPotentialConvocationsForTender(tenderId: string) {
   }
 }
 
-export async function relinkUnmatchedConvocations() {
-  const recentUnclassified = (await db.emailMessage.findMany({
+export async function relinkUnmatchedConvocations(companyId?: string) {
+  const recentMessages = (await db.emailMessage.findMany({
     where: {
-      isPotentialConvocation: false,
+      ...(companyId ? { companyId } : {}),
+      OR: [{ convocationMatchMethod: null }, { convocationMatchMethod: { not: 'MANUAL' } }],
       receivedAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60_000) }
     },
-    select: { id: true, sender: true, subject: true, snippet: true, textContent: true },
+    select: {
+      id: true,
+      sender: true,
+      subject: true,
+      snippet: true,
+      textContent: true,
+      isPotentialConvocation: true,
+      convocationReason: true
+    },
     orderBy: { receivedAt: 'desc' },
     take: 1000
   })) as Array<{
@@ -454,31 +463,54 @@ export async function relinkUnmatchedConvocations() {
     subject: string | null;
     snippet: string | null;
     textContent: string | null;
+    isPotentialConvocation: boolean;
+    convocationReason: string | null;
   }>;
   let reclassified = 0;
-  for (const message of recentUnclassified) {
+  let discarded = 0;
+  for (const message of recentMessages) {
     const detection = detectPotentialConvocation({
       sender: message.sender,
       subject: message.subject,
       snippet: message.snippet,
       text: message.textContent
     });
-    if (!detection.detected) continue;
+    if (
+      detection.detected === message.isPotentialConvocation &&
+      detection.reason === message.convocationReason
+    ) {
+      continue;
+    }
     await db.emailMessage.update({
       where: { id: message.id },
-      data: { isPotentialConvocation: true, convocationReason: detection.reason }
+      data: detection.detected
+        ? { isPotentialConvocation: true, convocationReason: detection.reason }
+        : {
+            isPotentialConvocation: false,
+            convocationReason: null,
+            tenderId: null,
+            bidId: null,
+            convocationMatchMethod: null,
+            convocationMatchConfidence: null,
+            convocationMatchedAt: null
+          }
     });
-    reclassified += 1;
+    if (detection.detected) reclassified += 1;
+    else discarded += 1;
   }
 
   const messages = (await db.emailMessage.findMany({
-    where: { isPotentialConvocation: true, bidId: null },
+    where: {
+      ...(companyId ? { companyId } : {}),
+      isPotentialConvocation: true,
+      bidId: null
+    },
     select: { id: true },
     orderBy: { receivedAt: 'desc' },
     take: 500
   })) as Array<{ id: string }>;
   for (const message of messages) await autoLinkConvocationMessage(message.id);
-  return { checked: messages.length, reclassified };
+  return { checked: recentMessages.length, reclassified, discarded };
 }
 
 export async function getGmailStatus(companyId: string, auth: AuthScope): Promise<GmailStatus> {
@@ -716,7 +748,9 @@ export async function syncCompanyGmail(companyId: string, auth: AuthScope) {
   await assertCompanyPortalAccess(companyId, auth);
   const integration = await db.emailIntegration.findUnique({ where: { companyId }, select: { id: true } });
   if (!integration) throw new AppError('Gmail não conectado nesta empresa', 404);
-  return syncGmailIntegration(companyId);
+  const result = await syncGmailIntegration(companyId);
+  const review = await relinkUnmatchedConvocations(companyId);
+  return { ...result, convocations: result.convocations + review.reclassified };
 }
 
 export async function syncAllGmailIntegrations() {

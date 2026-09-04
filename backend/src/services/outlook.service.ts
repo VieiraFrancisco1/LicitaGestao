@@ -5,7 +5,7 @@ import { env } from '../config/env.js';
 import { AppError } from '../utils/app-error.js';
 import { assertCompanyPortalAccess, type AuthScope } from './access.service.js';
 import { decryptSecret, detectPotentialConvocation, encryptSecret } from './gmail-utils.js';
-import { autoLinkConvocationMessage } from './gmail.service.js';
+import { autoLinkConvocationMessage, relinkUnmatchedConvocations } from './gmail.service.js';
 
 const MICROSOFT_AUTH_URL = 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize';
 const MICROSOFT_TOKEN_URL = 'https://login.microsoftonline.com/common/oauth2/v2.0/token';
@@ -89,10 +89,10 @@ type GraphMessageList = {
 function outlookConfigured() {
   return Boolean(
     env.MICROSOFT_CLIENT_ID &&
-      env.MICROSOFT_CLIENT_SECRET &&
-      env.MICROSOFT_REDIRECT_URI &&
-      env.MICROSOFT_OAUTH_STATE_SECRET &&
-      env.MICROSOFT_TOKEN_ENCRYPTION_KEY
+    env.MICROSOFT_CLIENT_SECRET &&
+    env.MICROSOFT_REDIRECT_URI &&
+    env.MICROSOFT_OAUTH_STATE_SECRET &&
+    env.MICROSOFT_TOKEN_ENCRYPTION_KEY
   );
 }
 
@@ -127,10 +127,7 @@ function verifyState(state: string) {
   requireOutlookConfig();
   const [body, signature] = state.split('.');
   if (!body || !signature) throw new AppError('Estado OAuth inválido', 400);
-  const expected = crypto
-    .createHmac('sha256', env.MICROSOFT_OAUTH_STATE_SECRET!)
-    .update(body)
-    .digest();
+  const expected = crypto.createHmac('sha256', env.MICROSOFT_OAUTH_STATE_SECRET!).update(body).digest();
   const received = Buffer.from(signature, 'base64url');
   if (expected.length !== received.length || !crypto.timingSafeEqual(expected, received)) {
     throw new AppError('Estado OAuth inválido', 400);
@@ -144,7 +141,8 @@ function verifyState(state: string) {
 
 function microsoftErrorMessage(data: unknown) {
   if (!data || typeof data !== 'object') return '';
-  if ('error_description' in data && typeof data.error_description === 'string') return data.error_description;
+  if ('error_description' in data && typeof data.error_description === 'string')
+    return data.error_description;
   if ('error' in data) {
     const error = data.error;
     if (typeof error === 'string') return error;
@@ -281,10 +279,10 @@ async function authScopeFromState(userId: string): Promise<AuthScope> {
 async function listNewMessages(accessToken: string, since: Date) {
   const messages: GraphMessage[] = [];
   const query = new URLSearchParams({
-    '$select': 'id,conversationId,receivedDateTime,from,sender,subject,bodyPreview,body',
-    '$filter': `receivedDateTime ge ${since.toISOString()}`,
-    '$orderby': 'receivedDateTime asc',
-    '$top': '100'
+    $select: 'id,conversationId,receivedDateTime,from,sender,subject,bodyPreview,body',
+    $filter: `receivedDateTime ge ${since.toISOString()}`,
+    $orderby: 'receivedDateTime asc',
+    $top: '100'
   });
   let nextUrl: string | undefined = `${GRAPH_API_URL}/me/mailFolders/inbox/messages?${query.toString()}`;
 
@@ -353,10 +351,12 @@ export async function completeOutlookOAuth(code: string, state: string) {
 
   const existing = await db.outlookIntegration.findUnique({ where: { companyId: payload.companyId } });
   const refreshToken =
-    tokens.refresh_token ??
-    (existing ? decryptMicrosoftRefreshToken(existing.refreshTokenEncrypted) : null);
+    tokens.refresh_token ?? (existing ? decryptMicrosoftRefreshToken(existing.refreshTokenEncrypted) : null);
   if (!refreshToken) {
-    throw new AppError('Microsoft não forneceu autorização offline. Remova o acesso e tente conectar novamente.', 400);
+    throw new AppError(
+      'Microsoft não forneceu autorização offline. Remova o acesso e tente conectar novamente.',
+      400
+    );
   }
 
   const profile = await graphGet<MicrosoftProfile>('/me?$select=mail,userPrincipalName', tokens.access_token);
@@ -467,7 +467,9 @@ export async function syncOutlookIntegration(companyId: string) {
       data: {
         ...(listed.complete ? { lastSyncedAt: syncStartedAt } : {}),
         lastSuccessfulSyncAt: new Date(),
-        lastError: listed.complete ? null : 'Sincronização parcial: volume de mensagens acima do limite por ciclo.'
+        lastError: listed.complete
+          ? null
+          : 'Sincronização parcial: volume de mensagens acima do limite por ciclo.'
       }
     });
     return { found: listed.messages.length, inserted, convocations, complete: listed.complete };
@@ -484,7 +486,9 @@ export async function syncCompanyOutlook(companyId: string, auth: AuthScope) {
   await assertCompanyPortalAccess(companyId, auth);
   const integration = await db.outlookIntegration.findUnique({ where: { companyId }, select: { id: true } });
   if (!integration) throw new AppError('Outlook não conectado nesta empresa', 404);
-  return syncOutlookIntegration(companyId);
+  const result = await syncOutlookIntegration(companyId);
+  const review = await relinkUnmatchedConvocations(companyId);
+  return { ...result, convocations: result.convocations + review.reclassified };
 }
 
 export async function syncAllOutlookIntegrations() {
@@ -498,7 +502,10 @@ export async function syncAllOutlookIntegrations() {
       try {
         await syncOutlookIntegration(integration.companyId);
       } catch (error) {
-        console.error(`Falha ao sincronizar Outlook da empresa ${integration.companyId}:`, safeMicrosoftError(error));
+        console.error(
+          `Falha ao sincronizar Outlook da empresa ${integration.companyId}:`,
+          safeMicrosoftError(error)
+        );
       }
     }
   } catch (error) {

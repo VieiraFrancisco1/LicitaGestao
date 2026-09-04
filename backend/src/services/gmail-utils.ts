@@ -134,7 +134,16 @@ const PLATFORM_SENDERS = [
 const SPECIFIC_PROCUREMENT_ALERT_TERMS = [
   { terms: ['alteracao do edital', 'alteracoes do edital'], label: 'alteração do edital' },
   { terms: ['retificacao do edital', 'edital retificado'], label: 'retificação do edital' },
+  { terms: ['resposta de impugnacao'], label: 'resposta de impugnação' },
+  { terms: ['resposta de esclarecimento', 'aviso de esclarecimento'], label: 'esclarecimento' },
   { terms: ['nova mensagem no forum', 'mensagem no forum do processo'], label: 'nova mensagem no fórum' },
+  { terms: ['aviso de mudanca de vencedor'], label: 'mudança de vencedor' },
+  { terms: ['aviso de prorrogacao'], label: 'prorrogação do certame' },
+  { terms: ['aviso de anulacao'], label: 'anulação do certame' },
+  { terms: ['aviso de revogacao'], label: 'revogação do certame' },
+  { terms: ['aviso de suspensao'], label: 'suspensão do certame' },
+  { terms: ['aviso de homologacao'], label: 'homologação do certame' },
+  { terms: ['aviso de adjudicacao'], label: 'adjudicação do certame' },
   { terms: ['prorrogacao do certame'], label: 'prorrogação do certame' },
   { terms: ['anulacao do certame'], label: 'anulação do certame' },
   { terms: ['revogacao do certame'], label: 'revogação do certame' },
@@ -155,18 +164,15 @@ const SPECIFIC_PROCUREMENT_ALERT_TERMS = [
 ];
 
 const CONTEXTUAL_ALERT_TERMS = [
-  { terms: ['resposta de impugnacao', 'impugnacao'], label: 'resposta de impugnação' },
-  {
-    terms: ['resposta de esclarecimento', 'aviso de esclarecimento', 'esclarecimento'],
-    label: 'esclarecimento'
-  },
+  { terms: ['impugnacao'], label: 'resposta de impugnação' },
+  { terms: ['esclarecimento'], label: 'esclarecimento' },
   { terms: ['mudanca de vencedor'], label: 'mudança de vencedor' },
-  { terms: ['aviso de prorrogacao', 'prorrogacao'], label: 'prorrogação do certame' },
-  { terms: ['aviso de anulacao', 'anulacao'], label: 'anulação do certame' },
-  { terms: ['aviso de revogacao', 'revogacao'], label: 'revogação do certame' },
-  { terms: ['aviso de suspensao', 'suspensao'], label: 'suspensão do certame' },
-  { terms: ['aviso de homologacao', 'homologacao'], label: 'homologação do certame' },
-  { terms: ['aviso de adjudicacao', 'adjudicacao'], label: 'adjudicação do certame' }
+  { terms: ['prorrogacao'], label: 'prorrogação do certame' },
+  { terms: ['anulacao'], label: 'anulação do certame' },
+  { terms: ['revogacao'], label: 'revogação do certame' },
+  { terms: ['suspensao'], label: 'suspensão do certame' },
+  { terms: ['homologacao'], label: 'homologação do certame' },
+  { terms: ['adjudicacao'], label: 'adjudicação do certame' }
 ];
 
 const STRONG_PROCUREMENT_TERMS = [
