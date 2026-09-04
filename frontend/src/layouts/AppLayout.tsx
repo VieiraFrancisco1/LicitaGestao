@@ -16,11 +16,13 @@ import {
   Users,
   X
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState, type ChangeEvent } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { DeadlineNotifications } from '../components/DeadlineNotifications';
 import { ChangePasswordModal } from '../components/ChangePasswordModal';
+import { api } from '../services/api';
+import type { ApiResponse, CompanySummary } from '../types';
 import licitaGestaoLogo from '../assets/licitagestao-logo.png';
 
 const titles: Record<string, string> = {
@@ -45,6 +47,7 @@ export function AppLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+  const [adminCompanies, setAdminCompanies] = useState<CompanySummary[]>([]);
   const companyPath =
     user?.role === 'EMPRESA' && user.companyId ? `/empresas/${user.companyId}` : '/empresas';
   const sections = [
@@ -82,6 +85,33 @@ export function AppLayout() {
     (location.pathname.startsWith('/empresas/') ? 'Empresa' : undefined) ??
     'LicitaGestão';
   const activeAssignments = user?.assignedCompanies.filter((company) => company.active) ?? [];
+  const switcherCompanies = user?.role === 'ADMIN' ? adminCompanies : activeAssignments;
+
+  useEffect(() => {
+    if (user?.role !== 'ADMIN') {
+      setAdminCompanies([]);
+      return;
+    }
+
+    let cancelled = false;
+    void api
+      .get<ApiResponse<CompanySummary[]>>('/companies/options')
+      .then((response) => {
+        if (!cancelled) setAdminCompanies(response.data.data);
+      })
+      .catch(() => {
+        if (!cancelled) setAdminCompanies([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.role]);
+
+  useEffect(() => {
+    if (user?.role !== 'ADMIN' || !activeCompanyId || adminCompanies.length === 0) return;
+    if (!adminCompanies.some((company) => company.id === activeCompanyId)) setActiveCompanyId(null);
+  }, [user?.role, activeCompanyId, adminCompanies, setActiveCompanyId]);
 
   return (
     <div className="app-shell">
@@ -134,18 +164,17 @@ export function AppLayout() {
             </div>
           </div>
           <div className="topbar-actions">
-            {user?.role === 'FUNCIONARIO' && activeAssignments.length > 0 && (
+            {user?.role !== 'EMPRESA' && switcherCompanies.length > 0 && (
               <label className="company-switcher">
                 <Building2 size={17} />
                 <span>Empresa ativa</span>
                 <select
                   value={activeCompanyId ?? ''}
-                  onChange={(event) => {
-                    const companyId = event.target.value;
-                    setActiveCompanyId(companyId);
-                  }}
+                  onChange={(event: ChangeEvent<HTMLSelectElement>) => setActiveCompanyId(event.target.value || null)}
+                  aria-label="Trocar empresa ativa"
                 >
-                  {activeAssignments.map((company) => (
+                  {user?.role === 'ADMIN' && <option value="">Todas as empresas</option>}
+                  {switcherCompanies.map((company) => (
                     <option key={company.id} value={company.id}>
                       {company.tradeName || company.legalName}
                     </option>

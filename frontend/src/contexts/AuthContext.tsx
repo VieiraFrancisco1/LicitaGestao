@@ -21,14 +21,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const applyUser = useCallback((nextUser: User | null) => {
     setUser(nextUser);
     if (!nextUser) return setActiveCompanyId(null);
+
     const stored = window.localStorage.getItem(`active-company:${nextUser.id}`);
     const activeAssignments = nextUser.assignedCompanies.filter((company) => company.active);
     const allowed =
       nextUser.role === 'EMPRESA'
         ? nextUser.companyId
-        : activeAssignments.some((company) => company.id === stored)
+        : nextUser.role === 'ADMIN'
           ? stored
-          : (activeAssignments[0]?.id ?? null);
+          : activeAssignments.some((company) => company.id === stored)
+            ? stored
+            : (activeAssignments[0]?.id ?? null);
+
     setActiveCompanyId(allowed ?? null);
   }, []);
 
@@ -75,7 +79,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const selectCompany = useCallback(
     (companyId: string | null) => {
       setActiveCompanyId(companyId);
-      if (user && companyId) window.localStorage.setItem(`active-company:${user.id}`, companyId);
+      if (!user) return;
+
+      const storageKey = `active-company:${user.id}`;
+      if (companyId) window.localStorage.setItem(storageKey, companyId);
+      else window.localStorage.removeItem(storageKey);
     },
     [user]
   );

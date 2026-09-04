@@ -23,11 +23,8 @@ function relative(days?: number) {
 }
 
 export function DashboardPage() {
-  const { user, activeCompanyId } = useAuth();
-  const scopedCompanyId =
-    user?.role === 'EMPRESA' ? user.companyId : user?.role === 'FUNCIONARIO' ? activeCompanyId : null;
-  const [adminCompanyId, setAdminCompanyId] = useState<string | null>(null);
-  const companyId = user?.role === 'ADMIN' ? adminCompanyId : (scopedCompanyId ?? null);
+  const { user, activeCompanyId, setActiveCompanyId } = useAuth();
+  const companyId = user?.role === 'EMPRESA' ? user.companyId : activeCompanyId;
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -81,22 +78,6 @@ export function DashboardPage() {
           </p>
         </div>
         <div className="dashboard-scope-control">
-          {user?.role === 'ADMIN' && (
-            <label>
-              <span>Visão do dashboard</span>
-              <select
-                value={companyId ?? ''}
-                onChange={(event) => setAdminCompanyId(event.target.value || null)}
-              >
-                <option value="">Todas as empresas</option>
-                {data?.companies.map((company) => (
-                  <option key={company.id} value={company.id}>
-                    {company.tradeName || company.legalName}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
           <button className="secondary-button compact" onClick={() => void load()} disabled={loading}>
             <RefreshCw size={15} /> Atualizar
           </button>
@@ -269,12 +250,12 @@ export function DashboardPage() {
             <div>
               <span className="eyebrow">Empresas</span>
               <h3>Visão individual por empresa</h3>
-              <p>Abra uma empresa no próprio dashboard sem perder a visão geral.</p>
+              <p>Selecione uma empresa e mantenha esse contexto ao navegar pelo sistema.</p>
             </div>
           </div>
           <div className="dashboard-company-cards">
             {data?.companyCards.map((company) => (
-              <button key={company.id} onClick={() => setAdminCompanyId(company.id)}>
+              <button key={company.id} onClick={() => setActiveCompanyId(company.id)}>
                 <span className="company-card-icon">
                   <Building2 size={19} />
                 </span>

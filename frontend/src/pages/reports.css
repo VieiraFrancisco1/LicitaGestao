@@ -56,7 +56,8 @@
 
 .reports-filters {
   display: grid;
-  grid-template-columns: minmax(150px, 180px) minmax(150px, 180px) minmax(220px, 1fr) auto auto;
+  grid-template-columns: minmax(150px, 180px) minmax(150px, 180px) auto auto;
+  justify-content: start;
   align-items: end;
   gap: 12px;
   padding: 16px;
@@ -426,9 +427,6 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .reports-company-filter {
-    grid-column: span 2;
-  }
 
   .reports-analysis-grid {
     grid-template-columns: 1fr 1fr;
@@ -462,9 +460,6 @@
     grid-template-columns: 1fr;
   }
 
-  .reports-company-filter {
-    grid-column: auto;
-  }
 
   .reports-primary-button,
   .reports-export-button {

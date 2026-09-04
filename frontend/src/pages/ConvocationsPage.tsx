@@ -40,8 +40,10 @@ export function ConvocationsPage() {
       setData(alerts);
       setCompanies(options);
       setSelectedCompanyId((current) => {
-        if (activeCompanyId && options.some((company) => company.id === activeCompanyId))
+        if (activeCompanyId && options.some((company) => company.id === activeCompanyId)) {
           return activeCompanyId;
+        }
+        if (user?.role === 'ADMIN' && !activeCompanyId) return '';
         if (options.some((company) => company.id === current)) return current;
         return options[0]?.id ?? '';
       });
@@ -51,7 +53,7 @@ export function ConvocationsPage() {
     } finally {
       setLoading(false);
     }
-  }, [activeCompanyId]);
+  }, [activeCompanyId, user?.role]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => void load(), 0);
@@ -77,16 +79,19 @@ export function ConvocationsPage() {
   };
 
   const markAll = async () => {
-    const unreadItems = data.items.filter((item) => item.companyId === selectedCompanyId && !item.read);
+    const unreadItems = data.items.filter(
+      (item) => (!selectedCompanyId || item.companyId === selectedCompanyId) && !item.read
+    );
     if (unreadItems.length === 0) return;
     await Promise.all(
       unreadItems.map((item) => api.post('/integrations/gmail/alerts/read', { messageId: item.messageId }))
     );
+    const unreadIds = new Set(unreadItems.map((item) => item.messageId));
     setData((current) => ({
       ...current,
       unread: Math.max(0, current.unread - unreadItems.length),
       items: current.items.map((item) =>
-        item.companyId === selectedCompanyId ? { ...item, read: true } : item
+        unreadIds.has(item.messageId) ? { ...item, read: true } : item
       )
     }));
   };
@@ -100,15 +105,15 @@ export function ConvocationsPage() {
   }, [data.items]);
 
   const visibleItems = useMemo(
-    () => data.items.filter((item) => item.companyId === selectedCompanyId),
+    () => selectedCompanyId ? data.items.filter((item) => item.companyId === selectedCompanyId) : data.items,
     [data.items, selectedCompanyId]
   );
-  const selectedUnread = unreadByCompany.get(selectedCompanyId) ?? 0;
+  const selectedUnread = selectedCompanyId ? (unreadByCompany.get(selectedCompanyId) ?? 0) : data.unread;
   const selectedCompany = companies.find((company) => company.id === selectedCompanyId);
 
-  const selectCompany = (companyId: string) => {
-    setSelectedCompanyId(companyId);
-    if (user?.role === 'FUNCIONARIO') setActiveCompanyId(companyId);
+  const selectCompany = (companyId: string | null) => {
+    setSelectedCompanyId(companyId ?? '');
+    if (user?.role !== 'EMPRESA') setActiveCompanyId(companyId);
   };
 
   const dismiss = async (item: GmailConvocationAlert) => {
@@ -143,7 +148,7 @@ export function ConvocationsPage() {
         <div className="page-heading-actions">
           {!!selectedUnread && (
             <button className="secondary-button" onClick={() => void markAll()}>
-              <CheckCheck size={16} /> Marcar empresa como lida
+              <CheckCheck size={16} /> {selectedCompanyId ? 'Marcar empresa como lida' : 'Marcar todos como lidos'}
             </button>
           )}
           <button className="secondary-button" onClick={() => void load()} disabled={loading}>
@@ -154,6 +159,18 @@ export function ConvocationsPage() {
 
       {companies.length > 0 && (
         <nav className="company-alert-tabs" aria-label="Avisos separados por empresa">
+          {user?.role === 'ADMIN' && (
+            <button
+              className={selectedCompanyId === '' ? 'active' : ''}
+              onClick={() => selectCompany(null)}
+            >
+              <Building2 size={16} />
+              <span>Todas as empresas</span>
+              {data.unread > 0 && (
+                <strong className="company-alert-badge">{data.unread > 99 ? '99+' : data.unread}</strong>
+              )}
+            </button>
+          )}
           {companies.map((company) => {
             const unread = unreadByCompany.get(company.id) ?? 0;
             return (
@@ -176,7 +193,9 @@ export function ConvocationsPage() {
       <div className="convocation-summary-card">
         <MailWarning size={22} />
         <div>
-          <small>Não lidos · {selectedCompany?.tradeName || selectedCompany?.legalName || 'Empresa'}</small>
+          <small>
+            Não lidos · {selectedCompany?.tradeName || selectedCompany?.legalName || 'Todas as empresas'}
+          </small>
           <strong>{selectedUnread}</strong>
         </div>
       </div>
@@ -190,9 +209,9 @@ export function ConvocationsPage() {
       ) : visibleItems.length === 0 ? (
         <section className="empty-state">
           <MailWarning size={36} />
-          <h2>Nenhum aviso encontrado para esta empresa</h2>
+          <h2>Nenhum aviso encontrado para este escopo</h2>
           <p>
-            Quando o Gmail ou Outlook desta empresa receber um aviso de licitação, ele aparecerá nesta aba.
+            Quando o Gmail ou Outlook receber um aviso de licitação dentro do escopo selecionado, ele aparecerá aqui.
           </p>
         </section>
       ) : (

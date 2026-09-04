@@ -137,14 +137,11 @@ export function ReportsPage() {
   const initialFilters = useMemo(() => defaultFilters(), []);
   const [draftFilters, setDraftFilters] = useState<DateFilters>(initialFilters);
   const [filters, setFilters] = useState<DateFilters>(initialFilters);
-  const [draftAdminCompanyId, setDraftAdminCompanyId] = useState<string | null>(null);
-  const [adminCompanyId, setAdminCompanyId] = useState<string | null>(null);
   const [data, setData] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const scopedCompanyId =
-    user?.role === 'EMPRESA' ? user.companyId : user?.role === 'FUNCIONARIO' ? activeCompanyId : adminCompanyId;
+  const scopedCompanyId = user?.role === 'EMPRESA' ? user.companyId : activeCompanyId;
 
   const load = useCallback(async () => {
     if (!filters.dateFrom || !filters.dateTo) return;
@@ -178,7 +175,6 @@ export function ReportsPage() {
     }
     setError('');
     setFilters(draftFilters);
-    if (user?.role === 'ADMIN') setAdminCompanyId(draftAdminCompanyId);
   };
 
   const maxMonthly = Math.max(1, ...(data?.monthly.map((item) => item.count) ?? []));
@@ -244,24 +240,6 @@ export function ReportsPage() {
             required
           />
         </label>
-        {user?.role === 'ADMIN' && (
-          <label className="reports-company-filter">
-            <span>Empresa</span>
-            <select
-              value={draftAdminCompanyId ?? ''}
-              onChange={(event: ChangeEvent<HTMLSelectElement>) =>
-                setDraftAdminCompanyId(event.target.value || null)
-              }
-            >
-              <option value="">Todas as empresas</option>
-              {data?.companies.map((company) => (
-                <option key={company.id} value={company.id}>
-                  {company.tradeName || company.legalName}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
         <button className="reports-primary-button" type="submit" disabled={loading}>
           Aplicar filtros
         </button>
