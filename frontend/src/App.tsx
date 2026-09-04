@@ -8,7 +8,6 @@ import { CompaniesPage } from './pages/CompaniesPage';
 import { CompanyDetailsPage } from './pages/CompanyDetailsPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { LoginPage } from './pages/LoginPage';
-import { PlaceholderPage } from './pages/PlaceholderPage';
 import { PlatformsPage } from './pages/PlatformsPage';
 import { UsersPage } from './pages/UsersPage';
 import { TendersPage } from './pages/TendersPage';
@@ -21,6 +20,7 @@ import { ConvocationsPage } from './pages/ConvocationsPage';
 import { BackupsPage } from './pages/BackupsPage';
 import { SystemHealthPage } from './pages/SystemHealthPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { ReportsPage } from './pages/ReportsPage';
 
 export default function App() {
   return (
@@ -57,7 +57,7 @@ export default function App() {
               <Route path="saude-sistema" element={<ProtectedRoute roles={['ADMIN']} />}>
                 <Route index element={<SystemHealthPage />} />
               </Route>
-              <Route path="relatorios" element={<PlaceholderPage title="Relatórios" phase="a Fase 7" />} />
+              <Route path="relatorios" element={<ReportsPage />} />
               <Route path="configuracoes" element={<SettingsPage />} />
             </Route>
           </Route>
