@@ -11,6 +11,7 @@ import { auditRouter } from './audit.routes.js';
 import { megaRouter } from './mega.routes.js';
 import { gmailRouter } from './gmail.routes.js';
 import { outlookRouter } from './outlook.routes.js';
+import { emailSyncRouter } from './email-sync.routes.js';
 import { dashboardRouter } from './dashboard.routes.js';
 import { backupRouter } from './backup.routes.js';
 
@@ -37,6 +38,7 @@ apiRouter.use('/audit', auditRouter);
 apiRouter.use('/mega', megaRouter);
 apiRouter.use('/integrations/gmail', gmailRouter);
 apiRouter.use('/integrations/outlook', outlookRouter);
+apiRouter.use('/integrations/email', emailSyncRouter);
 
 apiRouter.use('/dashboard', dashboardRouter);
 apiRouter.use('/backups', backupRouter);

@@ -1,5 +1,5 @@
 import { Bell, CheckCheck, MailWarning, MonitorCheck, Trash2 } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import type {
@@ -88,6 +88,7 @@ export function DeadlineNotifications() {
     if (typeof window === 'undefined' || !('Notification' in window)) return 'unsupported';
     return Notification.permission;
   });
+  const emailSyncRunning = useRef(false);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -179,6 +180,19 @@ export function DeadlineNotifications() {
     }
   }, [showDesktopDeadlineAlerts, showDesktopGmailAlerts]);
 
+  const syncEmails = useCallback(async () => {
+    if (emailSyncRunning.current) return;
+    emailSyncRunning.current = true;
+    try {
+      await api.post('/integrations/email/sync');
+      await loadAlerts();
+    } catch {
+      // O status detalhado da integração continua disponível na área da empresa.
+    } finally {
+      emailSyncRunning.current = false;
+    }
+  }, [loadAlerts]);
+
   useEffect(() => {
     let active = true;
     const load = async () => {
@@ -192,6 +206,22 @@ export function DeadlineNotifications() {
       window.clearInterval(timer);
     };
   }, [location.pathname, loadAlerts]);
+
+  useEffect(() => {
+    const initialTimer = window.setTimeout(() => void syncEmails(), 8_000);
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') void syncEmails();
+    }, 90_000);
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') void syncEmails();
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      window.clearTimeout(initialTimer);
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [syncEmails]);
 
   const requestDesktopPermission = async () => {
     if (!('Notification' in window)) {
