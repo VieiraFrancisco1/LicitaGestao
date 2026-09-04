@@ -88,10 +88,7 @@ export function AppLayout() {
   const switcherCompanies = user?.role === 'ADMIN' ? adminCompanies : activeAssignments;
 
   useEffect(() => {
-    if (user?.role !== 'ADMIN') {
-      setAdminCompanies([]);
-      return;
-    }
+    if (user?.role !== 'ADMIN') return;
 
     let cancelled = false;
     void api
