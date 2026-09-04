@@ -2,6 +2,7 @@ import {
   CheckCircle2,
   Cloud,
   Database,
+  DatabaseBackup,
   Mail,
   RefreshCw,
   Server,
@@ -9,10 +10,11 @@ import {
   TriangleAlert,
   type LucideIcon
 } from 'lucide-react';
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { api, errorMessage } from '../services/api';
-import type { ApiResponse, HealthStatus, SystemHealth } from '../types';
-import { formatBytes } from '../utils/bid';
+import type { ApiResponse, BackupSummary, HealthStatus, SystemHealth } from '../types';
+import './system-health.css';
 
 const statusLabels: Record<HealthStatus, string> = {
   OPERATIONAL: 'Funcionando',
@@ -34,43 +36,82 @@ function formatUptime(seconds: number) {
   const days = Math.floor(seconds / 86_400);
   const hours = Math.floor((seconds % 86_400) / 3_600);
   const minutes = Math.floor((seconds % 3_600) / 60);
-  if (days) return `${days}d ${hours}h ${minutes}min`;
+  if (days) return `${days}d ${hours}h`;
   if (hours) return `${hours}h ${minutes}min`;
   return `${minutes}min`;
 }
 
-function HealthCard({
+function formatStorage(bytes: number) {
+  const gigabytes = bytes / 1024 / 1024 / 1024;
+  if (gigabytes >= 1) return `${gigabytes.toFixed(gigabytes >= 100 ? 0 : 1)} GB`;
+  const megabytes = bytes / 1024 / 1024;
+  return `${megabytes.toFixed(megabytes >= 100 ? 0 : 1)} MB`;
+}
+
+function storagePercentage(used: number | null, total: number | null) {
+  if (used === null || total === null || total <= 0) return null;
+  return Math.min(100, Math.max(0, (used / total) * 100));
+}
+
+type HealthFact = { label: string; value: string | number };
+
+function ServiceCard({
   icon: Icon,
   title,
   status,
   message,
-  children
+  facts,
+  details = []
 }: {
   icon: LucideIcon;
   title: string;
   status: HealthStatus;
   message: string;
-  children: ReactNode;
+  facts: HealthFact[];
+  details?: HealthFact[];
 }) {
   return (
-    <article className={`system-health-card status-${status.toLowerCase().replace('_', '-')}`}>
-      <div className="system-health-card-heading">
-        <span className="system-health-card-icon">
-          <Icon size={21} />
+    <article className={`health-service-card status-${status.toLowerCase().replace('_', '-')}`}>
+      <header className="health-service-card-header">
+        <span className="health-service-icon">
+          <Icon size={19} />
         </span>
-        <div>
-          <h3>{title}</h3>
-          <span className="system-health-status">{statusLabels[status]}</span>
-        </div>
-      </div>
-      <p>{message}</p>
-      <dl>{children}</dl>
+        <strong>{title}</strong>
+        <span className="health-service-status">{statusLabels[status]}</span>
+      </header>
+
+      <p className="health-service-message">{message}</p>
+
+      <dl className="health-service-facts">
+        {facts.map((fact) => (
+          <div key={fact.label}>
+            <dt>{fact.label}</dt>
+            <dd>{fact.value}</dd>
+          </div>
+        ))}
+      </dl>
+
+      {details.length > 0 && (
+        <details className="health-service-details">
+          <summary>Ver detalhes</summary>
+          <dl>
+            {details.map((detail) => (
+              <div key={detail.label}>
+                <dt>{detail.label}</dt>
+                <dd>{detail.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </details>
+      )}
     </article>
   );
 }
 
 export function SystemHealthPage() {
   const [data, setData] = useState<SystemHealth | null>(null);
+  const [backup, setBackup] = useState<BackupSummary | null>(null);
+  const [backupUnavailable, setBackupUnavailable] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
@@ -78,8 +119,19 @@ export function SystemHealthPage() {
   const load = useCallback(async (manual = false) => {
     if (manual) setRefreshing(true);
     try {
-      const response = await api.get<ApiResponse<SystemHealth>>('/system/health');
-      setData(response.data.data);
+      const [healthResponse, backupResponse] = await Promise.all([
+        api.get<ApiResponse<SystemHealth>>('/system/health'),
+        api.get<ApiResponse<BackupSummary>>('/backups/summary').catch(() => null)
+      ]);
+
+      setData(healthResponse.data.data);
+      if (backupResponse) {
+        setBackup(backupResponse.data.data);
+        setBackupUnavailable(false);
+      } else {
+        setBackup(null);
+        setBackupUnavailable(true);
+      }
       setError('');
     } catch (err) {
       setError(errorMessage(err));
@@ -98,113 +150,222 @@ export function SystemHealthPage() {
     };
   }, [load]);
 
+  if (loading && !data) {
+    return (
+      <div className="app-loader">
+        <span className="spinner" />
+        Verificando os serviços...
+      </div>
+    );
+  }
+
+  const statuses = data
+    ? [data.api.status, data.database.status, data.mega.status, data.gmail.status, data.outlook.status]
+    : [];
+  const operationalCount = statuses.filter((status) => status === 'OPERATIONAL').length;
+  const hasUnavailable = statuses.some((status) => status === 'UNAVAILABLE');
+  const hasWarning = statuses.some((status) => status === 'WARNING' || status === 'NOT_CONFIGURED');
+  const visualStatus: HealthStatus = hasUnavailable ? 'UNAVAILABLE' : hasWarning ? 'WARNING' : 'OPERATIONAL';
+
   const overallTitle =
-    data?.overall === 'OPERATIONAL'
+    visualStatus === 'OPERATIONAL'
       ? 'Sistema funcionando normalmente'
-      : data?.overall === 'UNAVAILABLE'
-        ? 'Serviço essencial indisponível'
+      : visualStatus === 'UNAVAILABLE'
+        ? 'Há serviço indisponível'
         : 'Alguns serviços precisam de atenção';
 
+  const megaUsage = data ? storagePercentage(data.mega.spaceUsed, data.mega.spaceTotal) : null;
+  const megaFree =
+    data && data.mega.spaceUsed !== null && data.mega.spaceTotal !== null
+      ? Math.max(0, data.mega.spaceTotal - data.mega.spaceUsed)
+      : null;
+
   return (
-    <div className="page-stack">
-      <div className="page-heading system-health-heading">
+    <div className="page-stack health-center-page">
+      <div className="page-heading health-center-heading">
         <div>
           <span className="eyebrow">Monitoramento</span>
           <h2>Saúde do sistema</h2>
-          <p>Acompanhe os serviços essenciais do LicitaGestão em um único lugar.</p>
+          <p>Status dos serviços essenciais, integrações e rotinas de proteção do LicitaGestão.</p>
         </div>
         <button className="secondary-button" disabled={refreshing} onClick={() => void load(true)}>
-          <RefreshCw size={17} className={refreshing ? 'spin-icon' : ''} />
+          <RefreshCw size={16} className={refreshing ? 'spin-icon' : ''} />
           {refreshing ? 'Verificando...' : 'Verificar agora'}
         </button>
       </div>
 
       {error && <div className="alert alert-error">{error}</div>}
-      {loading && !data && <div className="empty-state">Verificando os serviços...</div>}
 
       {data && (
         <>
-          <section className={`system-health-overview status-${data.overall.toLowerCase()}`}>
-            <span>
-              {data.overall === 'OPERATIONAL' ? <CheckCircle2 size={25} /> : <TriangleAlert size={25} />}
-            </span>
-            <div>
-              <strong>{overallTitle}</strong>
-              <small>Última verificação: {formatDateTime(data.checkedAt)}</small>
+          <section className={`health-center-overview status-${visualStatus.toLowerCase()}`}>
+            <div className="health-center-overview-main">
+              <span className="health-center-overview-icon">
+                {visualStatus === 'OPERATIONAL' ? <CheckCircle2 size={22} /> : <TriangleAlert size={22} />}
+              </span>
+              <div>
+                <strong>{overallTitle}</strong>
+                <small>Última verificação: {formatDateTime(data.checkedAt)}</small>
+              </div>
+            </div>
+
+            <div className="health-center-overview-stats">
+              <div>
+                <strong>{operationalCount}/5</strong>
+                <span>serviços operacionais</span>
+              </div>
+              <div>
+                <strong>60s</strong>
+                <span>atualização automática</span>
+              </div>
             </div>
           </section>
 
-          <section className="system-health-grid">
-            <HealthCard icon={Server} title="API" status={data.api.status} message={data.api.message}>
-              <div>
-                <dt>Tempo em funcionamento</dt>
-                <dd>{formatUptime(data.api.uptimeSeconds)}</dd>
-              </div>
-            </HealthCard>
+          <section className="health-services-grid">
+            <ServiceCard
+              icon={Server}
+              title="API"
+              status={data.api.status}
+              message={data.api.message}
+              facts={[
+                { label: 'Em funcionamento', value: formatUptime(data.api.uptimeSeconds) }
+              ]}
+            />
 
-            <HealthCard
+            <ServiceCard
               icon={Database}
               title="Banco de dados"
               status={data.database.status}
               message={data.database.message}
-            >
-              <div>
-                <dt>Tempo de resposta</dt>
-                <dd>{data.database.latencyMs === null ? 'Indisponível' : `${data.database.latencyMs} ms`}</dd>
-              </div>
-            </HealthCard>
+              facts={[
+                {
+                  label: 'Tempo de resposta',
+                  value: data.database.latencyMs === null ? 'Indisponível' : `${data.database.latencyMs} ms`
+                }
+              ]}
+            />
 
-            <HealthCard icon={Cloud} title="MEGA" status={data.mega.status} message={data.mega.message}>
-              <div>
-                <dt>Pasta principal</dt>
-                <dd>{data.mega.rootFolder}</dd>
-              </div>
-              <div>
-                <dt>Espaço utilizado</dt>
-                <dd>
-                  {data.mega.spaceUsed !== null && data.mega.spaceTotal !== null
-                    ? `${formatBytes(data.mega.spaceUsed)} de ${formatBytes(data.mega.spaceTotal)}`
-                    : 'Não informado'}
-                </dd>
-              </div>
-            </HealthCard>
+            <article className={`health-service-card status-${data.mega.status.toLowerCase().replace('_', '-')}`}>
+              <header className="health-service-card-header">
+                <span className="health-service-icon"><Cloud size={19} /></span>
+                <strong>MEGA</strong>
+                <span className="health-service-status">{statusLabels[data.mega.status]}</span>
+              </header>
 
-            <HealthCard icon={Mail} title="Gmail" status={data.gmail.status} message={data.gmail.message}>
-              <div>
-                <dt>Contas conectadas</dt>
-                <dd>{data.gmail.connectedAccounts}</dd>
-              </div>
-              <div>
-                <dt>Última sincronização</dt>
-                <dd>{formatDateTime(data.gmail.lastSuccessfulSyncAt)}</dd>
-              </div>
-              <div>
-                <dt>Verificação automática</dt>
-                <dd>A cada {data.gmail.pollingIntervalSeconds}s</dd>
-              </div>
-            </HealthCard>
+              <p className="health-service-message">{data.mega.message}</p>
 
-            <HealthCard icon={Mail} title="Outlook" status={data.outlook.status} message={data.outlook.message}>
-              <div>
-                <dt>Contas conectadas</dt>
-                <dd>{data.outlook.connectedAccounts}</dd>
-              </div>
-              <div>
-                <dt>Última sincronização</dt>
-                <dd>{formatDateTime(data.outlook.lastSuccessfulSyncAt)}</dd>
-              </div>
-              <div>
-                <dt>Verificação automática</dt>
-                <dd>A cada {data.outlook.pollingIntervalSeconds}s</dd>
-              </div>
-            </HealthCard>
+              <dl className="health-service-facts">
+                <div>
+                  <dt>Armazenamento usado</dt>
+                  <dd>{megaUsage === null ? 'Não informado' : `${megaUsage.toFixed(1)}%`}</dd>
+                </div>
+                <div>
+                  <dt>Espaço livre</dt>
+                  <dd>{megaFree === null ? 'Não informado' : formatStorage(megaFree)}</dd>
+                </div>
+              </dl>
+
+              {megaUsage !== null && (
+                <div className="health-storage-bar" aria-label={`${megaUsage.toFixed(1)}% do armazenamento utilizado`}>
+                  <span style={{ width: `${megaUsage}%` }} />
+                </div>
+              )}
+
+              <details className="health-service-details">
+                <summary>Ver detalhes</summary>
+                <dl>
+                  <div>
+                    <dt>Pasta principal</dt>
+                    <dd>{data.mega.rootFolder}</dd>
+                  </div>
+                  <div>
+                    <dt>Utilizado</dt>
+                    <dd>{data.mega.spaceUsed === null ? 'Não informado' : formatStorage(data.mega.spaceUsed)}</dd>
+                  </div>
+                  <div>
+                    <dt>Capacidade</dt>
+                    <dd>{data.mega.spaceTotal === null ? 'Não informado' : formatStorage(data.mega.spaceTotal)}</dd>
+                  </div>
+                  <div>
+                    <dt>Conexão</dt>
+                    <dd>{data.mega.connected ? 'Conectado' : 'Desconectado'}</dd>
+                  </div>
+                </dl>
+              </details>
+            </article>
+
+            <ServiceCard
+              icon={Mail}
+              title="Gmail"
+              status={data.gmail.status}
+              message={data.gmail.message}
+              facts={[
+                { label: 'Contas', value: data.gmail.connectedAccounts },
+                { label: 'Última sincronização', value: formatDateTime(data.gmail.lastSuccessfulSyncAt) }
+              ]}
+              details={[
+                { label: 'Integração', value: data.gmail.configured ? 'Configurada' : 'Não configurada' },
+                { label: 'Verificação automática', value: `A cada ${data.gmail.pollingIntervalSeconds}s` },
+                { label: 'Contas com erro', value: data.gmail.accountsWithError },
+                { label: 'Sincronizações atrasadas', value: data.gmail.delayedAccounts }
+              ]}
+            />
+
+            <ServiceCard
+              icon={Mail}
+              title="Outlook"
+              status={data.outlook.status}
+              message={data.outlook.message}
+              facts={[
+                { label: 'Contas', value: data.outlook.connectedAccounts },
+                { label: 'Última sincronização', value: formatDateTime(data.outlook.lastSuccessfulSyncAt) }
+              ]}
+              details={[
+                { label: 'Integração', value: data.outlook.configured ? 'Configurada' : 'Não configurada' },
+                { label: 'Verificação automática', value: `A cada ${data.outlook.pollingIntervalSeconds}s` },
+                { label: 'Contas com erro', value: data.outlook.accountsWithError },
+                { label: 'Sincronizações atrasadas', value: data.outlook.delayedAccounts }
+              ]}
+            />
           </section>
 
-          <section className="system-health-security-note">
-            <ShieldCheck size={20} />
-            <div>
-              <strong>Diagnóstico protegido</strong>
-              <p>Esta tela é exclusiva do administrador e não mostra senhas, tokens ou credenciais.</p>
+          <section className="health-maintenance-section">
+            <div className="health-maintenance-heading">
+              <div>
+                <span className="eyebrow">Proteção e manutenção</span>
+                <h3>Rotinas administrativas</h3>
+              </div>
+            </div>
+
+            <div className="health-maintenance-grid">
+              <article className={`health-maintenance-card ${!backup?.lastBackup ? 'attention' : ''}`}>
+                <span className="health-maintenance-icon"><DatabaseBackup size={19} /></span>
+                <div>
+                  <small>Último backup</small>
+                  <strong>
+                    {backupUnavailable
+                      ? 'Não foi possível consultar'
+                      : backup?.lastBackup
+                        ? formatDateTime(backup.lastBackup.createdAt)
+                        : 'Nenhum backup registrado'}
+                  </strong>
+                  <span>
+                    {backup?.lastBackup?.actor?.name
+                      ? `Gerado por ${backup.lastBackup.actor.name}`
+                      : 'Acesse a área de backup para gerar ou revisar uma cópia.'}
+                  </span>
+                </div>
+                <Link to="/backups">Abrir backups</Link>
+              </article>
+
+              <article className="health-maintenance-card protected">
+                <span className="health-maintenance-icon"><ShieldCheck size={19} /></span>
+                <div>
+                  <small>Diagnóstico protegido</small>
+                  <strong>Credenciais não são exibidas</strong>
+                  <span>Senhas, tokens e segredos das integrações permanecem fora desta tela.</span>
+                </div>
+              </article>
             </div>
           </section>
         </>
