@@ -71,6 +71,7 @@ export function TendersPage() {
   const [actionId, setActionId] = useState('');
   const [error, setError] = useState('');
   const [associating, setAssociating] = useState<Tender | null>(null);
+  const [viewingCompanies, setViewingCompanies] = useState<Tender | null>(null);
 
   const yearOptions = Array.from({ length: 8 }, (_, index) => currentYear - 5 + index);
   const daysInSelectedMonth = month === 'all' ? 31 : new Date(year, Number(month), 0).getDate();
@@ -325,7 +326,6 @@ export function TendersPage() {
                     (company) => !tender.bids.some((bid) => bid.companyId === company.id)
                   );
                   const attachedBids = tender.bids.filter((bid) => bid.situation === 'ANEXADA');
-                  const pendingBids = tender.bids.filter((bid) => bid.situation !== 'ANEXADA');
                   const tenderLabel = [tender.modality, tender.noticeNumber ? `Nº ${tender.noticeNumber}` : null]
                     .filter(Boolean)
                     .join(' · ');
@@ -362,25 +362,17 @@ export function TendersPage() {
                       </td>
                       <td className="companies-cell organized-companies-cell">
                         <div className="tender-cell-content tender-companies-content">
-                          <span className="association-count">
+                          <button
+                            type="button"
+                            className="association-count"
+                            disabled={attachedBids.length === 0}
+                            onClick={() => setViewingCompanies(tender)}
+                            title={attachedBids.length ? 'Ver empresas que anexaram' : 'Nenhuma empresa anexou'}
+                          >
                             <Building2 size={15} />
-                            {tender.attachedCompanies}/{tender._count?.bids ?? 0} anexaram
-                          </span>
-                          {attachedBids.length > 0 && (
-                            <div className="attached-company-list">
-                              {attachedBids.map((bid) => (
-                                <span key={bid.id} className="attached-company-pill">
-                                  {bid.company.tradeName || bid.company.legalName} anexou
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                          {attachedBids.length === 0 && pendingBids.length > 0 && (
-                            <small>
-                              Associadas: {pendingBids.map((bid) => bid.company.tradeName || bid.company.legalName).join(', ')}
-                            </small>
-                          )}
-                          {tender.bids.length === 0 && <small>Nenhuma empresa associada</small>}
+                            {attachedBids.length}{' '}
+                            {attachedBids.length === 1 ? 'empresa anexou' : 'empresas anexaram'}
+                          </button>
                         </div>
                       </td>
                       <td className="spreadsheet-control-cell">
@@ -491,7 +483,55 @@ export function TendersPage() {
         />
       )}
 
+      {viewingCompanies && (
+        <TenderCompaniesModal tender={viewingCompanies} onClose={() => setViewingCompanies(null)} />
+      )}
+
     </div>
+  );
+}
+
+function TenderCompaniesModal({ tender, onClose }: { tender: Tender; onClose: () => void }) {
+  const attachedBids = tender.bids.filter((bid) => bid.situation === 'ANEXADA');
+  const reference = [
+    tender.municipality,
+    tender.noticeNumber ? `Nº ${tender.noticeNumber}` : tender.processNumber
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
+  return (
+    <Modal title="Empresas que anexaram" eyebrow="Licitação" onClose={onClose}>
+      <div className="tender-companies-modal">
+        <div className="tender-companies-modal-summary">
+          <span className="tender-companies-modal-icon">
+            <Building2 size={20} />
+          </span>
+          <div>
+            <strong>{reference}</strong>
+            <small>
+              {attachedBids.length}{' '}
+              {attachedBids.length === 1 ? 'empresa anexou esta licitação' : 'empresas anexaram esta licitação'}
+            </small>
+          </div>
+        </div>
+
+        <div className="tender-companies-modal-list">
+          {attachedBids.map((bid) => (
+            <article key={bid.id}>
+              <span className="tender-company-check">
+                <CheckCircle2 size={17} />
+              </span>
+              <div>
+                <strong>{bid.company.tradeName || bid.company.legalName}</strong>
+                <small>{bid._count?.documents ?? 0} documento(s) vinculado(s)</small>
+              </div>
+              <span className="tender-company-status">Anexada</span>
+            </article>
+          ))}
+        </div>
+      </div>
+    </Modal>
   );
 }
 

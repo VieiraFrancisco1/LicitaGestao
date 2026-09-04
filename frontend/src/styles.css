@@ -5160,16 +5160,141 @@ td small {
 }
 
 .organized-companies-cell .association-count {
+  display: inline-flex;
   width: fit-content;
   max-width: 100%;
+  min-height: 31px;
+  align-items: center;
+  gap: 6px;
   padding: 5px 7px;
   border: 1px solid #d8e4f4;
   border-radius: 7px;
   background: #eef4fc;
   color: #355f96;
+  font-family: inherit;
   font-size: 11px;
+  font-weight: 800;
   line-height: 1.2;
   white-space: nowrap;
+  cursor: pointer;
+  transition:
+    border-color 0.16s ease,
+    background-color 0.16s ease,
+    transform 0.16s ease;
+}
+
+.organized-companies-cell .association-count:hover:not(:disabled) {
+  border-color: #b8cdea;
+  background: #e4eefb;
+  transform: translateY(-1px);
+}
+
+.organized-companies-cell .association-count:disabled {
+  border-color: #e2e7ee;
+  background: #f5f7fa;
+  color: #8995a7;
+  cursor: default;
+}
+
+.tender-companies-modal {
+  display: grid;
+  gap: 16px;
+  padding: 20px 22px 24px;
+}
+
+.tender-companies-modal-summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #dbe5f3;
+  border-radius: 11px;
+  background: #f5f8fd;
+}
+
+.tender-companies-modal-summary > div {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.tender-companies-modal-summary strong {
+  overflow: hidden;
+  color: #1b365d;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tender-companies-modal-summary small {
+  color: #65758d;
+  font-size: 12px;
+}
+
+.tender-companies-modal-icon,
+.tender-company-check {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 9px;
+  background: #e6effc;
+  color: #3569ad;
+}
+
+.tender-companies-modal-icon {
+  width: 38px;
+  height: 38px;
+}
+
+.tender-companies-modal-list {
+  display: grid;
+  gap: 8px;
+}
+
+.tender-companies-modal-list article {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 11px;
+  padding: 12px 13px;
+  border: 1px solid #e0e7ef;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.tender-company-check {
+  width: 32px;
+  height: 32px;
+  background: #eaf7ef;
+  color: #258052;
+}
+
+.tender-companies-modal-list article > div {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.tender-companies-modal-list article strong {
+  overflow: hidden;
+  color: #233750;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tender-companies-modal-list article small {
+  color: #78869a;
+  font-size: 11px;
+}
+
+.tender-company-status {
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: #e9f7ef;
+  color: #26764d;
+  font-size: 10px;
+  font-weight: 850;
 }
 
 .spreadsheet-status-pill {
