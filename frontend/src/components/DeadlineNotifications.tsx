@@ -208,18 +208,22 @@ export function DeadlineNotifications() {
   }, [location.pathname, loadAlerts]);
 
   useEffect(() => {
-    const initialTimer = window.setTimeout(() => void syncEmails(), 8_000);
-    const timer = window.setInterval(() => {
-      if (document.visibilityState === 'visible') void syncEmails();
-    }, 90_000);
+    const initialTimer = window.setTimeout(() => void syncEmails(), 0);
+    const timer = window.setInterval(() => void syncEmails(), 60_000);
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') void syncEmails();
     };
+    const handleFocus = () => void syncEmails();
+    const handleOnline = () => void syncEmails();
     document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('online', handleOnline);
     return () => {
       window.clearTimeout(initialTimer);
       window.clearInterval(timer);
       document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('online', handleOnline);
     };
   }, [syncEmails]);
 

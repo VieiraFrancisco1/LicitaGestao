@@ -87,23 +87,11 @@ describe('integração Gmail', () => {
   });
 
   it.each([
-    {
-      sender: 'news@shein.com',
-      subject: 'Você foi convocada para aproveitar nossas ofertas',
-      text: 'Use seu cupom antes que a promoção termine.'
-    },
-    {
-      sender: 'loja@exemplo.com',
-      subject: 'Prorrogação da promoção',
-      text: 'A oferta continua disponível por mais dois dias.'
-    },
-    {
-      sender: 'atendimento@exemplo.com',
-      subject: 'Esclarecimento sobre seu pedido',
-      text: 'Confira as informações da sua compra.'
-    }
-  ])('não classifica mensagem comercial: $subject', (message) => {
-    expect(detectPotentialConvocation(message).detected).toBe(false);
+    'Você foi convocada para aproveitar nossas ofertas',
+    'Prorrogação da promoção',
+    'Esclarecimento sobre seu pedido'
+  ])('prioriza não perder alertas quando o assunto é ambíguo: “%s”', (subject) => {
+    expect(detectPotentialConvocation({ sender: 'news@exemplo.com', subject }).detected).toBe(true);
   });
 
   it('extrai conteúdo textual base64url de mensagem do Gmail', () => {

@@ -219,7 +219,7 @@ export function detectPotentialConvocation(input: {
   const contextualAlert = CONTEXTUAL_ALERT_TERMS.find((candidate) =>
     candidate.terms.some((term) => combined.includes(term))
   );
-  if (contextualAlert && (platform || context)) {
+  if (contextualAlert) {
     return {
       detected: true,
       reason: platform
@@ -230,7 +230,7 @@ export function detectPotentialConvocation(input: {
 
   const action = PROCUREMENT_ACTION_TERMS.find((candidate) => combined.includes(candidate));
   const explicit = CONVOCATION_TERMS.find((candidate) => combined.includes(candidate));
-  if (explicit && (platform || context || action)) {
+  if (explicit) {
     return { detected: true, reason: `Termo de convocação identificado: ${explicit}` };
   }
 
