@@ -20,6 +20,7 @@ import { DocumentsPage } from './pages/DocumentsPage';
 import { ConvocationsPage } from './pages/ConvocationsPage';
 import { BackupsPage } from './pages/BackupsPage';
 import { SystemHealthPage } from './pages/SystemHealthPage';
+import { SettingsPage } from './pages/SettingsPage';
 
 export default function App() {
   return (
@@ -57,10 +58,7 @@ export default function App() {
                 <Route index element={<SystemHealthPage />} />
               </Route>
               <Route path="relatorios" element={<PlaceholderPage title="Relatórios" phase="a Fase 7" />} />
-              <Route
-                path="configuracoes"
-                element={<PlaceholderPage title="Configurações" phase="as próximas fases" />}
-              />
+              <Route path="configuracoes" element={<SettingsPage />} />
             </Route>
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
