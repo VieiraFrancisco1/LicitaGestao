@@ -37,10 +37,7 @@ export function decryptSecret(value: string, secret: string) {
   const key = encryptionKey(secret);
   const decipher = crypto.createDecipheriv('aes-256-gcm', key, Buffer.from(ivValue, 'base64url'));
   decipher.setAuthTag(Buffer.from(tagValue, 'base64url'));
-  const clear = Buffer.concat([
-    decipher.update(Buffer.from(cipherValue, 'base64url')),
-    decipher.final()
-  ]);
+  const clear = Buffer.concat([decipher.update(Buffer.from(cipherValue, 'base64url')), decipher.final()]);
   return clear.toString('utf8');
 }
 
@@ -134,24 +131,42 @@ const PLATFORM_SENDERS = [
   { name: 'M2A Compras', domains: ['m2atecnologia.com.br'] }
 ];
 
-const PLATFORM_ALERT_TERMS = [
+const SPECIFIC_PROCUREMENT_ALERT_TERMS = [
   { terms: ['alteracao do edital', 'alteracoes do edital'], label: 'alteração do edital' },
   { terms: ['retificacao do edital', 'edital retificado'], label: 'retificação do edital' },
-  { terms: ['resposta de impugnacao', 'impugnacao'], label: 'resposta de impugnação' },
-  { terms: ['resposta de esclarecimento', 'aviso de esclarecimento', 'esclarecimento'], label: 'esclarecimento' },
   { terms: ['nova mensagem no forum', 'mensagem no forum do processo'], label: 'nova mensagem no fórum' },
-  { terms: ['mudanca de vencedor'], label: 'mudança de vencedor' },
-  { terms: ['aviso de prorrogacao', 'prorrogacao do certame', 'prorrogacao'], label: 'prorrogação do certame' },
-  { terms: ['aviso de anulacao', 'anulacao do certame', 'anulacao'], label: 'anulação do certame' },
-  { terms: ['aviso de revogacao', 'revogacao do certame', 'revogacao'], label: 'revogação do certame' },
-  { terms: ['aviso de suspensao', 'suspensao do certame', 'suspensao'], label: 'suspensão do certame' },
-  { terms: ['aviso de homologacao', 'homologacao do certame', 'homologacao'], label: 'homologação do certame' },
-  { terms: ['aviso de adjudicacao', 'adjudicacao do certame', 'adjudicacao'], label: 'adjudicação do certame' },
+  { terms: ['prorrogacao do certame'], label: 'prorrogação do certame' },
+  { terms: ['anulacao do certame'], label: 'anulação do certame' },
+  { terms: ['revogacao do certame'], label: 'revogação do certame' },
+  { terms: ['suspensao do certame'], label: 'suspensão do certame' },
+  { terms: ['homologacao do certame'], label: 'homologação do certame' },
+  { terms: ['adjudicacao do certame'], label: 'adjudicação do certame' },
   { terms: ['resultado da licitacao', 'resultado do certame'], label: 'resultado da licitação' },
-  { terms: ['aviso de inabilitacao', 'licitante inabilitado', 'inabilitacao'], label: 'inabilitação de licitante' },
-  { terms: ['aviso de desclassificacao', 'licitante desclassificado', 'desclassificacao'], label: 'desclassificação de licitante' },
+  {
+    terms: ['aviso de inabilitacao', 'licitante inabilitado', 'inabilitacao'],
+    label: 'inabilitação de licitante'
+  },
+  {
+    terms: ['aviso de desclassificacao', 'licitante desclassificado', 'desclassificacao'],
+    label: 'desclassificação de licitante'
+  },
   { terms: ['reabertura da sessao', 'nova data da sessao'], label: 'alteração da sessão' },
   { terms: ['recurso administrativo', 'contrarrazoes'], label: 'recurso da licitação' }
+];
+
+const CONTEXTUAL_ALERT_TERMS = [
+  { terms: ['resposta de impugnacao', 'impugnacao'], label: 'resposta de impugnação' },
+  {
+    terms: ['resposta de esclarecimento', 'aviso de esclarecimento', 'esclarecimento'],
+    label: 'esclarecimento'
+  },
+  { terms: ['mudanca de vencedor'], label: 'mudança de vencedor' },
+  { terms: ['aviso de prorrogacao', 'prorrogacao'], label: 'prorrogação do certame' },
+  { terms: ['aviso de anulacao', 'anulacao'], label: 'anulação do certame' },
+  { terms: ['aviso de revogacao', 'revogacao'], label: 'revogação do certame' },
+  { terms: ['aviso de suspensao', 'suspensao'], label: 'suspensão do certame' },
+  { terms: ['aviso de homologacao', 'homologacao'], label: 'homologação do certame' },
+  { terms: ['aviso de adjudicacao', 'adjudicacao'], label: 'adjudicação do certame' }
 ];
 
 const STRONG_PROCUREMENT_TERMS = [
@@ -173,27 +188,41 @@ export function detectPotentialConvocation(input: {
   const platform = PLATFORM_SENDERS.find((candidate) =>
     candidate.domains.some((domain) => normalizedSender.includes(`@${domain}`))
   );
-  const platformAlert = PLATFORM_ALERT_TERMS.find((candidate) =>
+  const context = PROCUREMENT_CONTEXT_TERMS.find((candidate) => combined.includes(candidate));
+  const strongContext = STRONG_PROCUREMENT_TERMS.find((candidate) => combined.includes(candidate));
+  const specificAlert = SPECIFIC_PROCUREMENT_ALERT_TERMS.find((candidate) =>
     candidate.terms.some((term) => combined.includes(term))
   );
-  if (platformAlert) {
+  if (specificAlert) {
     return {
       detected: true,
       reason: platform
-        ? `Aviso da ${platform.name}: ${platformAlert.label}`
-        : `Aviso de licitação identificado: ${platformAlert.label}`
+        ? `Aviso da ${platform.name}: ${specificAlert.label}`
+        : `Aviso de licitação identificado: ${specificAlert.label}`
+    };
+  }
+
+  const contextualAlert = CONTEXTUAL_ALERT_TERMS.find((candidate) =>
+    candidate.terms.some((term) => combined.includes(term))
+  );
+  if (contextualAlert && (platform || context)) {
+    return {
+      detected: true,
+      reason: platform
+        ? `Aviso da ${platform.name}: ${contextualAlert.label}`
+        : `Aviso de licitação identificado: ${contextualAlert.label}`
     };
   }
 
   const explicit = CONVOCATION_TERMS.find((candidate) => combined.includes(candidate));
-  if (explicit) return { detected: true, reason: `Termo de convocação identificado: ${explicit}` };
+  if (explicit && (platform || context)) {
+    return { detected: true, reason: `Termo de convocação identificado: ${explicit}` };
+  }
 
   const action = PROCUREMENT_ACTION_TERMS.find((candidate) => combined.includes(candidate));
-  const context = PROCUREMENT_CONTEXT_TERMS.find((candidate) => combined.includes(candidate));
   if (action && context) {
     return { detected: true, reason: `Ação licitatória identificada: ${action}` };
   }
-  const strongContext = STRONG_PROCUREMENT_TERMS.find((candidate) => combined.includes(candidate));
   if (strongContext) {
     return { detected: true, reason: `Conteúdo de licitação identificado: ${strongContext}` };
   }

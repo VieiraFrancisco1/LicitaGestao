@@ -1,6 +1,11 @@
 import crypto from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { decryptSecret, detectPotentialConvocation, encryptSecret, extractGmailText } from '../src/services/gmail-utils.js';
+import {
+  decryptSecret,
+  detectPotentialConvocation,
+  encryptSecret,
+  extractGmailText
+} from '../src/services/gmail-utils.js';
 
 describe('integração Gmail', () => {
   it('cifra o refresh token sem armazenar o valor em texto puro', () => {
@@ -13,7 +18,10 @@ describe('integração Gmail', () => {
   it('identifica termos explícitos de convocação sem IA', () => {
     expect(detectPotentialConvocation({ subject: 'Convocação - Pregão 12/2026' }).detected).toBe(true);
     expect(
-      detectPotentialConvocation({ subject: 'Pregão 12/2026', text: 'Solicitamos apresentar documentos de habilitação.' }).detected
+      detectPotentialConvocation({
+        subject: 'Pregão 12/2026',
+        text: 'Solicitamos apresentar documentos de habilitação.'
+      }).detected
     ).toBe(true);
     expect(detectPotentialConvocation({ subject: 'Nota fiscal disponível' }).detected).toBe(false);
   });
@@ -51,13 +59,34 @@ describe('integração Gmail', () => {
     expect(result.detected).toBe(true);
   });
 
-  it('classifica esclarecimento mesmo quando o assunto é curto', () => {
+  it('classifica esclarecimento de remetente desconhecido quando há contexto de edital', () => {
     const result = detectPotentialConvocation({
       sender: 'pessoa@exemplo.com',
-      subject: 'Esclarecimento'
+      subject: 'Esclarecimento',
+      text: 'Resposta referente ao edital da concorrência eletrônica nº 10/2026.'
     });
     expect(result.detected).toBe(true);
     expect(result.reason).toContain('esclarecimento');
+  });
+
+  it.each([
+    {
+      sender: 'news@shein.com',
+      subject: 'Você foi convocada para aproveitar nossas ofertas',
+      text: 'Use seu cupom antes que a promoção termine.'
+    },
+    {
+      sender: 'loja@exemplo.com',
+      subject: 'Prorrogação da promoção',
+      text: 'A oferta continua disponível por mais dois dias.'
+    },
+    {
+      sender: 'atendimento@exemplo.com',
+      subject: 'Esclarecimento sobre seu pedido',
+      text: 'Confira as informações da sua compra.'
+    }
+  ])('não classifica mensagem comercial: $subject', (message) => {
+    expect(detectPotentialConvocation(message).detected).toBe(false);
   });
 
   it('extrai conteúdo textual base64url de mensagem do Gmail', () => {
