@@ -2,29 +2,23 @@ import {
   ArrowRight,
   Building2,
   CalendarDays,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  ChevronUp,
+  CheckCircle2,
   Download,
   FileCheck2,
   FileText,
-  ListFilter,
-  Mail,
-  Paperclip,
+  Layers3,
   RefreshCw,
   Search,
-  ShieldCheck,
   X
 } from 'lucide-react';
 import {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
   type ChangeEvent,
   type FormEvent,
+  type MouseEvent,
   type ReactNode
 } from 'react';
 import { Link } from 'react-router-dom';
@@ -68,17 +62,13 @@ type ReportData = {
 
 type DateFilters = { dateFrom: string; dateTo: string };
 
-type DetailFilter =
-  | { kind: 'all'; label: string }
-  | { kind: 'pendingAttachments'; label: string }
-  | { kind: 'spreadsheetPending'; label: string }
-  | { kind: 'documents'; label: string }
-  | { kind: 'month'; label: string; value: string }
-  | { kind: 'platform'; label: string; value: string }
-  | { kind: 'municipality'; label: string; value: string };
+type DetailView =
+  | { kind: 'all'; title: string; description: string }
+  | { kind: 'pendingAttachments'; title: string; description: string }
+  | { kind: 'spreadsheetPending'; title: string; description: string }
+  | { kind: 'platform'; title: string; description: string; platform: string };
 
 const PAGE_SIZE = 10;
-const ALL_FILTER: DetailFilter = { kind: 'all', label: 'Todas as licitações' };
 
 function fortalezaDateParts(date = new Date()) {
   const parts = new Intl.DateTimeFormat('en-US', {
@@ -100,25 +90,13 @@ function dateLabel(value: string) {
   return new Intl.DateTimeFormat('pt-BR', { timeZone: 'UTC' }).format(new Date(`${value}T00:00:00Z`));
 }
 
-function monthLabel(value: string) {
-  const [year, month] = value.split('-').map(Number);
-  if (!year || !month) return value;
-  return new Intl.DateTimeFormat('pt-BR', { month: 'short', year: 'numeric', timeZone: 'UTC' })
-    .format(new Date(Date.UTC(year, month - 1, 1)))
-    .replace('.', '');
-}
-
-function municipalityKey(row: ReportRow) {
-  return row.state ? `${row.municipality}/${row.state}` : row.municipality;
-}
-
 function csvCell(value: string | number | null) {
   const text = String(value ?? '');
   const protectedText = /^\s*[=+\-@]/.test(text) || /^[\t\r]/.test(text) ? `'${text}` : text;
   return `"${protectedText.replace(/"/g, '""')}"`;
 }
 
-function downloadCsv(data: ReportData) {
+function downloadCsv(data: ReportData, rows: ReportRow[], title: string) {
   const header = [
     'Data',
     'Município',
@@ -127,12 +105,10 @@ function downloadCsv(data: ReportData) {
     'Processo',
     'Órgão',
     'Plataforma',
-    'Participações no escopo',
-    'Pendências de anexação',
-    'Planilha pronta',
-    'Documentos'
+    'Anexação',
+    'Planilha'
   ];
-  const rows = data.rows.map((row) => [
+  const body = rows.map((row) => [
     dateLabel(row.sessionDate),
     row.municipality,
     row.state,
@@ -140,24 +116,20 @@ function downloadCsv(data: ReportData) {
     row.processNumber,
     row.agency,
     row.platformName,
-    row.participations,
-    row.pendingAttachments,
-    row.spreadsheetReady ? 'Sim' : 'Não',
-    row.documents
+    row.pendingAttachments > 0 ? 'Pendente' : 'Sem pendência',
+    row.spreadsheetReady ? 'Pronta' : 'Pendente'
   ]);
   const metadata = [
-    ['Relatório', 'Operacional'],
+    ['Relatório', title],
+    ['Empresa', data.scope.companyName || 'Empresa selecionada'],
     ['Período', `${dateLabel(data.period.dateFrom)} a ${dateLabel(data.period.dateTo)}`],
-    ['Escopo', data.scope.companyName || 'Visão geral das empresas permitidas'],
     []
   ];
-  const csv = `\uFEFF${[...metadata, header, ...rows]
-    .map((row) => row.map(csvCell).join(';'))
-    .join('\r\n')}`;
+  const csv = `\uFEFF${[...metadata, header, ...body].map((row) => row.map(csvCell).join(';')).join('\r\n')}`;
   const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
   const anchor = document.createElement('a');
   anchor.href = url;
-  anchor.download = `licitagestao-relatorio-operacional-${data.period.dateFrom}-${data.period.dateTo}.csv`;
+  anchor.download = `licitagestao-relatorio-${data.period.dateFrom}-${data.period.dateTo}.csv`;
   document.body.appendChild(anchor);
   anchor.click();
   anchor.remove();
@@ -172,15 +144,25 @@ export function ReportsPage() {
   const [data, setData] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [detailFilter, setDetailFilter] = useState<DetailFilter>(ALL_FILTER);
+  const [detailView, setDetailView] = useState<DetailView | null>(null);
   const [detailSearch, setDetailSearch] = useState('');
   const [detailPage, setDetailPage] = useState(1);
-  const detailRef = useRef<HTMLElement | null>(null);
 
   const scopedCompanyId = user?.role === 'EMPRESA' ? user.companyId : activeCompanyId;
+  const needsCompanySelection = user?.role === 'ADMIN' && !scopedCompanyId;
 
   const load = useCallback(async () => {
     if (!filters.dateFrom || !filters.dateTo) return;
+    if (needsCompanySelection) {
+      setData(null);
+      setDetailView(null);
+      setDetailSearch('');
+      setDetailPage(1);
+      setError('');
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError('');
     try {
@@ -191,7 +173,7 @@ export function ReportsPage() {
         }
       });
       setData(response.data.data);
-      setDetailFilter(ALL_FILTER);
+      setDetailView(null);
       setDetailSearch('');
       setDetailPage(1);
     } catch (err) {
@@ -199,13 +181,26 @@ export function ReportsPage() {
     } finally {
       setLoading(false);
     }
-  }, [filters, scopedCompanyId]);
+  }, [filters, needsCompanySelection, scopedCompanyId]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => void load(), 0);
     return () => window.clearTimeout(timer);
   }, [load]);
 
+  useEffect(() => {
+    if (!detailView) return;
+    const previousOverflow = document.body.style.overflow;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setDetailView(null);
+    };
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [detailView]);
 
   const applyFilters = (event: FormEvent) => {
     event.preventDefault();
@@ -217,36 +212,30 @@ export function ReportsPage() {
     setFilters(draftFilters);
   };
 
-  const openDetail = useCallback((filter: DetailFilter) => {
-    setDetailFilter(filter);
+  const openDetail = (view: DetailView) => {
+    setDetailView(view);
     setDetailSearch('');
     setDetailPage(1);
-    window.setTimeout(() => detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0);
-  }, []);
+  };
 
-  const filteredRows = useMemo(() => {
+  const detailRows = useMemo(() => {
+    if (!detailView) return [];
     const query = detailSearch.trim().toLocaleLowerCase('pt-BR');
     return (data?.rows ?? []).filter((row) => {
-      const matchesFilter = (() => {
-        switch (detailFilter.kind) {
+      const matchesView = (() => {
+        switch (detailView.kind) {
           case 'pendingAttachments':
             return row.pendingAttachments > 0;
           case 'spreadsheetPending':
             return !row.spreadsheetReady;
-          case 'documents':
-            return row.documents > 0;
-          case 'month':
-            return row.sessionDate.slice(0, 7) === detailFilter.value;
           case 'platform':
-            return (row.platformName || 'Sem plataforma') === detailFilter.value;
-          case 'municipality':
-            return municipalityKey(row) === detailFilter.value;
+            return (row.platformName || 'Sem plataforma') === detailView.platform;
           default:
             return true;
         }
       })();
-      if (!matchesFilter || !query) return matchesFilter;
-      const searchable = [
+      if (!matchesView || !query) return matchesView;
+      return [
         row.municipality,
         row.state,
         row.noticeNumber,
@@ -256,20 +245,19 @@ export function ReportsPage() {
       ]
         .filter(Boolean)
         .join(' ')
-        .toLocaleLowerCase('pt-BR');
-      return searchable.includes(query);
+        .toLocaleLowerCase('pt-BR')
+        .includes(query);
     });
-  }, [data?.rows, detailFilter, detailSearch]);
+  }, [data?.rows, detailSearch, detailView]);
 
-  const pageCount = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
-  const safePage = Math.min(detailPage, pageCount);
-  const pageRows = filteredRows.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const detailPageCount = Math.max(1, Math.ceil(detailRows.length / PAGE_SIZE));
+  const safeDetailPage = Math.min(detailPage, detailPageCount);
+  const detailPageRows = detailRows.slice(
+    (safeDetailPage - 1) * PAGE_SIZE,
+    safeDetailPage * PAGE_SIZE
+  );
 
-  const maxMonthly = Math.max(1, ...(data?.monthly.map((item) => item.count) ?? []));
-  const maxPlatform = Math.max(1, ...(data?.platforms.map((item) => item.count) ?? []));
-  const maxMunicipality = Math.max(1, ...(data?.municipalities.map((item) => item.count) ?? []));
-
-  if (loading && !data) {
+  if (loading && !data && !needsCompanySelection) {
     return (
       <div className="app-loader">
         <span className="spinner" />
@@ -282,25 +270,26 @@ export function ReportsPage() {
     <div className="page-stack reports-page">
       <section className="reports-hero">
         <div>
-          <span className="eyebrow">Gestão operacional</span>
-          <h2>Relatórios</h2>
-          <p>Veja o volume de trabalho do período e abra rapidamente os pontos que precisam de atenção.</p>
+          <span className="eyebrow">Relatório operacional</span>
+          <h2>Resumo da empresa</h2>
+          <p>Escolha o período e consulte somente as informações que ajudam no acompanhamento das licitações.</p>
         </div>
-        <div className="reports-hero-actions">
-          <span
-            className="reports-mode-badge"
-            title="Sem valores de propostas, vencedoras, taxa de êxito ou ranking entre empresas."
-          >
-            <ShieldCheck size={16} /> Operacional e privado
-          </span>
-          <button className="secondary-button compact" onClick={() => void load()} disabled={loading}>
-            <RefreshCw size={15} /> Atualizar
-          </button>
-        </div>
+        <button className="secondary-button compact" onClick={() => void load()} disabled={loading || needsCompanySelection}>
+          <RefreshCw size={15} /> Atualizar
+        </button>
       </section>
 
-      <section className="reports-control-card">
-        <form className="reports-filters" onSubmit={applyFilters}>
+      <section className="reports-context-card">
+        <div className="reports-company-context">
+          <span className="reports-context-icon"><Building2 size={20} /></span>
+          <div>
+            <small>Empresa selecionada</small>
+            <strong>{data?.scope.companyName || (needsCompanySelection ? 'Nenhuma empresa selecionada' : 'Empresa atual')}</strong>
+            <span>{user?.role === 'ADMIN' ? 'Troque a empresa pelo seletor fixo no topo.' : 'O relatório acompanha a empresa ativa no sistema.'}</span>
+          </div>
+        </div>
+
+        <form className="reports-period-form" onSubmit={applyFilters}>
           <label>
             <span>De</span>
             <input
@@ -323,375 +312,280 @@ export function ReportsPage() {
               required
             />
           </label>
-          <button className="reports-primary-button" type="submit" disabled={loading}>
+          <button type="submit" className="reports-apply-button" disabled={loading || needsCompanySelection}>
             Aplicar período
           </button>
-          <button
-            className="reports-export-button"
-            type="button"
-            disabled={!data?.rows.length}
-            onClick={() => data && downloadCsv(data)}
-          >
-            <Download size={16} /> Exportar CSV
-          </button>
         </form>
-
-        <div className="reports-scope-line">
-          <span><CalendarDays size={16} /> {data ? `${dateLabel(data.period.dateFrom)} a ${dateLabel(data.period.dateTo)}` : 'Período selecionado'}</span>
-          <span><Building2 size={16} /> {data?.scope.companyName || 'Todas as empresas permitidas'}</span>
-        </div>
       </section>
 
       {error && <div className="alert alert-error">{error}</div>}
 
-      <section className="reports-metrics">
-        <ReportMetric
-          icon={<FileText />}
-          label="Licitações no período"
-          value={data?.metrics.tenders ?? 0}
-          detail="licitações distintas no escopo"
-          actionLabel="Ver licitações"
-          onClick={() => openDetail(ALL_FILTER)}
-        />
-        <ReportMetric
-          icon={<Building2 />}
-          label="Participações acompanhadas"
-          value={data?.metrics.participations ?? 0}
-          detail="volume operacional registrado"
-        />
-        <ReportMetric
-          icon={<FileCheck2 />}
-          label="Pendentes de anexação"
-          value={data?.metrics.pendingAttachments ?? 0}
-          detail="participações que ainda exigem ação"
-          attention={Boolean(data?.metrics.pendingAttachments)}
-          actionLabel="Ver pendências"
-          onClick={() => openDetail({ kind: 'pendingAttachments', label: 'Pendentes de anexação' })}
-        />
-        <ReportMetric
-          icon={<FileCheck2 />}
-          label="Planilhas pendentes"
-          value={data?.metrics.spreadsheetsPending ?? 0}
-          detail={`${data?.metrics.spreadsheetsReady ?? 0} pronta${(data?.metrics.spreadsheetsReady ?? 0) === 1 ? '' : 's'} no período`}
-          attention={Boolean(data?.metrics.spreadsheetsPending)}
-          actionLabel="Ver pendentes"
-          onClick={() => openDetail({ kind: 'spreadsheetPending', label: 'Planilhas pendentes' })}
-        />
-        <ReportMetric
-          icon={<Paperclip />}
-          label="Documentos vinculados"
-          value={data?.metrics.documents ?? 0}
-          detail="arquivos ligados às participações"
-          actionLabel="Abrir documentos"
-          to="/documentos"
-        />
-        <ReportMetric
-          icon={<Mail />}
-          label="Avisos por e-mail"
-          value={data?.metrics.emailAlerts ?? 0}
-          detail="avisos relevantes recebidos no período"
-          actionLabel="Abrir avisos"
-          to="/convocacoes"
-        />
-      </section>
-
-      <section className="reports-insights-heading">
-        <div>
-          <span className="eyebrow">Distribuição</span>
-          <h3>Onde o trabalho está concentrado</h3>
-          <p>Clique em uma linha para filtrar o detalhamento. Listas grandes ficam compactas e podem ser expandidas.</p>
-        </div>
-      </section>
-
-      <section className="reports-analysis-grid">
-        <ReportBars
-          title="Licitações por mês"
-          subtitle="Evolução do volume dentro do período."
-          visibleLimit={6}
-          items={(data?.monthly ?? []).map((item) => ({
-            key: item.month,
-            label: monthLabel(item.month),
-            count: item.count,
-            width: (item.count / maxMonthly) * 100
-          }))}
-          onSelect={(key, label) => openDetail({ kind: 'month', value: key, label: `Mês: ${label}` })}
-        />
-        <ReportBars
-          title="Plataformas"
-          subtitle="Principais ambientes usados nas licitações."
-          visibleLimit={5}
-          items={(data?.platforms ?? []).map((item) => ({
-            key: item.name,
-            label: item.name,
-            count: item.count,
-            width: (item.count / maxPlatform) * 100
-          }))}
-          onSelect={(key, label) => openDetail({ kind: 'platform', value: key, label: `Plataforma: ${label}` })}
-        />
-        <ReportBars
-          title="Municípios"
-          subtitle="Localidades com maior volume no período."
-          visibleLimit={5}
-          items={(data?.municipalities ?? []).map((item) => ({
-            key: item.name,
-            label: item.name,
-            count: item.count,
-            width: (item.count / maxMunicipality) * 100
-          }))}
-          onSelect={(key, label) => openDetail({ kind: 'municipality', value: key, label: `Município: ${label}` })}
-        />
-      </section>
-
-      <section className="reports-table-card" ref={detailRef}>
-        <div className="reports-section-heading">
+      {needsCompanySelection ? (
+        <section className="reports-company-required">
+          <Building2 size={30} />
           <div>
-            <span className="eyebrow">Detalhamento</span>
-            <h3>Licitações do período</h3>
-            <p>Use os indicadores e distribuições acima como atalhos para chegar ao que precisa conferir.</p>
+            <h3>Selecione uma empresa para gerar o relatório</h3>
+            <p>
+              O relatório foi pensado para a visão individual de cada empresa. Use o seletor “Empresa ativa” no topo da tela.
+            </p>
           </div>
-          <strong>{filteredRows.length} registro{filteredRows.length === 1 ? '' : 's'}</strong>
-        </div>
+        </section>
+      ) : (
+        <>
+          <section className="reports-period-heading">
+            <div>
+              <span className="eyebrow">Período analisado</span>
+              <h3>{data ? `${dateLabel(data.period.dateFrom)} a ${dateLabel(data.period.dateTo)}` : 'Período selecionado'}</h3>
+            </div>
+            <span><CalendarDays size={16} /> Dados da empresa selecionada</span>
+          </section>
 
-        <div className="reports-detail-toolbar">
-          <div className="reports-filter-chip">
-            <ListFilter size={15} />
-            <span>{detailFilter.label}</span>
-            {detailFilter.kind !== 'all' && (
-              <button type="button" onClick={() => openDetail(ALL_FILTER)} title="Limpar filtro">
-                <X size={14} />
-              </button>
-            )}
-          </div>
-          <label className="reports-detail-search">
-            <Search size={16} />
-            <input
-              value={detailSearch}
-              onChange={(event) => {
-                setDetailSearch(event.target.value);
-                setDetailPage(1);
-              }}
-              placeholder="Buscar município, edital, processo, órgão ou plataforma"
+          <section className="reports-summary-grid">
+            <SummaryCard
+              icon={<FileText />}
+              label="Licitações participadas"
+              value={data?.metrics.tenders ?? 0}
+              description="Relação completa das licitações da empresa neste período."
+              action="Ver licitações"
+              onClick={() => openDetail({
+                kind: 'all',
+                title: 'Licitações do período',
+                description: 'Todas as licitações participadas pela empresa no período selecionado.'
+              })}
             />
-          </label>
-          <div className="reports-quick-filters" aria-label="Filtros rápidos">
-            <button
-              type="button"
-              className={detailFilter.kind === 'pendingAttachments' ? 'active' : ''}
-              onClick={() => openDetail({ kind: 'pendingAttachments', label: 'Pendentes de anexação' })}
-            >
-              Anexação pendente
-            </button>
-            <button
-              type="button"
-              className={detailFilter.kind === 'spreadsheetPending' ? 'active' : ''}
-              onClick={() => openDetail({ kind: 'spreadsheetPending', label: 'Planilhas pendentes' })}
-            >
-              Planilha pendente
-            </button>
-            <button
-              type="button"
-              className={detailFilter.kind === 'documents' ? 'active' : ''}
-              onClick={() => openDetail({ kind: 'documents', label: 'Com documentos' })}
-            >
-              Com documentos
-            </button>
-          </div>
-        </div>
+            <SummaryCard
+              icon={<FileCheck2 />}
+              label="Pendentes de anexação"
+              value={data?.metrics.pendingAttachments ?? 0}
+              description="Licitações que ainda precisam concluir a anexação."
+              action="Ver pendências"
+              attention={Boolean(data?.metrics.pendingAttachments)}
+              onClick={() => openDetail({
+                kind: 'pendingAttachments',
+                title: 'Pendentes de anexação',
+                description: 'Licitações do período que ainda possuem pendência de anexação.'
+              })}
+            />
+            <SummaryCard
+              icon={<CheckCircle2 />}
+              label="Planilhas pendentes"
+              value={data?.metrics.spreadsheetsPending ?? 0}
+              description="Licitações cuja planilha ainda não foi marcada como pronta."
+              action="Ver planilhas"
+              attention={Boolean(data?.metrics.spreadsheetsPending)}
+              onClick={() => openDetail({
+                kind: 'spreadsheetPending',
+                title: 'Planilhas pendentes',
+                description: 'Licitações do período cuja planilha ainda precisa ser concluída.'
+              })}
+            />
+          </section>
 
-        {!filteredRows.length ? (
-          <div className="reports-empty">
-            <strong>Nenhuma licitação encontrada.</strong>
-            <span>Altere o filtro ou a busca para visualizar outros registros do período.</span>
-          </div>
-        ) : (
-          <>
-            <div className="reports-table-wrap">
-              <table className="reports-table">
-                <thead>
-                  <tr>
-                    <th>Data</th>
-                    <th>Licitação</th>
-                    <th>Plataforma</th>
-                    <th>Participações</th>
-                    <th>Anexação</th>
-                    <th>Planilha</th>
-                    <th>Documentos</th>
-                    <th />
-                  </tr>
-                </thead>
-                <tbody>
-                  {pageRows.map((row) => (
-                    <tr key={row.id}>
-                      <td>{dateLabel(row.sessionDate)}</td>
-                      <td>
-                        <strong>
-                          {row.municipality}
-                          {row.state ? `/${row.state}` : ''}
-                        </strong>
-                        <small>
-                          {row.noticeNumber
-                            ? `Edital ${row.noticeNumber}`
-                            : row.processNumber
-                              ? `Processo ${row.processNumber}`
-                              : 'Sem número informado'}
-                        </small>
-                      </td>
-                      <td>{row.platformName || 'Sem plataforma'}</td>
-                      <td>{row.participations}</td>
-                      <td>
-                        <span className={`reports-status ${row.pendingAttachments ? 'pending' : 'ok'}`}>
-                          {row.pendingAttachments
-                            ? `${row.pendingAttachments} pendente${row.pendingAttachments === 1 ? '' : 's'}`
-                            : 'Sem pendência'}
-                        </span>
-                      </td>
-                      <td>
-                        <span className={`reports-status ${row.spreadsheetReady ? 'ok' : 'neutral'}`}>
-                          {row.spreadsheetReady ? 'Pronta' : 'Pendente'}
-                        </span>
-                      </td>
-                      <td>{row.documents}</td>
-                      <td>
-                        <Link className="reports-open-link" to={`/licitacoes/${row.id}`}>
-                          Abrir <ArrowRight size={13} />
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          <section className="reports-platforms-card">
+            <div className="reports-section-title">
+              <div>
+                <span className="eyebrow">Plataformas</span>
+                <h3>Participação por plataforma</h3>
+                <p>Veja quantas licitações do período aconteceram em cada plataforma. Clique para abrir a relação.</p>
+              </div>
+              <span className="reports-platform-total">
+                <Layers3 size={16} /> {data?.platforms.length ?? 0} plataforma{(data?.platforms.length ?? 0) === 1 ? '' : 's'}
+              </span>
             </div>
 
-            {pageCount > 1 && (
-              <div className="reports-pagination">
+            {!data?.platforms.length ? (
+              <div className="reports-empty-state">Nenhuma plataforma encontrada neste período.</div>
+            ) : (
+              <div className="reports-platform-list">
+                {data.platforms.map((platform) => (
+                  <button
+                    type="button"
+                    key={platform.name}
+                    className="reports-platform-item"
+                    onClick={() => openDetail({
+                      kind: 'platform',
+                      platform: platform.name,
+                      title: platform.name,
+                      description: `Licitações do período realizadas pela empresa na plataforma ${platform.name}.`
+                    })}
+                  >
+                    <span className="reports-platform-icon"><Layers3 size={18} /></span>
+                    <span className="reports-platform-copy">
+                      <strong>{platform.name}</strong>
+                      <small>{platform.count} licitação{platform.count === 1 ? '' : 'ões'} no período</small>
+                    </span>
+                    <strong className="reports-platform-count">{platform.count}</strong>
+                    <ArrowRight size={16} />
+                  </button>
+                ))}
+              </div>
+            )}
+          </section>
+        </>
+      )}
+
+      {detailView && data && (
+        <div className="reports-modal-backdrop" role="presentation" onMouseDown={() => setDetailView(null)}>
+          <section
+            className="reports-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="reports-modal-title"
+            onMouseDown={(event: MouseEvent<HTMLElement>) => event.stopPropagation()}
+          >
+            <header className="reports-modal-header">
+              <div>
+                <span className="eyebrow">{data.scope.companyName || 'Empresa selecionada'}</span>
+                <h2 id="reports-modal-title">{detailView.title}</h2>
+                <p>{detailView.description}</p>
+                <small>{dateLabel(data.period.dateFrom)} a {dateLabel(data.period.dateTo)}</small>
+              </div>
+              <button type="button" className="reports-modal-close" onClick={() => setDetailView(null)} aria-label="Fechar janela">
+                <X size={20} />
+              </button>
+            </header>
+
+            <div className="reports-modal-summary">
+              <span><strong>{detailRows.length}</strong> licitação{detailRows.length === 1 ? '' : 'ões'}</span>
+              <span><strong>{detailRows.filter((row) => row.pendingAttachments > 0).length}</strong> com anexação pendente</span>
+              <span><strong>{detailRows.filter((row) => !row.spreadsheetReady).length}</strong> com planilha pendente</span>
+            </div>
+
+            <div className="reports-modal-toolbar">
+              <label className="reports-modal-search">
+                <Search size={16} />
+                <input
+                  value={detailSearch}
+                  onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                    setDetailSearch(event.target.value);
+                    setDetailPage(1);
+                  }}
+                  placeholder="Buscar município, edital, processo, órgão ou plataforma"
+                />
+              </label>
+              <button
+                type="button"
+                className="reports-export-button"
+                disabled={!detailRows.length}
+                onClick={() => downloadCsv(data, detailRows, detailView.title)}
+              >
+                <Download size={15} /> Exportar relação
+              </button>
+            </div>
+
+            <div className="reports-modal-content">
+              {!detailRows.length ? (
+                <div className="reports-empty-state modal-empty">
+                  Nenhuma licitação encontrada para este filtro no período selecionado.
+                </div>
+              ) : (
+                <div className="reports-detail-list">
+                  {detailPageRows.map((row) => (
+                    <article className="reports-detail-row" key={row.id}>
+                      <div className="reports-detail-date">
+                        <strong>{row.sessionDate.slice(8, 10)}</strong>
+                        <span>{new Intl.DateTimeFormat('pt-BR', { month: 'short', timeZone: 'UTC' })
+                          .format(new Date(`${row.sessionDate}T00:00:00Z`))
+                          .replace('.', '')}</span>
+                      </div>
+
+                      <div className="reports-detail-main">
+                        <div className="reports-detail-title-line">
+                          <div>
+                            <strong>{row.municipality}{row.state ? `/${row.state}` : ''}</strong>
+                            <small>
+                              {row.noticeNumber
+                                ? `Edital ${row.noticeNumber}`
+                                : row.processNumber
+                                  ? `Processo ${row.processNumber}`
+                                  : 'Sem número informado'}
+                            </small>
+                          </div>
+                          <span className="reports-detail-platform">{row.platformName || 'Sem plataforma'}</span>
+                        </div>
+
+                        <div className="reports-detail-meta">
+                          {row.processNumber && row.noticeNumber && <span>Processo: <strong>{row.processNumber}</strong></span>}
+                          {row.agency && <span>Órgão: <strong>{row.agency}</strong></span>}
+                          <span>Data: <strong>{dateLabel(row.sessionDate)}</strong></span>
+                        </div>
+
+                        <div className="reports-detail-statuses">
+                          <span className={`reports-status ${row.pendingAttachments > 0 ? 'pending' : 'ok'}`}>
+                            Anexação: {row.pendingAttachments > 0 ? 'Pendente' : 'Sem pendência'}
+                          </span>
+                          <span className={`reports-status ${row.spreadsheetReady ? 'ok' : 'pending'}`}>
+                            Planilha: {row.spreadsheetReady ? 'Pronta' : 'Pendente'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <Link className="reports-open-link" to={`/licitacoes/${row.id}`} onClick={() => setDetailView(null)}>
+                        Abrir licitação <ArrowRight size={14} />
+                      </Link>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {detailPageCount > 1 && (
+              <footer className="reports-modal-footer">
                 <span>
-                  Mostrando {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filteredRows.length)} de {filteredRows.length}
+                  Mostrando {(safeDetailPage - 1) * PAGE_SIZE + 1}–{Math.min(safeDetailPage * PAGE_SIZE, detailRows.length)} de {detailRows.length}
                 </span>
                 <div>
                   <button
                     type="button"
-                    disabled={safePage === 1}
+                    disabled={safeDetailPage === 1}
                     onClick={() => setDetailPage((current) => Math.max(1, current - 1))}
                   >
-                    <ChevronLeft size={15} /> Anterior
+                    Anterior
                   </button>
-                  <strong>{safePage} de {pageCount}</strong>
+                  <strong>{safeDetailPage} de {detailPageCount}</strong>
                   <button
                     type="button"
-                    disabled={safePage === pageCount}
-                    onClick={() => setDetailPage((current) => Math.min(pageCount, current + 1))}
+                    disabled={safeDetailPage === detailPageCount}
+                    onClick={() => setDetailPage((current) => Math.min(detailPageCount, current + 1))}
                   >
-                    Próxima <ChevronRight size={15} />
+                    Próxima
                   </button>
                 </div>
-              </div>
+              </footer>
             )}
-          </>
-        )}
-      </section>
+          </section>
+        </div>
+      )}
     </div>
   );
 }
 
-function ReportMetric({
+function SummaryCard({
   icon,
   label,
   value,
-  detail,
+  description,
+  action,
   attention = false,
-  actionLabel,
-  onClick,
-  to
+  onClick
 }: {
   icon: ReactNode;
   label: string;
   value: number;
-  detail: string;
+  description: string;
+  action: string;
   attention?: boolean;
-  actionLabel?: string;
-  onClick?: () => void;
-  to?: string;
+  onClick: () => void;
 }) {
-  const content = (
-    <>
-      <span className="reports-metric-icon">{icon}</span>
-      <div className="reports-metric-copy">
-        <span>{label}</span>
-        <strong>{value}</strong>
-        <small>{detail}</small>
-        {actionLabel && <em>{actionLabel} <ArrowRight size={12} /></em>}
-      </div>
-    </>
-  );
-  const className = `reports-metric ${attention ? 'attention' : ''} ${actionLabel ? 'interactive' : ''}`;
-
-  if (to) {
-    return <Link className={className} to={to}>{content}</Link>;
-  }
-  if (onClick) {
-    return <button type="button" className={className} onClick={onClick}>{content}</button>;
-  }
-  return <article className={className}>{content}</article>;
-}
-
-function ReportBars({
-  title,
-  subtitle,
-  items,
-  visibleLimit,
-  onSelect
-}: {
-  title: string;
-  subtitle: string;
-  items: Array<{ key: string; label: string; count: number; width: number }>;
-  visibleLimit: number;
-  onSelect?: (key: string, label: string) => void;
-}) {
-  const [expanded, setExpanded] = useState(false);
-  const visibleItems = expanded ? items : items.slice(0, visibleLimit);
-  const hasMore = items.length > visibleLimit;
-
   return (
-    <article className="reports-panel">
-      <div className="reports-panel-heading">
-        <div>
-          <h3>{title}</h3>
-          <p>{subtitle}</p>
-        </div>
-        {!!items.length && <span>{items.length} {items.length === 1 ? 'item' : 'itens'}</span>}
-      </div>
-      {!items.length ? (
-        <div className="reports-empty compact">Sem dados neste período.</div>
-      ) : (
-        <>
-          <div className={`reports-bars ${expanded ? 'expanded' : ''}`}>
-            {visibleItems.map((item) => (
-              <button
-                type="button"
-                className="reports-bar-row"
-                key={item.key}
-                onClick={() => onSelect?.(item.key, item.label)}
-                disabled={!onSelect}
-                title={onSelect ? `Filtrar detalhamento por ${item.label}` : undefined}
-              >
-                <span className="reports-bar-copy">
-                  <span>{item.label}</span>
-                  <strong>{item.count}</strong>
-                </span>
-                <span className="reports-bar-track">
-                  <i style={{ width: `${Math.max(5, item.width)}%` }} />
-                </span>
-              </button>
-            ))}
-          </div>
-          {hasMore && (
-            <button className="reports-show-more" type="button" onClick={() => setExpanded((current) => !current)}>
-              {expanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
-              {expanded ? 'Mostrar menos' : `Ver todos (${items.length})`}
-            </button>
-          )}
-        </>
-      )}
-    </article>
+    <button type="button" className={`reports-summary-card ${attention ? 'attention' : ''}`} onClick={onClick}>
+      <span className="reports-summary-icon">{icon}</span>
+      <span className="reports-summary-copy">
+        <small>{label}</small>
+        <strong>{value}</strong>
+        <span>{description}</span>
+        <em>{action} <ArrowRight size={13} /></em>
+      </span>
+    </button>
   );
 }
