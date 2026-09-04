@@ -1,0 +1,51 @@
+name: Qualidade do sistema
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verificar codigo
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Baixar codigo
+        uses: actions/checkout@v4
+
+      - name: Preparar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.0
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci --include=dev
+
+      - name: Gerar cliente do banco
+        run: npm run db:generate
+
+      - name: Verificar vulnerabilidades criticas
+        run: npm audit --omit=dev --audit-level=critical
+
+      - name: Verificar padrao do codigo
+        run: npm run lint
+
+      - name: Verificar tipos
+        run: npm run typecheck
+
+      - name: Executar testes
+        run: npm run test
+
+      - name: Gerar versao de producao
+        run: npm run build
