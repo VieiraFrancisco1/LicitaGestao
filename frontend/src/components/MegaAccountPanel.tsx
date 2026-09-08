@@ -1,5 +1,5 @@
 import { Cloud, HardDrive, Link2, Mail, RefreshCw, ShieldCheck, Unlink } from 'lucide-react';
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { api, errorMessage } from '../services/api';
 import type { ApiResponse, MegaStatus } from '../types';
 import { formatBytes } from '../utils/bid';
@@ -23,7 +23,7 @@ export function MegaAccountPanel() {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
 
-  const load = useCallback(async () => {
+   const load = async () => {
     setLoading(true);
     setError('');
     try {
@@ -35,11 +35,36 @@ export function MegaAccountPanel() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  };
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    let cancelled = false;
+
+    void api
+      .get<ApiResponse<MegaStatus>>('/mega/status')
+      .then((response) => {
+        if (cancelled) return;
+
+        setStatus(response.data.data);
+        if (response.data.data.email) {
+          setEmail(response.data.data.email);
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setError(errorMessage(err));
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const connect = async (event: FormEvent) => {
     event.preventDefault();
