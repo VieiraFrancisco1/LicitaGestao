@@ -1,43 +1,36 @@
 import { UserRole } from '@prisma/client';
 import { z } from 'zod';
 
+type CompanyRuleValue = {
+  role: UserRole;
+  companyId?: string | null;
+  companyIds: string[];
+};
+
+const validateCompanyRules = (value: CompanyRuleValue, ctx: z.RefinementCtx) => {
+  if (value.role === UserRole.EMPRESA && !value.companyId) {
+    ctx.addIssue({ code: 'custom', path: ['companyId'], message: 'Usuário EMPRESA deve possuir uma empresa' });
+  }
+  if (value.role !== UserRole.EMPRESA && value.companyId) {
+    ctx.addIssue({ code: 'custom', path: ['companyId'], message: 'Somente usuário EMPRESA pode ser vinculado' });
+  }
+  if (value.role !== UserRole.FUNCIONARIO && value.companyIds.length > 0) {
+    ctx.addIssue({ code: 'custom', path: ['companyIds'], message: 'Somente funcionário recebe várias empresas' });
+  }
+};
+
 export const createUserSchema = z.object({
   body: z
     .object({
       name: z.string().trim().min(2).max(120),
-      email: z
-        .string()
-        .email()
-        .transform((value) => value.trim().toLowerCase()),
+      email: z.string().email().transform((value) => value.trim().toLowerCase()),
       password: z.string().min(12, 'A senha deve possuir pelo menos 12 caracteres').max(128),
       role: z.nativeEnum(UserRole),
       companyId: z.string().uuid().nullable().optional(),
       companyIds: z.array(z.string().uuid()).max(100).optional().default([]),
       active: z.boolean().optional()
     })
-    .superRefine((value, ctx) => {
-      if (value.role === UserRole.EMPRESA && !value.companyId) {
-        ctx.addIssue({
-          code: 'custom',
-          path: ['companyId'],
-          message: 'Usuário EMPRESA deve possuir uma empresa'
-        });
-      }
-      if (value.role !== UserRole.EMPRESA && value.companyId) {
-        ctx.addIssue({
-          code: 'custom',
-          path: ['companyId'],
-          message: 'Somente usuário EMPRESA pode ser vinculado'
-        });
-      }
-      if (value.role !== UserRole.FUNCIONARIO && value.companyIds.length > 0) {
-        ctx.addIssue({
-          code: 'custom',
-          path: ['companyIds'],
-          message: 'Somente funcionário recebe várias empresas'
-        });
-      }
-    }),
+    .superRefine(validateCompanyRules),
   params: z.object({}),
   query: z.object({})
 });
@@ -46,11 +39,7 @@ export const updateUserSchema = z.object({
   body: z
     .object({
       name: z.string().trim().min(2).max(120).optional(),
-      email: z
-        .string()
-        .email()
-        .transform((value) => value.trim().toLowerCase())
-        .optional(),
+      email: z.string().email().transform((value) => value.trim().toLowerCase()).optional(),
       password: z.string().min(12, 'A senha deve possuir pelo menos 12 caracteres').max(128).optional(),
       role: z.nativeEnum(UserRole).optional(),
       companyId: z.string().uuid().nullable().optional(),
@@ -58,6 +47,21 @@ export const updateUserSchema = z.object({
       active: z.boolean().optional()
     })
     .refine((value) => Object.keys(value).length > 0, 'Informe ao menos um campo'),
+  params: z.object({ id: z.string().uuid() }),
+  query: z.object({})
+});
+
+export const resetUserPasswordSchema = z.object({
+  body: z
+    .object({
+      newPassword: z.string().min(12, 'A nova senha deve possuir pelo menos 12 caracteres').max(128),
+      confirmPassword: z.string().min(1)
+    })
+    .superRefine((value, ctx) => {
+      if (value.newPassword !== value.confirmPassword) {
+        ctx.addIssue({ code: 'custom', path: ['confirmPassword'], message: 'A confirmação da senha não confere' });
+      }
+    }),
   params: z.object({ id: z.string().uuid() }),
   query: z.object({})
 });

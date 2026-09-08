@@ -48,8 +48,10 @@ export function AppLayout() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const [adminCompanies, setAdminCompanies] = useState<CompanySummary[]>([]);
+
   const companyPath =
     user?.role === 'EMPRESA' && user.companyId ? `/empresas/${user.companyId}` : '/empresas';
+
   const sections = [
     { label: 'Início', items: [{ to: '/', label: 'Dashboard', icon: LayoutDashboard }] },
     {
@@ -79,11 +81,13 @@ export function AppLayout() {
       ]
     }
   ];
+
   const pageTitle =
     titles[location.pathname] ??
     (location.pathname.startsWith('/licitacoes/') ? 'Licitação' : undefined) ??
     (location.pathname.startsWith('/empresas/') ? 'Empresa' : undefined) ??
     'LicitaGestão';
+
   const activeAssignments = user?.assignedCompanies.filter((company) => company.active) ?? [];
   const switcherCompanies = user?.role === 'ADMIN' ? adminCompanies : activeAssignments;
 
@@ -107,7 +111,9 @@ export function AppLayout() {
 
   useEffect(() => {
     if (user?.role !== 'ADMIN' || !activeCompanyId || adminCompanies.length === 0) return;
-    if (!adminCompanies.some((company) => company.id === activeCompanyId)) setActiveCompanyId(null);
+    if (!adminCompanies.some((company) => company.id === activeCompanyId)) {
+      setActiveCompanyId(null);
+    }
   }, [user?.role, activeCompanyId, adminCompanies, setActiveCompanyId]);
 
   return (
@@ -115,6 +121,7 @@ export function AppLayout() {
       {menuOpen && (
         <button className="sidebar-overlay" onClick={() => setMenuOpen(false)} aria-label="Fechar menu" />
       )}
+
       <aside className={`sidebar ${menuOpen ? 'sidebar-open' : ''}`}>
         <div className="brand">
           <div className="brand-logo-frame">
@@ -124,6 +131,7 @@ export function AppLayout() {
             <X size={20} />
           </button>
         </div>
+
         <nav>
           {sections.map((section) => (
             <div className="nav-section" key={section.label}>
@@ -144,11 +152,8 @@ export function AppLayout() {
             </div>
           ))}
         </nav>
-        <div className="sidebar-footer">
-          <span>Fase 5</span>
-          <strong>E-mails e alertas</strong>
-        </div>
       </aside>
+
       <div className="app-main">
         <header className="topbar">
           <div className="topbar-title">
@@ -160,6 +165,7 @@ export function AppLayout() {
               <h1>{pageTitle}</h1>
             </div>
           </div>
+
           <div className="topbar-actions">
             {user?.role !== 'EMPRESA' && switcherCompanies.length > 0 && (
               <label className="company-switcher">
@@ -167,7 +173,9 @@ export function AppLayout() {
                 <span>Empresa ativa</span>
                 <select
                   value={activeCompanyId ?? ''}
-                  onChange={(event: ChangeEvent<HTMLSelectElement>) => setActiveCompanyId(event.target.value || null)}
+                  onChange={(event: ChangeEvent<HTMLSelectElement>) =>
+                    setActiveCompanyId(event.target.value || null)
+                  }
                   aria-label="Trocar empresa ativa"
                 >
                   {user?.role === 'ADMIN' && <option value="">Todas as empresas</option>}
@@ -179,11 +187,14 @@ export function AppLayout() {
                 </select>
               </label>
             )}
+
             <label className="global-search">
               <Search size={18} />
               <input aria-label="Busca" placeholder="Buscar no sistema" disabled />
             </label>
+
             <DeadlineNotifications />
+
             <div className="profile-area">
               <button className="profile-button" onClick={() => setProfileOpen((value) => !value)}>
                 <span className="avatar">{user?.name.charAt(0).toUpperCase()}</span>
@@ -193,6 +204,7 @@ export function AppLayout() {
                 </span>
                 <ChevronDown size={16} />
               </button>
+
               {profileOpen && (
                 <div className="profile-menu">
                   <button
@@ -212,10 +224,12 @@ export function AppLayout() {
             </div>
           </div>
         </header>
+
         <main className="content">
           <Outlet />
         </main>
       </div>
+
       {passwordModalOpen && (
         <ChangePasswordModal
           onClose={() => setPasswordModalOpen(false)}

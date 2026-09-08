@@ -9,13 +9,24 @@ const envSchema = z.object({
   JWT_SECRET: z.string().min(32),
   JWT_REFRESH_SECRET: z.string().min(32),
   ACCESS_TOKEN_EXPIRES_IN: z.string().default('15m'),
+  ORGANIZATION_ACCESS_EXPIRES_IN: z.string().default('15m'),
   REFRESH_TOKEN_EXPIRES_IN_DAYS: z.coerce.number().int().positive().default(7),
+  PASSWORD_RESET_TTL_MINUTES: z.coerce.number().int().min(10).max(120).default(30),
   STORAGE_PATH: z.string().min(1).default('./storage'),
   MAX_UPLOAD_MB: z.coerce.number().int().min(1).max(100).default(25),
+
+  // Compatibilidade com documentos antigos armazenados na conta global.
   MEGA_EMAIL: z.string().email().optional(),
   MEGA_PASSWORD: z.string().min(1).optional(),
   MEGA_ROOT_FOLDER: z.string().trim().default(''),
   MEGA_TENDERS_FOLDER: z.string().trim().min(1).default('LICITAÇÕES'),
+  // Chave usada para proteger as credenciais MEGA individuais dos usuários.
+  MEGA_CREDENTIAL_ENCRYPTION_KEY: z.string().min(32).optional(),
+
+  // E-mail transacional para recuperação da senha principal da organização.
+  RESEND_API_KEY: z.string().trim().min(1).optional(),
+  PASSWORD_RESET_FROM: z.string().trim().min(3).optional(),
+
   GOOGLE_CLIENT_ID: z.string().trim().min(1).optional(),
   GOOGLE_CLIENT_SECRET: z.string().trim().min(1).optional(),
   GOOGLE_REDIRECT_URI: z.string().url().optional(),

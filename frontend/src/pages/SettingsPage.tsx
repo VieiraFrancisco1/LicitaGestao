@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { ChangePasswordModal } from '../components/ChangePasswordModal';
+import { MegaAccountPanel } from '../components/MegaAccountPanel';
 import { useAuth } from '../contexts/AuthContext';
 import './settings.css';
 
@@ -189,10 +190,13 @@ export function SettingsPage() {
               </div>
             </div>
           </div>
+
           <p className="settings-security-footnote">
             Ao alterar a senha, sua sessão é encerrada e será necessário entrar novamente no sistema.
           </p>
         </section>
+
+        <MegaAccountPanel />
 
         <section className="settings-card">
           <div className="settings-card-header">
@@ -251,7 +255,7 @@ export function SettingsPage() {
             </p>
             <p>
               Os backups administrativos são voltados à recuperação do sistema e não incluem senhas, sessões nem
-              credenciais das integrações de e-mail.
+              credenciais das integrações externas.
             </p>
           </div>
 

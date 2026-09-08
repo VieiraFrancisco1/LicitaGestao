@@ -1,5 +1,6 @@
 import { prisma } from '../config/database.js';
 import { env } from '../config/env.js';
+import { requireOrganizationId, type AuthScope } from './access.service.js';
 import { getMegaStatus } from './mega.service.js';
 
 export type HealthStatus = 'OPERATIONAL' | 'WARNING' | 'UNAVAILABLE' | 'NOT_CONFIGURED';
@@ -31,8 +32,7 @@ export function summarizeEmailHealth(input: {
   const now = input.now ?? new Date();
   const staleAfterMs = Math.max(10 * 60_000, input.pollingIntervalMs * 5);
   const delayedAccounts = input.integrations.filter(
-    (item) =>
-      !item.lastSuccessfulSyncAt || now.getTime() - item.lastSuccessfulSyncAt.getTime() > staleAfterMs
+    (item) => !item.lastSuccessfulSyncAt || now.getTime() - item.lastSuccessfulSyncAt.getTime() > staleAfterMs
   ).length;
   const lastSuccessfulSyncAt = input.integrations.reduce<Date | null>((latest, item) => {
     if (!item.lastSuccessfulSyncAt) return latest;
@@ -47,7 +47,7 @@ export function summarizeEmailHealth(input: {
     message = 'Integração não configurada no servidor.';
   } else if (connectedAccounts === 0) {
     status = 'WARNING';
-    message = 'Nenhuma conta conectada.';
+    message = 'Nenhuma conta conectada nesta organização.';
   } else if (accountsWithError > 0) {
     status = 'WARNING';
     message = `${accountsWithError} conta(s) com falha na última sincronização.`;
@@ -86,38 +86,52 @@ async function databaseHealth() {
   }
 }
 
-async function megaHealth() {
+async function megaHealth(auth: AuthScope) {
   try {
-    const status = await Promise.race([
-      getMegaStatus(),
+    const mega = await Promise.race([
+      getMegaStatus(auth),
       new Promise<never>((_resolve, reject) =>
         setTimeout(() => reject(new Error('Tempo limite do MEGA')), 8_000)
       )
     ]);
-    if (!status.configured) {
+
+    if (!mega.serverConfigured) {
       return {
         status: 'NOT_CONFIGURED' as const,
-        message: 'Armazenamento não configurado.',
+        message: 'MEGA individual ainda não habilitado no servidor.',
         configured: false,
         connected: false,
-        rootFolder: status.rootFolder,
+        rootFolder: mega.rootFolder,
         spaceUsed: null,
         spaceTotal: null
       };
     }
+
+    if (!mega.configured) {
+      return {
+        status: 'NOT_CONFIGURED' as const,
+        message: 'Seu usuário ainda não conectou uma conta MEGA.',
+        configured: false,
+        connected: false,
+        rootFolder: mega.rootFolder,
+        spaceUsed: null,
+        spaceTotal: null
+      };
+    }
+
     return {
-      status: status.connected ? ('OPERATIONAL' as const) : ('UNAVAILABLE' as const),
-      message: status.connected ? 'Armazenamento conectado.' : 'Não foi possível acessar o armazenamento.',
+      status: mega.connected ? ('OPERATIONAL' as const) : ('UNAVAILABLE' as const),
+      message: mega.connected ? 'Sua conta MEGA está conectada.' : 'Não foi possível acessar sua conta MEGA.',
       configured: true,
-      connected: status.connected,
-      rootFolder: status.rootFolder,
-      spaceUsed: status.spaceUsed,
-      spaceTotal: status.spaceTotal
+      connected: mega.connected,
+      rootFolder: mega.rootFolder,
+      spaceUsed: mega.spaceUsed,
+      spaceTotal: mega.spaceTotal
     };
   } catch {
     return {
       status: 'UNAVAILABLE' as const,
-      message: 'O armazenamento não respondeu dentro do tempo esperado.',
+      message: 'O MEGA não respondeu dentro do tempo esperado.',
       configured: true,
       connected: false,
       rootFolder: env.MEGA_ROOT_FOLDER || 'Cloud Drive',
@@ -145,20 +159,21 @@ const outlookConfigured = () =>
       env.MICROSOFT_TOKEN_ENCRYPTION_KEY
   );
 
-export async function getSystemHealth() {
+export async function getSystemHealth(auth: AuthScope) {
+  const organizationId = requireOrganizationId(auth);
   const checkedAt = new Date();
-  const [database, mega] = await Promise.all([databaseHealth(), megaHealth()]);
+  const [database, mega] = await Promise.all([databaseHealth(), megaHealth(auth)]);
 
   let gmailSnapshots: EmailIntegrationSnapshot[] = [];
   let outlookSnapshots: EmailIntegrationSnapshot[] = [];
   if (database.status === 'OPERATIONAL') {
     [gmailSnapshots, outlookSnapshots] = await Promise.all([
       prisma.emailIntegration.findMany({
-        where: { company: { active: true } },
+        where: { company: { active: true, organizationId } },
         select: { lastSuccessfulSyncAt: true, lastError: true }
       }),
       prisma.outlookIntegration.findMany({
-        where: { company: { active: true } },
+        where: { company: { active: true, organizationId } },
         select: { lastSuccessfulSyncAt: true, lastError: true }
       })
     ]);

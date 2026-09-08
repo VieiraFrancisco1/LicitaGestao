@@ -268,12 +268,25 @@ function senderLabel(message: GraphMessage) {
 async function authScopeFromState(userId: string): Promise<AuthScope> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { id: true, role: true, active: true, companyId: true, company: { select: { active: true } } }
+    select: {
+      id: true,
+      role: true,
+      active: true,
+      organizationId: true,
+      organization: { select: { active: true } },
+      companyId: true,
+      company: { select: { active: true } }
+    }
   });
-  if (!user?.active || (user.role === UserRole.EMPRESA && !user.company?.active)) {
+  if (!user?.active || !user.organization.active || (user.role === UserRole.EMPRESA && !user.company?.active)) {
     throw new AppError('Usuário sem acesso ao sistema', 403);
   }
-  return { userId: user.id, role: user.role, companyId: user.companyId };
+  return {
+    userId: user.id,
+    role: user.role,
+    companyId: user.companyId,
+    organizationId: user.organizationId
+  };
 }
 
 async function listNewMessages(accessToken: string, since: Date) {

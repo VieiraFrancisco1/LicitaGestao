@@ -208,11 +208,15 @@ function safeGoogleError(error: unknown) {
 }
 
 function emailAccessWhere(auth: AuthScope): Record<string, unknown> {
-  if (auth.role === UserRole.ADMIN) return {};
+  const organizationId = auth.organizationId ?? '00000000-0000-0000-0000-000000000000';
+  if (auth.role === UserRole.ADMIN) return { company: { organizationId } };
   if (auth.role === UserRole.EMPRESA) {
-    return { companyId: auth.companyId ?? '00000000-0000-0000-0000-000000000000' };
+    return {
+      companyId: auth.companyId ?? '00000000-0000-0000-0000-000000000000',
+      company: { organizationId }
+    };
   }
-  return { company: { staffLinks: { some: { userId: auth.userId } } } };
+  return { company: { organizationId, staffLinks: { some: { userId: auth.userId } } } };
 }
 
 type MatchCandidate = {
@@ -562,12 +566,25 @@ export async function createGmailAuthorizationUrl(companyId: string, auth: AuthS
 async function authScopeFromState(userId: string): Promise<AuthScope> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { id: true, role: true, active: true, companyId: true, company: { select: { active: true } } }
+    select: {
+      id: true,
+      role: true,
+      active: true,
+      organizationId: true,
+      organization: { select: { active: true } },
+      companyId: true,
+      company: { select: { active: true } }
+    }
   });
-  if (!user?.active || (user.role === UserRole.EMPRESA && !user.company?.active)) {
+  if (!user?.active || !user.organization.active || (user.role === UserRole.EMPRESA && !user.company?.active)) {
     throw new AppError('Usuário sem acesso ao sistema', 403);
   }
-  return { userId: user.id, role: user.role, companyId: user.companyId };
+  return {
+    userId: user.id,
+    role: user.role,
+    companyId: user.companyId,
+    organizationId: user.organizationId
+  };
 }
 
 export async function completeGmailOAuth(code: string, state: string) {

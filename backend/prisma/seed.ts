@@ -8,19 +8,25 @@ async function main() {
   const name = process.env.ADMIN_NAME?.trim();
   const email = process.env.ADMIN_EMAIL?.trim().toLowerCase();
   const password = process.env.ADMIN_PASSWORD;
+  const organizationName = process.env.ADMIN_ORGANIZATION_NAME?.trim() || 'LicitaGestão';
 
-  if (!name || !email || !password || password.length < 8) {
-    throw new Error('Defina ADMIN_NAME, ADMIN_EMAIL e ADMIN_PASSWORD (mínimo de 8 caracteres) no .env');
+  if (!name || !email || !password || password.length < 12) {
+    throw new Error('Defina ADMIN_NAME, ADMIN_EMAIL e ADMIN_PASSWORD (mínimo de 12 caracteres) no .env');
   }
 
   const passwordHash = await bcrypt.hash(password, 12);
+  const organization = await prisma.organization.upsert({
+    where: { loginEmail: email },
+    update: { name: organizationName, active: true },
+    create: { name: organizationName, loginEmail: email, passwordHash, active: true }
+  });
 
   await prisma.user.upsert({
-    where: { email },
+    where: { organizationId_email: { organizationId: organization.id, email } },
     update: { name, passwordHash, active: true, role: UserRole.ADMIN, companyId: null },
-    create: { name, email, passwordHash, role: UserRole.ADMIN }
+    create: { organizationId: organization.id, name, email, passwordHash, role: UserRole.ADMIN }
   });
-  console.log(`Administrador preparado: ${email}`);
+  console.log(`Organização e administrador preparados: ${organizationName} / ${email}`);
 
   const platforms = [
     'BLL Compras',
@@ -33,9 +39,9 @@ async function main() {
 
   for (const name of platforms) {
     await prisma.platform.upsert({
-      where: { name },
+      where: { organizationId_name: { organizationId: organization.id, name } },
       update: {},
-      create: { name }
+      create: { organizationId: organization.id, name }
     });
   }
   console.log(`${platforms.length} plataformas padrão preparadas.`);

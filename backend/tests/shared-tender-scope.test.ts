@@ -3,27 +3,42 @@ import { describe, expect, it } from 'vitest';
 import { accessibleBidWhere } from '../src/services/bid.service.js';
 import { accessibleParticipationWhere } from '../src/services/tender.service.js';
 
-describe('licitação geral compartilhada e participações privadas', () => {
-  it('limita a participação do login EMPRESA ao próprio companyId', () => {
+const organizationId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+
+describe('licitação geral compartilhada somente dentro da organização', () => {
+  it('limita o login EMPRESA à própria empresa e organização', () => {
     const auth = {
       userId: 'user-a',
       role: UserRole.EMPRESA,
-      companyId: '11111111-1111-4111-8111-111111111111'
+      companyId: '11111111-1111-4111-8111-111111111111',
+      organizationId
     };
-    expect(accessibleBidWhere(auth)).toEqual({ companyId: auth.companyId });
-    expect(accessibleParticipationWhere(auth)).toEqual({ companyId: auth.companyId });
+    expect(accessibleBidWhere(auth)).toEqual({
+      companyId: auth.companyId,
+      tender: { organizationId },
+      company: { organizationId }
+    });
+    expect(accessibleParticipationWhere(auth)).toEqual({
+      companyId: auth.companyId,
+      tender: { organizationId }
+    });
   });
 
-  it('limita o funcionário às empresas atribuídas ao login', () => {
-    const auth = { userId: 'staff-a', role: UserRole.FUNCIONARIO, companyId: null };
-    const expected = { company: { staffLinks: { some: { userId: auth.userId } } } };
-    expect(accessibleBidWhere(auth)).toEqual(expected);
-    expect(accessibleParticipationWhere(auth)).toEqual(expected);
+  it('limita o funcionário às empresas atribuídas dentro da organização', () => {
+    const auth = { userId: 'staff-a', role: UserRole.FUNCIONARIO, companyId: null, organizationId };
+    expect(accessibleBidWhere(auth)).toEqual({
+      tender: { organizationId },
+      company: { organizationId, staffLinks: { some: { userId: auth.userId } } }
+    });
+    expect(accessibleParticipationWhere(auth)).toEqual({
+      company: { organizationId, staffLinks: { some: { userId: auth.userId } } },
+      tender: { organizationId }
+    });
   });
 
-  it('permite ao administrador consultar todas as participações', () => {
-    const auth = { userId: 'admin', role: UserRole.ADMIN, companyId: null };
-    expect(accessibleBidWhere(auth)).toEqual({});
-    expect(accessibleParticipationWhere(auth)).toEqual({});
+  it('permite ao administrador consultar todas as participações da própria organização, não de outros clientes', () => {
+    const auth = { userId: 'admin', role: UserRole.ADMIN, companyId: null, organizationId };
+    expect(accessibleBidWhere(auth)).toEqual({ tender: { organizationId }, company: { organizationId } });
+    expect(accessibleParticipationWhere(auth)).toEqual({ tender: { organizationId } });
   });
 });

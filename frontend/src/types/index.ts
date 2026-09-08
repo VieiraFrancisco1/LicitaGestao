@@ -1,10 +1,20 @@
 export type UserRole = 'ADMIN' | 'FUNCIONARIO' | 'EMPRESA';
 
+export type OrganizationSummary = { id: string; name: string };
+export type OrganizationMember = { id: string; name: string; role: UserRole };
+export type OrganizationAccess = {
+  organizationToken: string;
+  organization: OrganizationSummary;
+  members: OrganizationMember[];
+};
+
 export type CompanySummary = { id: string; legalName: string; tradeName: string | null };
 export type AssignedCompany = CompanySummary & { active: boolean };
 
 export type User = {
   id: string;
+  organizationId: string;
+  organization: OrganizationSummary | null;
   name: string;
   email: string;
   role: UserRole;
@@ -267,12 +277,16 @@ export type SystemHealth = {
 };
 
 export type MegaStatus = {
+  serverConfigured: boolean;
   configured: boolean;
   connected: boolean;
+  email: string | null;
   rootFolder: string;
   accountName: string | null;
   spaceUsed: number | null;
   spaceTotal: number | null;
+  lastVerifiedAt: string | null;
+  lastError: string | null;
 };
 
 export type MegaItem = {

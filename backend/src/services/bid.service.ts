@@ -1,7 +1,12 @@
 import { BidProgress, BidSituation, Prisma, UserRole } from '@prisma/client';
 import { prisma } from '../config/database.js';
 import { AppError } from '../utils/app-error.js';
-import { assertCompanyWriteAccess, scopedBidCompanyId, type AuthScope } from './access.service.js';
+import {
+  assertCompanyWriteAccess,
+  requireOrganizationId,
+  scopedBidCompanyId,
+  type AuthScope
+} from './access.service.js';
 
 export type BidInput = {
   tenderId?: string;
@@ -24,11 +29,19 @@ export type BidQuery = {
 };
 
 export const accessibleBidWhere = (auth: AuthScope): Prisma.BidWhereInput => {
-  if (auth.role === UserRole.ADMIN) return {};
+  const organizationId = requireOrganizationId(auth);
+  if (auth.role === UserRole.ADMIN) return { tender: { organizationId }, company: { organizationId } };
   if (auth.role === UserRole.EMPRESA) {
-    return { companyId: auth.companyId ?? '00000000-0000-0000-0000-000000000000' };
+    return {
+      companyId: auth.companyId ?? '00000000-0000-0000-0000-000000000000',
+      tender: { organizationId },
+      company: { organizationId }
+    };
   }
-  return { company: { staffLinks: { some: { userId: auth.userId } } } };
+  return {
+    tender: { organizationId },
+    company: { organizationId, staffLinks: { some: { userId: auth.userId } } }
+  };
 };
 
 const includeBid = {
@@ -41,11 +54,12 @@ export const createBid = async (
   input: BidInput & Required<Pick<BidInput, 'tenderId' | 'companyId'>>,
   auth: AuthScope
 ) => {
+  const organizationId = requireOrganizationId(auth);
   const companyId = scopedBidCompanyId(auth, input.companyId)!;
   await assertCompanyWriteAccess(companyId, auth);
   const [company, tender] = await Promise.all([
-    prisma.company.findUnique({ where: { id: companyId }, select: { active: true } }),
-    prisma.tender.findUnique({ where: { id: input.tenderId }, select: { id: true } })
+    prisma.company.findFirst({ where: { id: companyId, organizationId }, select: { active: true } }),
+    prisma.tender.findFirst({ where: { id: input.tenderId, organizationId }, select: { id: true } })
   ]);
   if (!company?.active) throw new AppError('Empresa não encontrada ou inativa', 422);
   if (!tender) throw new AppError('Licitação geral não encontrada', 404);
@@ -124,32 +138,16 @@ export const listBids = async (query: BidQuery, auth: AuthScope) => {
       : {})
   };
   const orderBy: Prisma.BidOrderByWithRelationInput =
-    query.sort === 'createdAt'
-      ? { createdAt: query.direction }
-      : { tender: { [query.sort]: query.direction } };
+    query.sort === 'createdAt' ? { createdAt: query.direction } : { tender: { [query.sort]: query.direction } };
   const [items, total] = await prisma.$transaction([
-    prisma.bid.findMany({
-      where,
-      orderBy,
-      skip: (query.page - 1) * query.pageSize,
-      take: query.pageSize,
-      include: includeBid
-    }),
+    prisma.bid.findMany({ where, orderBy, skip: (query.page - 1) * query.pageSize, take: query.pageSize, include: includeBid }),
     prisma.bid.count({ where })
   ]);
-  return {
-    items,
-    total,
-    page: query.page,
-    pageSize: query.pageSize,
-    pages: Math.ceil(total / query.pageSize)
-  };
+  return { items, total, page: query.page, pageSize: query.pageSize, pages: Math.ceil(total / query.pageSize) };
 };
 
 export const deleteBid = async (id: string, auth: AuthScope) => {
-  if (auth.role === UserRole.EMPRESA) {
-    throw new AppError('Seu perfil não pode desassociar a licitação inteira', 403);
-  }
+  if (auth.role === UserRole.EMPRESA) throw new AppError('Seu perfil não pode desassociar a licitação inteira', 403);
   const bid = await getBid(id, auth);
   await assertCompanyWriteAccess(bid.companyId, auth);
   await prisma.$transaction([

@@ -1,19 +1,21 @@
+import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import type { Request, Response } from 'express';
 import {
   browseMega,
+  connectMegaAccount,
   createMegaFolder,
   deleteMegaNode,
+  disconnectMegaAccount,
   getMegaDownload,
   getMegaStatus,
   linkCompanyFolder,
   renameMegaNode,
+  syncMegaAccount,
   uploadMegaFile
 } from '../services/mega.service.js';
 import { AuditActions, recordAudit } from '../services/audit.service.js';
 import { safeResponseFileName } from '../services/file-security.service.js';
-
-import path from 'node:path';
 
 const previewMime = (name: string) => {
   const extension = path.extname(name).toLowerCase();
@@ -26,9 +28,36 @@ const previewMime = (name: string) => {
   return allowed[extension] ?? null;
 };
 
-export const status = async (_req: Request, res: Response) => {
-  const data = await getMegaStatus();
+export const status = async (req: Request, res: Response) => {
+  const data = await getMegaStatus(req.auth!);
   res.json({ success: true, data });
+};
+
+export const connectAccount = async (req: Request, res: Response) => {
+  const data = await connectMegaAccount(req.auth!, req.body.email, req.body.password);
+  await recordAudit(req.auth!, {
+    action: AuditActions.UPDATE,
+    entityType: 'USER_MEGA_INTEGRATION',
+    entityId: req.auth!.userId,
+    description: 'Conta individual do MEGA conectada'
+  });
+  res.json({ success: true, message: 'Conta do MEGA conectada e sincronizada.', data });
+};
+
+export const syncAccount = async (req: Request, res: Response) => {
+  const data = await syncMegaAccount(req.auth!);
+  res.json({ success: true, message: 'Conta do MEGA sincronizada.', data });
+};
+
+export const disconnectAccount = async (req: Request, res: Response) => {
+  await disconnectMegaAccount(req.auth!);
+  await recordAudit(req.auth!, {
+    action: AuditActions.UPDATE,
+    entityType: 'USER_MEGA_INTEGRATION',
+    entityId: req.auth!.userId,
+    description: 'Conta individual do MEGA desconectada'
+  });
+  res.json({ success: true, message: 'Conta do MEGA desconectada deste usuário.' });
 };
 
 export const browse = async (req: Request, res: Response) => {
@@ -44,7 +73,7 @@ export const upload = async (req: Request, res: Response) => {
     entityType: 'MEGA_FILE',
     entityId: data.id,
     entityLabel: data.name,
-    description: 'Arquivo enviado ao MEGA',
+    description: 'Arquivo enviado ao MEGA individual do usuário',
     metadata: { companyId: req.body.companyId ?? null, path: req.body.path ?? '' }
   });
   res.status(201).json({ success: true, message: 'Arquivo enviado ao MEGA', data });
@@ -57,7 +86,7 @@ export const createFolder = async (req: Request, res: Response) => {
     entityType: 'MEGA_FOLDER',
     entityId: data.id,
     entityLabel: data.name,
-    description: 'Pasta criada no MEGA',
+    description: 'Pasta criada no MEGA individual do usuário',
     metadata: { companyId: req.body.companyId ?? null, path: req.body.path ?? '' }
   });
   res.status(201).json({ success: true, message: 'Pasta criada', data });
@@ -102,31 +131,35 @@ export const download = async (req: Request, res: Response) => {
 };
 
 export const linkCompany = async (req: Request, res: Response) => {
-  const company = await linkCompanyFolder(req.params.companyId as string, req.body.path, req.auth!);
+  const data = await linkCompanyFolder(req.params.companyId as string, req.body.path, req.auth!);
   await recordAudit(req.auth!, {
     action: AuditActions.UPDATE,
-    entityType: 'COMPANY',
-    entityId: company.id,
-    entityLabel: company.tradeName || company.legalName,
-    description: 'Pasta de documentos da empresa vinculada ao MEGA',
-    metadata: { megaFolderPath: company.megaFolderPath }
+    entityType: 'COMPANY_MEGA_FOLDER',
+    entityId: req.params.companyId as string,
+    description: 'Pasta da empresa vinculada ao MEGA individual do usuário',
+    metadata: { megaFolderPath: data.megaFolderPath }
   });
-  res.json({ success: true, message: 'Pasta vinculada à empresa', data: company });
+  res.json({ success: true, message: 'Pasta vinculada à sua conta do MEGA', data });
 };
-
 
 export const preview = async (req: Request, res: Response) => {
   const companyId = (req.query as { companyId?: string }).companyId;
   const data = await getMegaDownload(req.auth!, companyId, req.params.id as string);
   const mime = previewMime(data.name);
   if (!mime) {
-    res.status(415).json({ success: false, message: 'Pré-visualização disponível apenas para PDF, PNG e JPG' });
+    res.status(415).json({
+      success: false,
+      message: 'Pré-visualização disponível apenas para PDF, PNG e JPG'
+    });
     return;
   }
   res.setHeader('Cache-Control', 'private, no-store');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Content-Type', mime);
-  res.setHeader('Content-Disposition', `inline; filename*=UTF-8''${encodeURIComponent(safeResponseFileName(data.name))}`);
+  res.setHeader(
+    'Content-Disposition',
+    `inline; filename*=UTF-8''${encodeURIComponent(safeResponseFileName(data.name))}`
+  );
   if (data.size) res.setHeader('Content-Length', String(data.size));
   await pipeline(data.stream as NodeJS.ReadableStream, res);
 };

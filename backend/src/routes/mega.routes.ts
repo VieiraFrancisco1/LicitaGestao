@@ -5,6 +5,7 @@ import { uploadDocument } from '../middlewares/upload.js';
 import { validate } from '../middlewares/validate.js';
 import { asyncHandler } from '../utils/async-handler.js';
 import {
+  megaAccountConnectSchema,
   megaBrowseSchema,
   megaCompanyLinkSchema,
   megaDeleteSchema,
@@ -15,8 +16,14 @@ import {
 } from '../validators/mega.validator.js';
 
 export const megaRouter = Router();
+
 megaRouter.use(authenticate);
+
 megaRouter.get('/status', asyncHandler(controller.status));
+megaRouter.post('/account/connect', validate(megaAccountConnectSchema), asyncHandler(controller.connectAccount));
+megaRouter.post('/account/sync', asyncHandler(controller.syncAccount));
+megaRouter.delete('/account', asyncHandler(controller.disconnectAccount));
+
 megaRouter.get('/browse', validate(megaBrowseSchema), asyncHandler(controller.browse));
 megaRouter.post('/folders', validate(megaFolderSchema), asyncHandler(controller.createFolder));
 megaRouter.post('/upload', uploadDocument, validate(megaUploadSchema), asyncHandler(controller.upload));
@@ -24,4 +31,8 @@ megaRouter.patch('/nodes/:id', validate(megaRenameSchema), asyncHandler(controll
 megaRouter.delete('/nodes/:id', validate(megaDeleteSchema), asyncHandler(controller.remove));
 megaRouter.get('/nodes/:id/preview', validate(megaNodeSchema), asyncHandler(controller.preview));
 megaRouter.get('/nodes/:id/download', validate(megaNodeSchema), asyncHandler(controller.download));
-megaRouter.put('/companies/:companyId/link', validate(megaCompanyLinkSchema), asyncHandler(controller.linkCompany));
+megaRouter.put(
+  '/companies/:companyId/link',
+  validate(megaCompanyLinkSchema),
+  asyncHandler(controller.linkCompany)
+);

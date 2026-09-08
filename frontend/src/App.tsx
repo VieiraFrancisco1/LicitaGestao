@@ -7,7 +7,9 @@ import { BidFormPage } from './pages/BidFormPage';
 import { CompaniesPage } from './pages/CompaniesPage';
 import { CompanyDetailsPage } from './pages/CompanyDetailsPage';
 import { DashboardPage } from './pages/DashboardPage';
+import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { LoginPage } from './pages/LoginPage';
+import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { PlatformsPage } from './pages/PlatformsPage';
 import { UsersPage } from './pages/UsersPage';
 import { TendersPage } from './pages/TendersPage';
@@ -28,6 +30,9 @@ export default function App() {
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/esqueci-senha" element={<ForgotPasswordPage />} />
+          <Route path="/redefinir-senha" element={<ResetPasswordPage />} />
+
           <Route element={<ProtectedRoute />}>
             <Route element={<AppLayout />}>
               <Route index element={<DashboardPage />} />
@@ -61,6 +66,7 @@ export default function App() {
               <Route path="configuracoes" element={<SettingsPage />} />
             </Route>
           </Route>
+
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>

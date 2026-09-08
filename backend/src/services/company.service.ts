@@ -2,7 +2,11 @@ import { BidProgress, Prisma, UserRole } from '@prisma/client';
 import { prisma } from '../config/database.js';
 import { AppError } from '../utils/app-error.js';
 import { onlyDigits } from '../utils/cnpj.js';
-import { assertCompanyPortalAccess, type AuthScope } from './access.service.js';
+import {
+  assertCompanyPortalAccess,
+  requireOrganizationId,
+  type AuthScope
+} from './access.service.js';
 
 export type CompanyInput = {
   legalName?: string;
@@ -21,19 +25,28 @@ const clean = (data: CompanyInput) => ({
   ...(data.email !== undefined ? { email: data.email || null } : {})
 });
 
-export const createCompany = (data: CompanyInput & { legalName: string; cnpj: string }) =>
-  prisma.company.create({ data: clean(data) as Prisma.CompanyCreateInput });
+export const createCompany = (
+  data: CompanyInput & { legalName: string; cnpj: string },
+  auth: AuthScope
+) =>
+  prisma.company.create({
+    data: {
+      ...(clean(data) as Omit<Prisma.CompanyUncheckedCreateInput, 'organizationId'>),
+      organizationId: requireOrganizationId(auth)
+    }
+  });
 
-export const updateCompany = async (id: string, data: CompanyInput) => {
-  const exists = await prisma.company.findUnique({ where: { id }, select: { id: true } });
+export const updateCompany = async (id: string, data: CompanyInput, auth: AuthScope) => {
+  const organizationId = requireOrganizationId(auth);
+  const exists = await prisma.company.findFirst({ where: { id, organizationId }, select: { id: true } });
   if (!exists) throw new AppError('Empresa não encontrada', 404);
   return prisma.company.update({ where: { id }, data: clean(data) });
 };
 
 export const getCompany = async (id: string, auth: AuthScope) => {
   await assertCompanyPortalAccess(id, auth);
-  const company = await prisma.company.findUnique({
-    where: { id },
+  const company = await prisma.company.findFirst({
+    where: { id, organizationId: requireOrganizationId(auth) },
     include: { _count: { select: { users: true, staffLinks: true, bids: true } } }
   });
   if (!company) throw new AppError('Empresa não encontrada', 404);
@@ -41,15 +54,12 @@ export const getCompany = async (id: string, auth: AuthScope) => {
 };
 
 export const listCompanies = async (
-  query: {
-    search?: string;
-    active?: string;
-    page: number;
-    pageSize: number;
-  },
+  query: { search?: string; active?: string; page: number; pageSize: number },
   auth: AuthScope
 ) => {
+  const organizationId = requireOrganizationId(auth);
   const where: Prisma.CompanyWhereInput = {
+    organizationId,
     ...(auth.role === UserRole.EMPRESA
       ? { id: auth.companyId ?? '00000000-0000-0000-0000-000000000000' }
       : {}),
@@ -75,19 +85,13 @@ export const listCompanies = async (
     }),
     prisma.company.count({ where })
   ]);
-  return {
-    items,
-    total,
-    page: query.page,
-    pageSize: query.pageSize,
-    pages: Math.ceil(total / query.pageSize)
-  };
+  return { items, total, page: query.page, pageSize: query.pageSize, pages: Math.ceil(total / query.pageSize) };
 };
 
 export const getCompanyDocuments = async (companyId: string, auth: AuthScope) => {
   await assertCompanyPortalAccess(companyId, auth);
   return prisma.document.findMany({
-    where: { bid: { companyId } },
+    where: { bid: { companyId, tender: { organizationId: requireOrganizationId(auth) } } },
     include: {
       bid: {
         select: {
@@ -107,7 +111,7 @@ export const getCompanyPlatformSummary = async (companyId: string, auth: AuthSco
     where: {
       companyId,
       progress: { not: BidProgress.FINALIZADA },
-      tender: { platformId: { not: null } }
+      tender: { organizationId: requireOrganizationId(auth), platformId: { not: null } }
     },
     select: {
       id: true,
@@ -136,6 +140,7 @@ export const getCompanyPlatformSummary = async (companyId: string, auth: AuthSco
 export const listCompanyOptions = (auth: AuthScope) =>
   prisma.company.findMany({
     where: {
+      organizationId: requireOrganizationId(auth),
       active: true,
       ...(auth.role === UserRole.EMPRESA
         ? { id: auth.companyId ?? '00000000-0000-0000-0000-000000000000' }
