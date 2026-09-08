@@ -391,7 +391,10 @@ export async function getMegaStatus(auth: AuthScope) {
   }
   try {
     const storage = await getPersonalStorageForIntegration(integration);
-    const info = await storage.getAccountInfo().catch(() => ({}));
+    const info = (await storage.getAccountInfo().catch(() => ({}))) as {
+      spaceUsed?: number;
+      spaceTotal?: number;
+    };
     const verifiedAt = new Date();
     await db.megaIntegration.update({
       where: { id: integration.id },

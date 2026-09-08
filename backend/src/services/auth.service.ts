@@ -138,10 +138,10 @@ export const authenticateUser = async (email: string, password: string) => {
     include: { organization: true, company: true, companyLinks: { include: { company: true } } },
     take: 2
   });
-  if (users.length !== 1 || !users[0].organization.active || !(await bcrypt.compare(password, users[0].passwordHash))) {
+  const user = users.length === 1 ? users[0] : undefined;
+  if (!user || !user.organization.active || !(await bcrypt.compare(password, user.passwordHash))) {
     throw new AppError('E-mail ou senha inválidos', 401);
   }
-  const user = users[0];
   if (user.role === 'EMPRESA' && (!user.company || !user.company.active)) {
     throw new AppError('Empresa sem acesso ao sistema', 403);
   }
