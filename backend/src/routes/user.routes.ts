@@ -7,6 +7,7 @@ import { asyncHandler } from '../utils/async-handler.js';
 import {
   createUserSchema,
   listUsersSchema,
+  resetUserPasswordSchema,
   updateUserSchema,
   userIdSchema
 } from '../validators/user.validator.js';
@@ -17,4 +18,5 @@ userRouter.use(authenticate, authorize(UserRole.ADMIN));
 userRouter.get('/', validate(listUsersSchema), asyncHandler(controller.index));
 userRouter.get('/:id', validate(userIdSchema), asyncHandler(controller.show));
 userRouter.post('/', validate(createUserSchema), asyncHandler(controller.create));
+userRouter.post('/:id/reset-password', validate(resetUserPasswordSchema), asyncHandler(controller.resetPassword));
 userRouter.put('/:id', validate(updateUserSchema), asyncHandler(controller.update));

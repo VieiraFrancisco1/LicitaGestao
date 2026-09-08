@@ -1,29 +1,18 @@
 import type { Request, Response } from 'express';
 import { AuditActions, recordAudit } from '../services/audit.service.js';
-import {
-  createSystemBackup,
-  getBackupSummary,
-  parseSystemBackup,
-  restoreSystemBackup
-} from '../services/backup.service.js';
+import { createSystemBackup, getBackupSummary, parseSystemBackup, restoreSystemBackup } from '../services/backup.service.js';
 import { AppError } from '../utils/app-error.js';
 
-export const summary = async (_req: Request, res: Response) => {
-  const data = await getBackupSummary();
+export const summary = async (req: Request, res: Response) => {
+  const data = await getBackupSummary(req.auth!);
   res.json({ success: true, data });
 };
 
 export const download = async (req: Request, res: Response) => {
-  const backup = await createSystemBackup();
+  const backup = await createSystemBackup(req.auth!);
   const stamp = backup.generatedAt.replace(/[:.]/g, '-');
-  await recordAudit(req.auth!, {
-    action: AuditActions.CREATE,
-    entityType: 'SYSTEM_BACKUP',
-    entityId: backup.generatedAt,
-    entityLabel: `Backup ${backup.generatedAt}`,
-    description: 'Backup de segurança baixado pelo administrador',
-    metadata: backup.counts
-  });
+  await recordAudit(req.auth!, { action: AuditActions.CREATE, entityType: 'SYSTEM_BACKUP', entityId: backup.generatedAt,
+    entityLabel: `Backup ${backup.generatedAt}`, description: 'Backup de segurança da organização baixado pelo administrador', metadata: backup.counts });
   res.setHeader('Cache-Control', 'no-store');
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.setHeader('Content-Disposition', `attachment; filename="licitagestao-backup-${stamp}.json"`);
@@ -31,23 +20,13 @@ export const download = async (req: Request, res: Response) => {
 };
 
 export const restore = async (req: Request, res: Response) => {
-  if (
-    String(req.body.confirmation ?? '')
-      .trim()
-      .toUpperCase() !== 'RESTAURAR'
-  ) {
+  if (String(req.body.confirmation ?? '').trim().toUpperCase() !== 'RESTAURAR') {
     throw new AppError('Digite RESTAURAR para confirmar a recuperação', 422);
   }
   if (!req.file?.buffer) throw new AppError('Selecione o arquivo de backup', 422);
   const backup = parseSystemBackup(req.file.buffer);
-  const data = await restoreSystemBackup(backup, req.auth!.userId);
-  await recordAudit(req.auth!, {
-    action: AuditActions.UPDATE,
-    entityType: 'SYSTEM_BACKUP',
-    entityId: backup.generatedAt,
-    entityLabel: `Backup ${backup.generatedAt}`,
-    description: 'Dados restaurados a partir de um backup de segurança',
-    metadata: data
-  });
+  const data = await restoreSystemBackup(backup, req.auth!);
+  await recordAudit(req.auth!, { action: AuditActions.UPDATE, entityType: 'SYSTEM_BACKUP', entityId: backup.generatedAt,
+    entityLabel: `Backup ${backup.generatedAt}`, description: 'Dados da organização restaurados a partir de backup', metadata: data });
   res.json({ success: true, message: 'Backup restaurado com sucesso', data });
 };

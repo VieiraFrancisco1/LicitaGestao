@@ -3,8 +3,9 @@ import { Storage } from 'megajs';
 import { prisma } from '../config/database.js';
 import { env } from '../config/env.js';
 import { AppError } from '../utils/app-error.js';
-import { assertCompanyPortalAccess, assertCompanyWriteAccess, type AuthScope } from './access.service.js';
+import { assertCompanyPortalAccess, assertCompanyWriteAccess, requireOrganizationId, type AuthScope } from './access.service.js';
 import { assertSafeUploadFile, assertSafeUploadName } from './file-security.service.js';
+import { decryptSecret, encryptSecret } from './gmail-utils.js';
 
 type MegaNode = {
   nodeId: string;
@@ -25,6 +26,19 @@ type MegaNode = {
 type MegaStorage = Storage & {
   root: MegaNode;
   files: Record<string, MegaNode>;
+  reload: () => Promise<unknown>;
+  getAccountInfo: () => Promise<Record<string, unknown>>;
+};
+
+type MegaIntegrationRecord = {
+  id: string;
+  userId: string;
+  email: string;
+  passwordEncrypted: string | null;
+  connected: boolean;
+  connectedAt: Date | null;
+  lastSyncedAt: Date | null;
+  lastError: string | null;
 };
 
 export type MegaItem = {
@@ -36,14 +50,13 @@ export type MegaItem = {
   path: string;
 };
 
+const db = prisma as any;
 const normalizeSlashes = (value: string) => value.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
 const safeSegments = (value: string) => {
   const normalized = normalizeSlashes(value);
   if (!normalized) return [];
   const segments = normalized.split('/').filter(Boolean);
-  if (segments.some((segment) => segment === '.' || segment === '..')) {
-    throw new AppError('Caminho inválido', 400);
-  }
+  if (segments.some((segment) => segment === '.' || segment === '..')) throw new AppError('Caminho inválido', 400);
   return segments;
 };
 
@@ -66,32 +79,95 @@ const nameKey = (value: string) =>
     .replace(/\s+/g, ' ')
     .trim();
 
-let storagePromise: Promise<MegaStorage> | null = null;
+const personalStoragePromises = new Map<string, Promise<MegaStorage>>();
+let legacyStoragePromise: Promise<MegaStorage> | null = null;
 
-export const isMegaConfigured = () => Boolean(env.MEGA_EMAIL && env.MEGA_PASSWORD);
+export const isMegaConfigured = () => Boolean(env.MEGA_CREDENTIAL_ENCRYPTION_KEY);
+export const isLegacyMegaConfigured = () => Boolean(env.MEGA_EMAIL && env.MEGA_PASSWORD);
 
-export async function getMegaStorage(forceReload = false): Promise<MegaStorage> {
-  const email = env.MEGA_EMAIL;
-  const password = env.MEGA_PASSWORD;
-
-  if (!email || !password) {
-    throw new AppError('Integração com o MEGA ainda não foi configurada no servidor', 503);
+function requirePersonalMegaConfig() {
+  if (!env.MEGA_CREDENTIAL_ENCRYPTION_KEY) {
+    throw new AppError('Integração MEGA individual ainda não configurada no servidor', 503, 'MEGA_NOT_CONFIGURED');
   }
+}
 
-  if (!storagePromise) {
-    storagePromise = new Storage({
-      email,
-      password,
-      userAgent: 'LicitaGestao/1.0',
-      keepalive: true,
-      autoload: true
-    }).ready as Promise<MegaStorage>;
-    storagePromise.catch(() => {
-      storagePromise = null;
+function encryptMegaPassword(value: string) {
+  requirePersonalMegaConfig();
+  return encryptSecret(value, env.MEGA_CREDENTIAL_ENCRYPTION_KEY!);
+}
+
+function decryptMegaPassword(value: string) {
+  requirePersonalMegaConfig();
+  return decryptSecret(value, env.MEGA_CREDENTIAL_ENCRYPTION_KEY!);
+}
+
+function createStorage(email: string, password: string): Promise<MegaStorage> {
+  return new Storage({
+    email,
+    password,
+    userAgent: 'LicitaGestao/2.0',
+    keepalive: true,
+    autoload: true
+  }).ready as Promise<MegaStorage>;
+}
+
+async function getIntegrationByUserId(userId: string): Promise<MegaIntegrationRecord | null> {
+  return db.megaIntegration.findUnique({
+    where: { userId },
+    select: {
+      id: true,
+      userId: true,
+      email: true,
+      passwordEncrypted: true,
+      connected: true,
+      connectedAt: true,
+      lastSyncedAt: true,
+      lastError: true
+    }
+  });
+}
+
+async function requireIntegrationByUserId(userId: string): Promise<MegaIntegrationRecord> {
+  const integration = await getIntegrationByUserId(userId);
+  if (!integration?.connected || !integration.passwordEncrypted) {
+    throw new AppError('Conecte sua conta MEGA em Configurações antes de acessar os documentos.', 409, 'MEGA_ACCOUNT_REQUIRED');
+  }
+  return integration;
+}
+
+async function getPersonalStorageForIntegration(integration: MegaIntegrationRecord, forceReload = false) {
+  if (!integration.passwordEncrypted || !integration.connected) {
+    throw new AppError('A conta MEGA responsável pelo arquivo não está conectada.', 409, 'MEGA_ACCOUNT_DISCONNECTED');
+  }
+  let promise = personalStoragePromises.get(integration.id);
+  if (!promise) {
+    const password = decryptMegaPassword(integration.passwordEncrypted);
+    promise = createStorage(integration.email, password);
+    personalStoragePromises.set(integration.id, promise);
+    promise.catch(() => personalStoragePromises.delete(integration.id));
+  }
+  const storage = await promise;
+  if (forceReload) await storage.reload();
+  return storage;
+}
+
+async function getCurrentUserStorage(auth: AuthScope, forceReload = false) {
+  requireOrganizationId(auth);
+  const integration = await requireIntegrationByUserId(auth.userId);
+  return { integration, storage: await getPersonalStorageForIntegration(integration, forceReload) };
+}
+
+async function getLegacyStorage(forceReload = false): Promise<MegaStorage> {
+  if (!env.MEGA_EMAIL || !env.MEGA_PASSWORD) {
+    throw new AppError('O arquivo antigo utiliza uma conta MEGA legada que não está configurada no servidor.', 503);
+  }
+  if (!legacyStoragePromise) {
+    legacyStoragePromise = createStorage(env.MEGA_EMAIL, env.MEGA_PASSWORD);
+    legacyStoragePromise.catch(() => {
+      legacyStoragePromise = null;
     });
   }
-
-  const storage = await storagePromise;
+  const storage = await legacyStoragePromise;
   if (forceReload) await storage.reload();
   return storage;
 }
@@ -147,7 +223,11 @@ function findCompanyFolder(base: MegaNode, legalName: string, tradeName: string 
     const current = queue.shift()!;
     const currentKey = nameKey(current.node.name ?? '');
     if (candidates.includes(currentKey)) return { node: current.node, path: current.path };
-    if (!fallback && currentKey && candidates.some((candidate) => candidate && (currentKey.includes(candidate) || candidate.includes(currentKey)))) {
+    if (
+      !fallback &&
+      currentKey &&
+      candidates.some((candidate) => candidate && (currentKey.includes(candidate) || candidate.includes(currentKey)))
+    ) {
       fallback = { node: current.node, path: current.path };
     }
     if (current.depth < 4) {
@@ -170,35 +250,47 @@ async function configuredRoot(storage: MegaStorage): Promise<MegaNode> {
 
 async function companyRoot(companyId: string, auth: AuthScope, createIfMissing = true) {
   await assertCompanyPortalAccess(companyId, auth);
-  const company = await (prisma as any).company.findUnique({
-    where: { id: companyId },
-    select: { id: true, legalName: true, tradeName: true, megaFolderPath: true }
+  const organizationId = requireOrganizationId(auth);
+  const company = await db.company.findFirst({
+    where: { id: companyId, organizationId },
+    select: { id: true, legalName: true, tradeName: true }
   });
   if (!company) throw new AppError('Empresa não encontrada', 404);
 
-  const storage = await getMegaStorage();
+  const { integration, storage } = await getCurrentUserStorage(auth);
   const root = await configuredRoot(storage);
+  const mapping = await db.megaCompanyFolder.findUnique({
+    where: { megaIntegrationId_companyId: { megaIntegrationId: integration.id, companyId } }
+  });
 
-  if (company.megaFolderPath) {
+  if (mapping?.path) {
     try {
-      return { node: navigateFrom(root, company.megaFolderPath), relativePath: company.megaFolderPath, company };
+      return { node: navigateFrom(root, mapping.path), relativePath: mapping.path, company, integration };
     } catch {
-      // A pasta pode ter sido movida diretamente pelo MEGA. Fazemos uma nova descoberta abaixo.
+      // A pasta pode ter sido movida diretamente pelo MEGA; redescobrimos abaixo.
     }
   }
 
   const found = findCompanyFolder(root, company.legalName, company.tradeName);
   if (found) {
-    await (prisma as any).company.update({ where: { id: company.id }, data: { megaFolderPath: found.path } });
-    return { node: found.node, relativePath: found.path, company };
+    await db.megaCompanyFolder.upsert({
+      where: { megaIntegrationId_companyId: { megaIntegrationId: integration.id, companyId } },
+      create: { megaIntegrationId: integration.id, companyId, path: found.path },
+      update: { path: found.path }
+    });
+    return { node: found.node, relativePath: found.path, company, integration };
   }
 
-  if (!createIfMissing) return { node: null, relativePath: null, company };
+  if (!createIfMissing) return { node: null, relativePath: null, company, integration };
   await assertCompanyWriteAccess(companyId, auth);
   const folderName = assertSafeName(company.tradeName || company.legalName);
   const node = await root.mkdir(folderName);
-  await (prisma as any).company.update({ where: { id: company.id }, data: { megaFolderPath: folderName } });
-  return { node, relativePath: folderName, company };
+  await db.megaCompanyFolder.upsert({
+    where: { megaIntegrationId_companyId: { megaIntegrationId: integration.id, companyId } },
+    create: { megaIntegrationId: integration.id, companyId, path: folderName },
+    update: { path: folderName }
+  });
+  return { node, relativePath: folderName, company, integration };
 }
 
 async function scopeBase(auth: AuthScope, companyId?: string) {
@@ -206,57 +298,147 @@ async function scopeBase(auth: AuthScope, companyId?: string) {
     if (!auth.companyId) throw new AppError('Usuário sem empresa vinculada', 403);
     return companyRoot(auth.companyId, auth);
   }
-
   if (auth.role === UserRole.FUNCIONARIO) {
     if (!companyId) throw new AppError('Selecione uma empresa para acessar os documentos', 422);
     return companyRoot(companyId, auth);
   }
-
   if (companyId) return companyRoot(companyId, auth);
-  const storage = await getMegaStorage();
+  const { integration, storage } = await getCurrentUserStorage(auth);
   const root = await configuredRoot(storage);
-  return { node: root, relativePath: '', company: null };
+  return { node: root, relativePath: '', company: null, integration };
 }
 
-export async function getMegaStatus() {
-  if (!isMegaConfigured()) {
+export async function connectMegaAccount(auth: AuthScope, email: string, password: string) {
+  requireOrganizationId(auth);
+  requirePersonalMegaConfig();
+  const cleanEmail = email.trim().toLowerCase();
+  let storage: MegaStorage;
+  try {
+    storage = await createStorage(cleanEmail, password);
+    await storage.getAccountInfo();
+  } catch {
+    throw new AppError('Não foi possível entrar no MEGA. Confira o e-mail e a senha informados.', 422, 'MEGA_LOGIN_FAILED');
+  }
+
+  const now = new Date();
+  const integration = await db.megaIntegration.upsert({
+    where: { userId: auth.userId },
+    create: {
+      userId: auth.userId,
+      email: cleanEmail,
+      passwordEncrypted: encryptMegaPassword(password),
+      connected: true,
+      connectedAt: now,
+      lastSyncedAt: now,
+      lastError: null
+    },
+    update: {
+      email: cleanEmail,
+      passwordEncrypted: encryptMegaPassword(password),
+      connected: true,
+      connectedAt: now,
+      lastSyncedAt: now,
+      lastError: null
+    }
+  });
+  personalStoragePromises.set(integration.id, Promise.resolve(storage));
+  return getMegaStatus(auth);
+}
+
+export async function disconnectMegaAccount(auth: AuthScope) {
+  requireOrganizationId(auth);
+  const integration = await getIntegrationByUserId(auth.userId);
+  if (!integration) return { disconnected: false };
+  personalStoragePromises.delete(integration.id);
+  await db.megaIntegration.update({
+    where: { id: integration.id },
+    data: { connected: false, passwordEncrypted: null, lastError: null }
+  });
+  return { disconnected: true, email: integration.email };
+}
+
+export async function getMegaStatus(auth: AuthScope) {
+  requireOrganizationId(auth);
+  const integration = await getIntegrationByUserId(auth.userId);
+  const serverConfigured = isMegaConfigured();
+  if (!serverConfigured) {
     return {
-      configured: false,
+      serverConfigured: false,
+      configured: Boolean(integration),
       connected: false,
+      email: integration?.email ?? null,
       rootFolder: env.MEGA_ROOT_FOLDER || 'Cloud Drive',
-      accountName: null,
+      accountName: integration?.email ?? null,
       spaceUsed: null,
-      spaceTotal: null
+      spaceTotal: null,
+      lastVerifiedAt: integration?.lastSyncedAt ?? null,
+      lastError: integration?.lastError ?? null
+    };
+  }
+  if (!integration?.connected || !integration.passwordEncrypted) {
+    return {
+      serverConfigured: true,
+      configured: Boolean(integration?.connected && integration.passwordEncrypted),
+      connected: false,
+      email: integration?.email ?? null,
+      rootFolder: env.MEGA_ROOT_FOLDER || 'Cloud Drive',
+      accountName: integration?.email ?? null,
+      spaceUsed: null,
+      spaceTotal: null,
+      lastVerifiedAt: integration?.lastSyncedAt ?? null,
+      lastError: integration?.lastError ?? null
     };
   }
   try {
-    const storage = await getMegaStorage();
-    const info = (await storage.getAccountInfo().catch(() => ({}))) as Record<string, unknown>;
+    const storage = await getPersonalStorageForIntegration(integration);
+    const info = await storage.getAccountInfo().catch(() => ({}));
+    const verifiedAt = new Date();
+    await db.megaIntegration.update({
+      where: { id: integration.id },
+      data: { lastSyncedAt: verifiedAt, lastError: null }
+    }).catch(() => undefined);
     return {
+      serverConfigured: true,
       configured: true,
       connected: true,
+      email: integration.email,
       rootFolder: env.MEGA_ROOT_FOLDER || 'Cloud Drive',
-      accountName: (storage as unknown as { name?: string }).name ?? null,
+      accountName: integration.email,
       spaceUsed: typeof info.spaceUsed === 'number' ? info.spaceUsed : null,
-      spaceTotal: typeof info.spaceTotal === 'number' ? info.spaceTotal : null
+      spaceTotal: typeof info.spaceTotal === 'number' ? info.spaceTotal : null,
+      lastVerifiedAt: verifiedAt,
+      lastError: null
     };
-  } catch {
+  } catch (error) {
+    const message = error instanceof Error ? error.message.slice(0, 500) : 'Falha ao conectar ao MEGA';
+    personalStoragePromises.delete(integration.id);
+    await db.megaIntegration.update({ where: { id: integration.id }, data: { lastError: message } }).catch(() => undefined);
     return {
+      serverConfigured: true,
       configured: true,
       connected: false,
+      email: integration.email,
       rootFolder: env.MEGA_ROOT_FOLDER || 'Cloud Drive',
-      accountName: null,
+      accountName: integration.email,
       spaceUsed: null,
-      spaceTotal: null
+      spaceTotal: null,
+      lastVerifiedAt: integration.lastSyncedAt,
+      lastError: message
     };
   }
 }
 
-export async function browseMega(
-  auth: AuthScope,
-  options: { companyId?: string; path?: string; refresh?: boolean }
-) {
-  if (options.refresh) await getMegaStorage(true);
+export async function syncMegaAccount(auth: AuthScope) {
+  const integration = await requireIntegrationByUserId(auth.userId);
+  await getPersonalStorageForIntegration(integration, true);
+  return getMegaStatus(auth);
+}
+
+export async function browseMega(auth: AuthScope, options: { companyId?: string; path?: string; refresh?: boolean }) {
+  if (options.refresh) {
+    const integration = await requireIntegrationByUserId(auth.userId);
+    await getPersonalStorageForIntegration(integration, true);
+  }
   const scoped = await scopeBase(auth, options.companyId);
   if (!scoped.node) throw new AppError('Pasta da empresa não encontrada no MEGA', 404);
   const relativePath = normalizeSlashes(options.path ?? '');
@@ -280,7 +462,7 @@ export async function browseMega(
   return {
     path: relativePath,
     basePath: scoped.relativePath,
-    scopeLabel: scoped.company ? scoped.company.tradeName || scoped.company.legalName : env.MEGA_ROOT_FOLDER || 'MEGA',
+    scopeLabel: scoped.company ? scoped.company.tradeName || scoped.company.legalName : 'Meu MEGA',
     items
   };
 }
@@ -358,41 +540,41 @@ export async function deleteMegaNode(auth: AuthScope, companyId: string | undefi
 export async function getMegaDownload(auth: AuthScope, companyId: string | undefined, nodeId: string) {
   const found = await resolveNodeForAction(auth, companyId, nodeId);
   if (found.node.directory) throw new AppError('Pastas não podem ser baixadas diretamente', 422);
-  return {
-    name: found.node.name || 'arquivo',
-    size: found.node.size ?? 0,
-    stream: found.node.download({ forceHttps: true })
-  };
+  return { name: found.node.name || 'arquivo', size: found.node.size ?? 0, stream: found.node.download({ forceHttps: true }) };
 }
 
 export async function linkCompanyFolder(companyId: string, relativePath: string, auth: AuthScope) {
   if (auth.role === UserRole.EMPRESA) throw new AppError('Você não pode alterar a pasta principal da empresa', 403);
   await assertCompanyWriteAccess(companyId, auth);
-  const storage = await getMegaStorage();
+  const { integration, storage } = await getCurrentUserStorage(auth);
   const root = await configuredRoot(storage);
   const cleanPath = normalizeSlashes(relativePath);
   const folder = navigateFrom(root, cleanPath);
   if (!folder.directory) throw new AppError('Selecione uma pasta', 422);
-  const company = await (prisma as any).company.update({
-    where: { id: companyId },
-    data: { megaFolderPath: cleanPath },
-    select: { id: true, legalName: true, tradeName: true, megaFolderPath: true }
+  await db.megaCompanyFolder.upsert({
+    where: { megaIntegrationId_companyId: { megaIntegrationId: integration.id, companyId } },
+    create: { megaIntegrationId: integration.id, companyId, path: cleanPath },
+    update: { path: cleanPath }
   });
-  return company;
+  return { companyId, megaFolderPath: cleanPath };
 }
 
-export async function saveBidFileToMega(input: {
-  companyId: string;
-  companyName: string;
-  municipality: string;
-  sessionDate: Date;
-  noticeNumber: string | null;
-  processNumber: string | null;
-  bidId: string;
-  file: Express.Multer.File;
-}) {
+export async function saveBidFileToMega(
+  input: {
+    companyId: string;
+    companyName: string;
+    municipality: string;
+    sessionDate: Date;
+    noticeNumber: string | null;
+    processNumber: string | null;
+    bidId: string;
+    file: Express.Multer.File;
+  },
+  auth: AuthScope
+) {
   assertSafeUploadFile(input.file);
-  const storage = await getMegaStorage();
+  await assertCompanyWriteAccess(input.companyId, auth);
+  const { integration, storage } = await getCurrentUserStorage(auth);
   const root = await configuredRoot(storage);
   const year = input.sessionDate.getUTCFullYear();
   const municipality = assertSafeName(input.municipality.toLocaleUpperCase('pt-BR'));
@@ -411,18 +593,38 @@ export async function saveBidFileToMega(input: {
   return {
     nodeId: uploaded.nodeId,
     remotePath: `${basePath}/${fileName}`,
-    fileName
+    fileName,
+    megaIntegrationId: integration.id
   };
 }
 
-export async function getMegaNodeById(nodeId: string) {
-  const storage = await getMegaStorage();
+async function storageForDocument(megaIntegrationId?: string | null) {
+  if (!megaIntegrationId) return getLegacyStorage();
+  const integration = await db.megaIntegration.findUnique({
+    where: { id: megaIntegrationId },
+    select: {
+      id: true,
+      userId: true,
+      email: true,
+      passwordEncrypted: true,
+      connected: true,
+      connectedAt: true,
+      lastSyncedAt: true,
+      lastError: true
+    }
+  });
+  if (!integration) throw new AppError('A conta MEGA responsável por este arquivo não foi encontrada.', 404);
+  return getPersonalStorageForIntegration(integration);
+}
+
+export async function getMegaNodeById(nodeId: string, megaIntegrationId?: string | null) {
+  const storage = await storageForDocument(megaIntegrationId);
   const node = storage.files[nodeId];
   if (!node) throw new AppError('Arquivo não encontrado no MEGA', 404);
   return node;
 }
 
-export async function removeMegaNodeById(nodeId: string) {
-  const node = await getMegaNodeById(nodeId);
+export async function removeMegaNodeById(nodeId: string, megaIntegrationId?: string | null) {
+  const node = await getMegaNodeById(nodeId, megaIntegrationId);
   await node.delete(false);
 }

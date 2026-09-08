@@ -1,7 +1,7 @@
 import { BidSituation, GuaranteeType, Prisma, TenderListStatus, UserRole } from '@prisma/client';
 import { prisma } from '../config/database.js';
 import { AppError } from '../utils/app-error.js';
-import type { AuthScope } from './access.service.js';
+import { requireOrganizationId, type AuthScope } from './access.service.js';
 
 export type TenderInput = {
   modality?: string | null;
@@ -42,16 +42,26 @@ const addDays = (date: Date, days: number | null | undefined) =>
   days === null || days === undefined ? null : new Date(date.getTime() + days * 86_400_000);
 
 export const accessibleParticipationWhere = (auth: AuthScope): Prisma.BidWhereInput => {
-  if (auth.role === UserRole.ADMIN) return {};
+  const organizationId = requireOrganizationId(auth);
+  if (auth.role === UserRole.ADMIN) return { tender: { organizationId } };
   if (auth.role === UserRole.EMPRESA) {
-    return { companyId: auth.companyId ?? '00000000-0000-0000-0000-000000000000' };
+    return {
+      companyId: auth.companyId ?? '00000000-0000-0000-0000-000000000000',
+      tender: { organizationId }
+    };
   }
-  return { company: { staffLinks: { some: { userId: auth.userId } } } };
+  return {
+    company: { organizationId, staffLinks: { some: { userId: auth.userId } } },
+    tender: { organizationId }
+  };
 };
 
-const ensurePlatform = async (platformId?: string | null) => {
+const ensurePlatform = async (platformId: string | null | undefined, auth: AuthScope) => {
   if (!platformId) return;
-  const platform = await prisma.platform.findUnique({ where: { id: platformId }, select: { active: true } });
+  const platform = await prisma.platform.findFirst({
+    where: { id: platformId, organizationId: requireOrganizationId(auth) },
+    select: { active: true }
+  });
   if (!platform?.active) throw new AppError('Plataforma não encontrada ou inativa', 422);
 };
 
@@ -68,9 +78,7 @@ const clean = (data: TenderInput, referenceValue?: number | Prisma.Decimal | nul
     ...(data.seobraLink !== undefined ? { seobraLink: data.seobraLink || null } : {}),
     ...(requiresGuaranteeOnePercent !== undefined
       ? {
-          guaranteeType: requiresGuaranteeOnePercent
-            ? GuaranteeType.PROPOSTA_INICIAL
-            : GuaranteeType.NAO_EXIGIDA,
+          guaranteeType: requiresGuaranteeOnePercent ? GuaranteeType.PROPOSTA_INICIAL : GuaranteeType.NAO_EXIGIDA,
           guaranteePercentage: requiresGuaranteeOnePercent ? new Prisma.Decimal(1) : null,
           guaranteeValue:
             requiresGuaranteeOnePercent && estimatedValue
@@ -94,19 +102,14 @@ const includeTender = (auth: AuthScope) =>
   }) satisfies Prisma.TenderInclude;
 
 export const createTender = async (
-  input: TenderInput &
-    Required<
-      Pick<
-        TenderInput,
-        'municipality' | 'sessionDate' | 'object' | 'proposalValidityDays' | 'estimatedValue' | 'platformId'
-      >
-    >,
+  input: TenderInput & Required<Pick<TenderInput, 'municipality' | 'sessionDate' | 'object' | 'proposalValidityDays' | 'estimatedValue' | 'platformId'>>,
   auth: AuthScope
 ) => {
-  await ensurePlatform(input.platformId);
+  await ensurePlatform(input.platformId, auth);
   return prisma.tender.create({
     data: {
       ...clean(input, input.estimatedValue),
+      organizationId: requireOrganizationId(auth),
       municipality: input.municipality,
       sessionDate: input.sessionDate,
       object: input.object,
@@ -119,12 +122,11 @@ export const createTender = async (
 };
 
 export const updateTender = async (id: string, input: TenderInput, auth: AuthScope) => {
-  const current = await prisma.tender.findUnique({ where: { id } });
+  const current = await prisma.tender.findFirst({ where: { id, organizationId: requireOrganizationId(auth) } });
   if (!current) throw new AppError('Licitação geral não encontrada', 404);
-  await ensurePlatform(input.platformId === undefined ? current.platformId : input.platformId);
+  await ensurePlatform(input.platformId === undefined ? current.platformId : input.platformId, auth);
   const sessionDate = input.sessionDate ?? current.sessionDate;
-  const validity =
-    input.proposalValidityDays === undefined ? current.proposalValidityDays : input.proposalValidityDays;
+  const validity = input.proposalValidityDays === undefined ? current.proposalValidityDays : input.proposalValidityDays;
   return prisma.tender.update({
     where: { id },
     data: {
@@ -137,8 +139,8 @@ export const updateTender = async (id: string, input: TenderInput, auth: AuthSco
 };
 
 export const getTender = async (id: string, auth: AuthScope) => {
-  const tender = await prisma.tender.findUnique({
-    where: { id },
+  const tender = await prisma.tender.findFirst({
+    where: { id, organizationId: requireOrganizationId(auth) },
     include: {
       ...includeTender(auth),
       createdBy: { select: { id: true, name: true } },
@@ -151,16 +153,12 @@ export const getTender = async (id: string, auth: AuthScope) => {
 
 export const listTenders = async (query: TenderQuery, auth: AuthScope) => {
   const where: Prisma.TenderWhereInput = {
+    organizationId: requireOrganizationId(auth),
     ...(query.municipality ? { municipality: { contains: query.municipality, mode: 'insensitive' } } : {}),
     ...(query.platformId ? { platformId: query.platformId } : {}),
     ...(query.listStatus ? { listStatus: query.listStatus } : {}),
     ...(query.dateFrom || query.dateTo
-      ? {
-          sessionDate: {
-            ...(query.dateFrom ? { gte: query.dateFrom } : {}),
-            ...(query.dateTo ? { lte: query.dateTo } : {})
-          }
-        }
+      ? { sessionDate: { ...(query.dateFrom ? { gte: query.dateFrom } : {}), ...(query.dateTo ? { lte: query.dateTo } : {}) } }
       : {}),
     ...(query.search
       ? {
@@ -185,13 +183,7 @@ export const listTenders = async (query: TenderQuery, auth: AuthScope) => {
     }),
     prisma.tender.count({ where })
   ]);
-  return {
-    items: await addAttachmentProgress(items),
-    total,
-    page: query.page,
-    pageSize: query.pageSize,
-    pages: Math.ceil(total / query.pageSize)
-  };
+  return { items: await addAttachmentProgress(items), total, page: query.page, pageSize: query.pageSize, pages: Math.ceil(total / query.pageSize) };
 };
 
 const addAttachmentProgress = async <T extends { id: string; _count: { bids: number } }>(items: T[]) => {
@@ -204,17 +196,13 @@ const addAttachmentProgress = async <T extends { id: string; _count: { bids: num
   const counts = new Map(attached.map((item) => [item.tenderId, item._count._all]));
   return items.map((item) => {
     const attachedCompanies = counts.get(item.id) ?? 0;
-    return {
-      ...item,
-      attachedCompanies,
-      allCompaniesAttached: item._count.bids > 0 && attachedCompanies === item._count.bids
-    };
+    return { ...item, attachedCompanies, allCompaniesAttached: item._count.bids > 0 && attachedCompanies === item._count.bids };
   });
 };
 
 export const deleteTender = async (id: string, auth: AuthScope) => {
-  const tender = await prisma.tender.findUnique({
-    where: { id },
+  const tender = await prisma.tender.findFirst({
+    where: { id, organizationId: requireOrganizationId(auth) },
     include: includeTender(auth)
   });
   if (!tender) throw new AppError('Licitação geral não encontrada', 404);
@@ -223,50 +211,27 @@ export const deleteTender = async (id: string, auth: AuthScope) => {
 };
 
 export const setSpreadsheetResponsibility = async (id: string, responsible: boolean, auth: AuthScope) => {
-  if (auth.role === UserRole.EMPRESA) {
-    throw new AppError('Seu perfil não pode assumir a planilha do controle geral', 403);
-  }
-  const tender = await prisma.tender.findUnique({
-    where: { id },
-    select: {
-      id: true,
-      spreadsheetResponsibleUserId: true,
-      spreadsheetResponsibleUser: { select: { id: true, name: true } }
-    }
+  if (auth.role === UserRole.EMPRESA) throw new AppError('Seu perfil não pode assumir a planilha do controle geral', 403);
+  const tender = await prisma.tender.findFirst({
+    where: { id, organizationId: requireOrganizationId(auth) },
+    select: { id: true, spreadsheetResponsibleUserId: true, spreadsheetResponsibleUser: { select: { id: true, name: true } } }
   });
   if (!tender) throw new AppError('Licitação geral não encontrada', 404);
-
   if (responsible) {
     if (tender.spreadsheetResponsibleUserId && tender.spreadsheetResponsibleUserId !== auth.userId) {
-      throw new AppError(
-        `Esta planilha já está sob responsabilidade de ${tender.spreadsheetResponsibleUser?.name ?? 'outro usuário'}`,
-        409
-      );
+      throw new AppError(`Esta planilha já está sob responsabilidade de ${tender.spreadsheetResponsibleUser?.name ?? 'outro usuário'}`, 409);
     }
-    return prisma.tender.update({
-      where: { id },
-      data: { spreadsheetResponsibleUserId: auth.userId, updatedById: auth.userId },
-      include: includeTender(auth)
-    });
+    return prisma.tender.update({ where: { id }, data: { spreadsheetResponsibleUserId: auth.userId, updatedById: auth.userId }, include: includeTender(auth) });
   }
-
-  if (
-    tender.spreadsheetResponsibleUserId &&
-    tender.spreadsheetResponsibleUserId !== auth.userId &&
-    auth.role !== UserRole.ADMIN
-  ) {
+  if (tender.spreadsheetResponsibleUserId && tender.spreadsheetResponsibleUserId !== auth.userId && auth.role !== UserRole.ADMIN) {
     throw new AppError('Somente o responsável atual ou um administrador pode liberar esta planilha', 403);
   }
-  return prisma.tender.update({
-    where: { id },
-    data: { spreadsheetResponsibleUserId: null, updatedById: auth.userId },
-    include: includeTender(auth)
-  });
+  return prisma.tender.update({ where: { id }, data: { spreadsheetResponsibleUserId: null, updatedById: auth.userId }, include: includeTender(auth) });
 };
 
 export const updateSpreadsheetNotes = async (id: string, notes: string | null, auth: AuthScope) => {
-  const tender = await prisma.tender.findUnique({
-    where: { id },
+  const tender = await prisma.tender.findFirst({
+    where: { id, organizationId: requireOrganizationId(auth) },
     select: { id: true, spreadsheetResponsibleUserId: true }
   });
   if (!tender) throw new AppError('Licitação geral não encontrada', 404);
@@ -275,40 +240,25 @@ export const updateSpreadsheetNotes = async (id: string, notes: string | null, a
   }
   return prisma.tender.update({
     where: { id },
-    data: {
-      spreadsheetNotes: notes?.trim() || null,
-      spreadsheetNotesUpdatedAt: new Date(),
-      updatedById: auth.userId
-    },
+    data: { spreadsheetNotes: notes?.trim() || null, spreadsheetNotesUpdatedAt: new Date(), updatedById: auth.userId },
     include: includeTender(auth)
   });
 };
 
 export const setSpreadsheetReady = async (id: string, ready: boolean, auth: AuthScope) => {
-  const exists = await prisma.tender.findUnique({ where: { id }, select: { id: true } });
+  const exists = await prisma.tender.findFirst({ where: { id, organizationId: requireOrganizationId(auth) }, select: { id: true } });
   if (!exists) throw new AppError('Licitação geral não encontrada', 404);
-  return prisma.tender.update({
-    where: { id },
-    data: { spreadsheetReady: ready, updatedById: auth.userId },
-    include: includeTender(auth)
-  });
+  return prisma.tender.update({ where: { id }, data: { spreadsheetReady: ready, updatedById: auth.userId }, include: includeTender(auth) });
 };
 
 export const setTenderListStatus = async (id: string, status: TenderListStatus, auth: AuthScope) => {
-  const tender = await prisma.tender.findUnique({
-    where: { id },
+  const tender = await prisma.tender.findFirst({
+    where: { id, organizationId: requireOrganizationId(auth) },
     include: { bids: { select: { situation: true } } }
   });
   if (!tender) throw new AppError('Licitação geral não encontrada', 404);
-  if (
-    status === TenderListStatus.ANEXADA &&
-    (tender.bids.length === 0 || tender.bids.some((bid) => bid.situation !== BidSituation.ANEXADA))
-  ) {
+  if (status === TenderListStatus.ANEXADA && (tender.bids.length === 0 || tender.bids.some((bid) => bid.situation !== BidSituation.ANEXADA))) {
     throw new AppError('Todas as empresas associadas precisam estar com situação ANEXADA', 422);
   }
-  return prisma.tender.update({
-    where: { id },
-    data: { listStatus: status, updatedById: auth.userId },
-    include: includeTender(auth)
-  });
+  return prisma.tender.update({ where: { id }, data: { listStatus: status, updatedById: auth.userId }, include: includeTender(auth) });
 };

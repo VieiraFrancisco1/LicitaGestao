@@ -10,7 +10,6 @@ import { assertSafeUploadFile } from './file-security.service.js';
 import { getMegaNodeById, removeMegaNodeById, saveBidFileToMega } from './mega.service.js';
 
 const storageRoot = path.resolve(process.cwd(), env.STORAGE_PATH);
-
 const resolveStoredPath = (relativePath: string) => {
   const fullPath = path.resolve(storageRoot, relativePath);
   if (fullPath !== storageRoot && !fullPath.startsWith(`${storageRoot}${path.sep}`)) {
@@ -39,19 +38,22 @@ export const saveDocument = async (
   await assertCompanyWriteAccess(bid.companyId, auth);
   assertSafeUploadFile(file);
 
-  const remote = await saveBidFileToMega({
-    companyId: bid.companyId,
-    companyName: bid.company.tradeName || bid.company.legalName,
-    municipality: bid.tender.municipality,
-    sessionDate: bid.tender.sessionDate,
-    noticeNumber: bid.tender.noticeNumber,
-    processNumber: bid.tender.processNumber,
-    bidId: bid.id,
-    file
-  });
+  const remote = await saveBidFileToMega(
+    {
+      companyId: bid.companyId,
+      companyName: bid.company.tradeName || bid.company.legalName,
+      municipality: bid.tender.municipality,
+      sessionDate: bid.tender.sessionDate,
+      noticeNumber: bid.tender.noticeNumber,
+      processNumber: bid.tender.processNumber,
+      bidId: bid.id,
+      file
+    },
+    auth
+  );
 
   try {
-    return await (prisma as any).document.create({
+    return await prisma.document.create({
       data: {
         bidId,
         originalName: file.originalname.slice(0, 255),
@@ -63,29 +65,26 @@ export const saveDocument = async (
         storageProvider: 'MEGA',
         remoteNodeId: remote.nodeId,
         remotePath: remote.remotePath,
+        megaIntegrationId: remote.megaIntegrationId,
         uploadedById: auth.userId
       },
       include: { uploadedBy: { select: { id: true, name: true } } }
     });
   } catch (error) {
-    await removeMegaNodeById(remote.nodeId).catch(() => undefined);
+    await removeMegaNodeById(remote.nodeId, remote.megaIntegrationId).catch(() => undefined);
     throw error;
   }
 };
 
 export const getDocumentDownload = async (id: string, auth: AuthScope) => {
-  const document = await (prisma as any).document.findUnique({ where: { id }, include: { bid: true } });
+  const document = await prisma.document.findUnique({ where: { id }, include: { bid: true } });
   if (!document) throw new AppError('Documento não encontrado', 404);
   await getBid(document.bidId, auth);
 
   if (document.storageProvider === 'MEGA' && document.remoteNodeId) {
-    const node = await getMegaNodeById(document.remoteNodeId);
+    const node = await getMegaNodeById(document.remoteNodeId, document.megaIntegrationId);
     if (node.directory) throw new AppError('Documento inválido no MEGA', 422);
-    return {
-      document,
-      mode: 'mega' as const,
-      stream: node.download({ forceHttps: true })
-    };
+    return { document, mode: 'mega' as const, stream: node.download({ forceHttps: true }) };
   }
 
   const fullPath = resolveStoredPath(document.path);
@@ -100,11 +99,9 @@ export const getDocumentDownload = async (id: string, auth: AuthScope) => {
 export const deleteDocument = async (id: string, auth: AuthScope) => {
   const payload = await getDocumentDownload(id, auth);
   await assertCompanyWriteAccess(payload.document.bid.companyId, auth);
-
   if (payload.mode === 'mega' && payload.document.remoteNodeId) {
-    await removeMegaNodeById(payload.document.remoteNodeId);
+    await removeMegaNodeById(payload.document.remoteNodeId, payload.document.megaIntegrationId);
   }
-
   await prisma.document.delete({ where: { id: payload.document.id } });
   if (payload.mode === 'local') await fs.unlink(payload.fullPath).catch(() => undefined);
 };

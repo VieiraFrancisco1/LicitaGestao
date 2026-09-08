@@ -1,0 +1,202 @@
+.mega-account-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 76px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.mega-account-connected,
+.mega-account-form {
+  display: grid;
+  gap: 16px;
+}
+
+.mega-account-summary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #e4e8ef;
+  border-radius: 12px;
+  background: #fafcff;
+}
+
+.mega-account-cloud {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  color: #2563eb;
+  background: #eaf1ff;
+}
+
+.mega-account-summary small,
+.mega-account-summary strong,
+.mega-account-summary span {
+  display: block;
+}
+
+.mega-account-summary small,
+.mega-account-summary div > span {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.mega-account-summary strong {
+  margin: 2px 0 3px;
+  color: #273246;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.mega-account-state {
+  padding: 6px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.mega-account-state.is-active {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.mega-account-state.is-error {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
+.mega-account-details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.mega-account-details > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #e7ebf1;
+  border-radius: 11px;
+  color: #6f7b8c;
+}
+
+.mega-account-details small,
+.mega-account-details strong {
+  display: block;
+}
+
+.mega-account-details small {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.mega-account-details strong {
+  margin-top: 2px;
+  color: #273246;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.mega-account-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.mega-disconnect-button {
+  border: 1px solid #fecaca;
+  border-radius: 9px;
+  padding: 9px 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #b4232f;
+  background: #fff7f7;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.mega-account-security-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 12px;
+  border-radius: 11px;
+  color: #2563eb;
+  background: #f5f8ff;
+}
+
+.mega-account-security-note p {
+  margin: 0;
+  color: #59677a;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.mega-account-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 13px;
+}
+
+.mega-account-form label {
+  display: grid;
+  gap: 7px;
+  color: #344054;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.mega-account-form label > small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 450;
+  line-height: 1.45;
+}
+
+.mega-root-input {
+  width: 100%;
+  border: 1px solid #d9dee8;
+  border-radius: 10px;
+  padding: 12px 13px;
+  outline: 0;
+  color: #172033;
+  background: #fff;
+}
+
+.mega-root-input:focus {
+  border-color: #7aa2ed;
+  box-shadow: 0 0 0 3px #e9f0ff;
+}
+
+.mega-account-feedback {
+  margin-top: 14px;
+}
+
+@media (max-width: 720px) {
+  .mega-account-summary {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .mega-account-state {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .mega-account-details,
+  .mega-account-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .mega-account-actions > button {
+    width: 100%;
+    justify-content: center;
+  }
+}

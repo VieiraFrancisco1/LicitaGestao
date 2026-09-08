@@ -2,8 +2,11 @@ import type { Request, Response } from 'express';
 import { env } from '../config/env.js';
 import { prisma } from '../config/database.js';
 import {
-  authenticateUser,
+  authenticateOrganizationMember,
   changeOwnPassword,
+  loginOrganization,
+  requestOrganizationPasswordReset,
+  resetOrganizationPassword as resetOrganizationPasswordService,
   revokeRefreshToken,
   rotateRefreshToken
 } from '../services/auth.service.js';
@@ -20,9 +23,17 @@ const cookieOptions = {
   maxAge: env.REFRESH_TOKEN_EXPIRES_IN_DAYS * 86_400_000
 };
 
-export const login = async (req: Request, res: Response) => {
-  const { email, password } = req.body as { email: string; password: string };
-  const result = await authenticateUser(email, password);
+export const organizationLogin = async (req: Request, res: Response) => {
+  const result = await loginOrganization(req.body.email, req.body.password);
+  res.json({ success: true, data: result });
+};
+
+export const memberLogin = async (req: Request, res: Response) => {
+  const result = await authenticateOrganizationMember(
+    req.body.organizationToken,
+    req.body.userId,
+    req.body.password
+  );
   res.cookie(cookieName, result.refreshToken, cookieOptions);
   res.json({ success: true, data: { accessToken: result.accessToken, user: result.user } });
 };
@@ -44,17 +55,27 @@ export const logout = async (req: Request, res: Response) => {
 export const me = async (req: Request, res: Response) => {
   const user = await prisma.user.findUnique({
     where: { id: req.auth!.userId },
-    include: { company: true, companyLinks: { include: { company: true } } }
+    include: { organization: true, company: true, companyLinks: { include: { company: true } } }
   });
-  if (!user || !user.active) throw new AppError('Usuário sem acesso ao sistema', 403);
+  if (!user || !user.active || !user.organization.active) throw new AppError('Usuário sem acesso ao sistema', 403);
   res.json({ success: true, data: publicUser(user) });
 };
 
+export const forgotOrganizationPassword = async (req: Request, res: Response) => {
+  await requestOrganizationPasswordReset(req.body.email);
+  res.json({
+    success: true,
+    message: 'Se este e-mail estiver cadastrado como acesso principal, enviaremos as instruções de redefinição.'
+  });
+};
+
+export const resetOrganizationPassword = async (req: Request, res: Response) => {
+  await resetOrganizationPasswordService(req.body.token, req.body.newPassword);
+  res.json({ success: true, message: 'Senha principal alterada. Volte ao login e entre com a nova senha.' });
+};
+
 export const changePassword = async (req: Request, res: Response) => {
-  const { currentPassword, newPassword } = req.body as {
-    currentPassword: string;
-    newPassword: string;
-  };
+  const { currentPassword, newPassword } = req.body as { currentPassword: string; newPassword: string };
   await changeOwnPassword(req.auth!.userId, currentPassword, newPassword);
   await recordAudit(req.auth!, {
     action: AuditActions.UPDATE,

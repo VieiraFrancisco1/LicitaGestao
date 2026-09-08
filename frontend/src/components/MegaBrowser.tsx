@@ -13,6 +13,7 @@ import {
   Upload
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api, errorMessage } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import type { ApiResponse, MegaBrowseData, MegaItem, MegaStatus } from '../types';
@@ -26,6 +27,7 @@ type Props = {
 
 export function MegaBrowser({ companyId, compact = false }: Props) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [status, setStatus] = useState<MegaStatus | null>(null);
   const [data, setData] = useState<MegaBrowseData | null>(null);
   const [path, setPath] = useState('');
@@ -119,7 +121,9 @@ export function MegaBrowser({ companyId, compact = false }: Props) {
 
   const uploadFiles = async (files: File[]) => {
     if (!files.length) return;
-    const invalid = files.map((file) => ({ file, error: validateDocumentUpload(file) })).find((item) => item.error);
+    const invalid = files
+      .map((file) => ({ file, error: validateDocumentUpload(file) }))
+      .find((item) => item.error);
     if (invalid) {
       setMessage('');
       setError(`${invalid.file.name}: ${invalid.error}`);
@@ -185,7 +189,6 @@ export function MegaBrowser({ companyId, compact = false }: Props) {
     }
   };
 
-
   const canPreview = (item: MegaItem) => /\.(pdf|png|jpe?g)$/i.test(item.name);
 
   const preview = async (item: MegaItem) => {
@@ -228,18 +231,27 @@ export function MegaBrowser({ companyId, compact = false }: Props) {
   if (status && (!status.configured || !status.connected)) {
     return (
       <section className="mega-setup-card">
-        <div className="mega-setup-icon"><Cloud size={30} /></div>
+        <div className="mega-setup-icon">
+          <Cloud size={30} />
+        </div>
         <div>
           <span className="eyebrow">Armazenamento online</span>
-          <h3>{status.configured ? 'Não foi possível conectar ao MEGA' : 'MEGA ainda não configurado'}</h3>
+          <h3>{status.configured ? 'Não foi possível conectar ao seu MEGA' : 'Conecte sua conta do MEGA'}</h3>
           <p>
             {status.configured
-              ? 'Confira as credenciais configuradas no servidor e tente novamente.'
-              : 'Configure MEGA_EMAIL e MEGA_PASSWORD nas variáveis de ambiente do Render. Os arquivos não serão gravados no disco temporário do servidor.'}
+              ? 'Sua conta MEGA está cadastrada, mas não respondeu agora. Tente novamente ou revise a conexão em Configurações.'
+              : 'Cada usuário do LicitaGestão usa sua própria conta MEGA. Conecte a sua em Configurações para acessar e sincronizar seus arquivos.'}
           </p>
-          <button className="secondary-button" onClick={() => void load('', true)}>
-            <RefreshCw size={16} /> Tentar novamente
-          </button>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button className="primary-button" type="button" onClick={() => navigate('/configuracoes')}>
+              <Cloud size={16} /> Configurar meu MEGA
+            </button>
+            {status.configured && (
+              <button className="secondary-button" type="button" onClick={() => void load('', true)}>
+                <RefreshCw size={16} /> Tentar novamente
+              </button>
+            )}
+          </div>
         </div>
       </section>
     );
@@ -249,7 +261,9 @@ export function MegaBrowser({ companyId, compact = false }: Props) {
     <section className={`mega-browser ${compact ? 'compact' : ''}`}>
       <div className="mega-toolbar">
         <div className="mega-location">
-          <span className="mega-cloud-badge"><Cloud size={17} /> MEGA</span>
+          <span className="mega-cloud-badge">
+            <Cloud size={17} /> MEGA
+          </span>
           <div className="mega-breadcrumbs">
             {breadcrumbs.map((crumb, index) => (
               <span key={`${crumb.path}:${index}`}>
@@ -285,7 +299,11 @@ export function MegaBrowser({ companyId, compact = false }: Props) {
       <div className="mega-meta-row">
         <label className="search-field mega-search">
           <Search size={16} />
-          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar nesta pasta" />
+          <input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Buscar nesta pasta"
+          />
         </label>
         {status?.spaceUsed != null && status.spaceTotal != null && (
           <span className="mega-quota">
@@ -299,13 +317,18 @@ export function MegaBrowser({ companyId, compact = false }: Props) {
 
       <div
         className={`mega-dropzone ${dragging ? 'dragging' : ''}`}
-        onDragEnter={(event) => { event.preventDefault(); setDragging(true); }}
+        onDragEnter={(event) => {
+          event.preventDefault();
+          setDragging(true);
+        }}
         onDragOver={(event) => event.preventDefault()}
         onDragLeave={() => setDragging(false)}
         onDrop={handleDrop}
       >
         {loading && (
-          <div className="mega-overlay-loading"><span className="spinner" /> Atualizando arquivos...</div>
+          <div className="mega-overlay-loading">
+            <span className="spinner" /> Atualizando arquivos...
+          </div>
         )}
         {!loading && filtered.length === 0 && (
           <div className="mega-empty">
@@ -317,7 +340,10 @@ export function MegaBrowser({ companyId, compact = false }: Props) {
         {filtered.length > 0 && (
           <div className="mega-file-list">
             <div className="mega-file-head">
-              <span>Nome</span><span>Tamanho</span><span>Atualizado</span><span>Ações</span>
+              <span>Nome</span>
+              <span>Tamanho</span>
+              <span>Atualizado</span>
+              <span>Ações</span>
             </div>
             {filtered.map((item) => (
               <article key={item.id} className={item.type === 'folder' ? 'folder-row' : ''}>
@@ -335,12 +361,22 @@ export function MegaBrowser({ companyId, compact = false }: Props) {
                 <span>{item.updatedAt ? formatDate(item.updatedAt) : '—'}</span>
                 <div className="mega-row-actions">
                   {item.type === 'file' && canPreview(item) && (
-                    <button className="icon-action" title="Visualizar" disabled={busy} onClick={() => void preview(item)}>
+                    <button
+                      className="icon-action"
+                      title="Visualizar"
+                      disabled={busy}
+                      onClick={() => void preview(item)}
+                    >
                       <Eye size={16} />
                     </button>
                   )}
                   {item.type === 'file' && (
-                    <button className="icon-action" title="Baixar" disabled={busy} onClick={() => void download(item)}>
+                    <button
+                      className="icon-action"
+                      title="Baixar"
+                      disabled={busy}
+                      onClick={() => void download(item)}
+                    >
                       <Download size={16} />
                     </button>
                   )}
@@ -350,7 +386,12 @@ export function MegaBrowser({ companyId, compact = false }: Props) {
                     </button>
                   )}
                   {(item.type === 'file' || user?.role === 'ADMIN') && (
-                    <button className="icon-action danger" title="Mover para lixeira" disabled={busy} onClick={() => remove(item)}>
+                    <button
+                      className="icon-action danger"
+                      title="Mover para lixeira"
+                      disabled={busy}
+                      onClick={() => remove(item)}
+                    >
                       <Trash2 size={16} />
                     </button>
                   )}
@@ -360,7 +401,9 @@ export function MegaBrowser({ companyId, compact = false }: Props) {
           </div>
         )}
       </div>
-      <small className="mega-safety-note">Exclusões são enviadas para a lixeira do MEGA, não apagadas permanentemente.</small>
+      <small className="mega-safety-note">
+        Exclusões são enviadas para a lixeira do MEGA, não apagadas permanentemente.
+      </small>
     </section>
   );
 }

@@ -14,19 +14,16 @@ export const options = async (req: Request, res: Response) => {
   const items = await listCompanyOptions(req.auth!);
   res.json({ success: true, data: items });
 };
-
 export const index = async (req: Request, res: Response) => {
   const result = await listCompanies(req.query as unknown as Parameters<typeof listCompanies>[0], req.auth!);
   res.json({ success: true, data: result });
 };
-
 export const show = async (req: Request, res: Response) => {
   const company = await getCompany(req.params.id as string, req.auth!);
   res.json({ success: true, data: company });
 };
-
 export const create = async (req: Request, res: Response) => {
-  const company = await createCompany(req.body);
+  const company = await createCompany(req.body, req.auth!);
   await recordAudit(req.auth!, {
     action: AuditActions.CREATE,
     entityType: 'COMPANY',
@@ -36,10 +33,9 @@ export const create = async (req: Request, res: Response) => {
   });
   res.status(201).json({ success: true, message: 'Empresa cadastrada', data: company });
 };
-
 export const update = async (req: Request, res: Response) => {
   await getCompany(req.params.id as string, req.auth!);
-  const company = await updateCompany(req.params.id as string, req.body);
+  const company = await updateCompany(req.params.id as string, req.body, req.auth!);
   await recordAudit(req.auth!, {
     action: AuditActions.UPDATE,
     entityType: 'COMPANY',
@@ -50,12 +46,10 @@ export const update = async (req: Request, res: Response) => {
   });
   res.json({ success: true, message: 'Empresa atualizada', data: company });
 };
-
 export const documents = async (req: Request, res: Response) => {
   const items = await getCompanyDocuments(req.params.id as string, req.auth!);
   res.json({ success: true, data: items });
 };
-
 export const platforms = async (req: Request, res: Response) => {
   const items = await getCompanyPlatformSummary(req.params.id as string, req.auth!);
   res.json({ success: true, data: items });

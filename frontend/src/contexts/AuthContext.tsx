@@ -1,13 +1,14 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { rawApi, setAccessToken, setRefreshHandler } from '../services/api';
-import type { ApiResponse, User } from '../types';
+import type { ApiResponse, OrganizationAccess, User } from '../types';
 
 type AuthContextValue = {
   user: User | null;
   loading: boolean;
   activeCompanyId: string | null;
   setActiveCompanyId: (companyId: string | null) => void;
-  login: (email: string, password: string) => Promise<void>;
+  organizationLogin: (email: string, password: string) => Promise<OrganizationAccess>;
+  memberLogin: (organizationToken: string, userId: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
 };
 
@@ -20,7 +21,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const applyUser = useCallback((nextUser: User | null) => {
     setUser(nextUser);
-    if (!nextUser) return setActiveCompanyId(null);
+    if (!nextUser) {
+      setActiveCompanyId(null);
+      return;
+    }
 
     const stored = window.localStorage.getItem(`active-company:${nextUser.id}`);
     const activeAssignments = nextUser.assignedCompanies.filter((company) => company.active);
@@ -55,10 +59,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => window.clearTimeout(timer);
   }, [refresh]);
 
-  const login = useCallback(
-    async (email: string, password: string) => {
-      const response = await rawApi.post<ApiResponse<{ accessToken: string; user: User }>>('/auth/login', {
-        email,
+  const organizationLogin = useCallback(async (email: string, password: string) => {
+    const response = await rawApi.post<ApiResponse<OrganizationAccess>>('/auth/organization-login', {
+      email,
+      password
+    });
+    return response.data.data;
+  }, []);
+
+  const memberLogin = useCallback(
+    async (organizationToken: string, userId: string, password: string) => {
+      const response = await rawApi.post<ApiResponse<{ accessToken: string; user: User }>>('/auth/member-login', {
+        organizationToken,
+        userId,
         password
       });
       setAccessToken(response.data.data.accessToken);
@@ -89,9 +102,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo(
-    () => ({ user, loading, activeCompanyId, setActiveCompanyId: selectCompany, login, logout }),
-    [user, loading, activeCompanyId, selectCompany, login, logout]
+    () => ({
+      user,
+      loading,
+      activeCompanyId,
+      setActiveCompanyId: selectCompany,
+      organizationLogin,
+      memberLogin,
+      logout
+    }),
+    [user, loading, activeCompanyId, selectCompany, organizationLogin, memberLogin, logout]
   );
+
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

@@ -3,13 +3,29 @@ import { z } from 'zod';
 const companyId = z.string().uuid().optional();
 const relativePath = z.string().max(1000).default('');
 
+export const megaAccountConnectSchema = z.object({
+  body: z.object({
+    email: z
+      .string()
+      .email('Informe o e-mail da sua conta MEGA')
+      .transform((value) => value.trim().toLowerCase()),
+    password: z.string().min(1, 'Informe a senha da sua conta MEGA').max(256),
+    rootFolder: z.string().trim().max(1000).optional().default('')
+  }),
+  params: z.object({}),
+  query: z.object({})
+});
+
 export const megaBrowseSchema = z.object({
   body: z.object({}),
   params: z.object({}),
   query: z.object({
     companyId,
     path: relativePath,
-    refresh: z.enum(['true', 'false']).optional().transform((value) => value === 'true')
+    refresh: z
+      .enum(['true', 'false'])
+      .optional()
+      .transform((value) => value === 'true')
   })
 });
 
