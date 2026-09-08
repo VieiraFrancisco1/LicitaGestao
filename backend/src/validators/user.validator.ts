@@ -1,13 +1,13 @@
 import { UserRole } from '@prisma/client';
 import { z } from 'zod';
 
-const companyFields = z.object({
-  role: z.nativeEnum(UserRole),
-  companyId: z.string().uuid().nullable().optional(),
-  companyIds: z.array(z.string().uuid()).max(100).optional().default([])
-});
+type CompanyRuleValue = {
+  role: UserRole;
+  companyId?: string | null;
+  companyIds: string[];
+};
 
-const validateCompanyRules = (value: z.infer<typeof companyFields>, ctx: z.RefinementCtx) => {
+const validateCompanyRules = (value: CompanyRuleValue, ctx: z.RefinementCtx) => {
   if (value.role === UserRole.EMPRESA && !value.companyId) {
     ctx.addIssue({ code: 'custom', path: ['companyId'], message: 'Usuário EMPRESA deve possuir uma empresa' });
   }
