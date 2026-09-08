@@ -13,6 +13,7 @@ import type {
 const DESKTOP_NOTIFIED_STORAGE_KEY = 'licitagestao.desktop-notifications.v2';
 
 type DesktopPermission = NotificationPermission | 'unsupported';
+type SelectedAlertKey = `gmail:${string}` | `deadline:${string}`;
 
 function formatDate(date: string) {
   const [year, month, day] = date.split('-');
@@ -80,10 +81,16 @@ function gmailDesktopBody(item: GmailConvocationAlert) {
   return `${item.companyName} · ${subject} · De: ${item.sender}`;
 }
 
+const gmailSelectionKey = (item: GmailConvocationAlert): SelectedAlertKey => `gmail:${item.messageId}`;
+const deadlineSelectionKey = (item: DeadlineAlert): SelectedAlertKey => `deadline:${item.key}`;
+
 export function DeadlineNotifications() {
   const [open, setOpen] = useState(false);
   const [deadlines, setDeadlines] = useState<DeadlineData | null>(null);
   const [gmailAlerts, setGmailAlerts] = useState<GmailConvocationAlertData | null>(null);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedAlerts, setSelectedAlerts] = useState<Set<SelectedAlertKey>>(() => new Set());
+  const [deletingSelected, setDeletingSelected] = useState(false);
   const [desktopPermission, setDesktopPermission] = useState<DesktopPermission>(() => {
     if (typeof window === 'undefined' || !('Notification' in window)) return 'unsupported';
     return Notification.permission;
@@ -334,8 +341,67 @@ export function DeadlineNotifications() {
     }
   };
 
-  const deadlineItems = deadlines?.items.slice(0, 5) ?? [];
-  const gmailItems = gmailAlerts?.items.slice(0, 5) ?? [];
+  const gmailItems = gmailAlerts?.items ?? [];
+  const deadlineItems = deadlines?.items ?? [];
+  const allSelectionKeys = useMemo<SelectedAlertKey[]>(
+    () => [
+      ...gmailItems.map((item) => gmailSelectionKey(item)),
+      ...deadlineItems.map((item) => deadlineSelectionKey(item))
+    ],
+    [gmailItems, deadlineItems]
+  );
+  const selectedCount = selectedAlerts.size;
+  const allSelected = allSelectionKeys.length > 0 && allSelectionKeys.every((key) => selectedAlerts.has(key));
+
+  const toggleSelection = (key: SelectedAlertKey) => {
+    setSelectedAlerts((current) => {
+      const next = new Set(current);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    setSelectedAlerts(allSelected ? new Set<SelectedAlertKey>() : new Set(allSelectionKeys));
+  };
+
+  const cancelSelection = () => {
+    setSelectionMode(false);
+    setSelectedAlerts(new Set<SelectedAlertKey>());
+  };
+
+  const deleteSelectedAlerts = async () => {
+    const selectedGmail = gmailItems.filter((item) => selectedAlerts.has(gmailSelectionKey(item)));
+    const selectedDeadlines = deadlineItems.filter((item) => selectedAlerts.has(deadlineSelectionKey(item)));
+    const total = selectedGmail.length + selectedDeadlines.length;
+    if (total === 0 || deletingSelected) return;
+
+    const confirmed = window.confirm(
+      `Apagar ${total} notificação${total === 1 ? '' : 'ões'} selecionada${total === 1 ? '' : 's'}?\n\n` +
+        'Isso remove os alertas da sua lista, mas não apaga o e-mail nem a licitação.'
+    );
+    if (!confirmed) return;
+
+    setDeletingSelected(true);
+    try {
+      const results = await Promise.allSettled([
+        ...selectedGmail.map((item) => api.delete(`/integrations/gmail/alerts/${item.messageId}`)),
+        ...selectedDeadlines.map((item) => api.post('/deadlines/dismiss', { alertKey: item.key }))
+      ]);
+      const failed = results.filter((result) => result.status === 'rejected').length;
+      await loadAlerts();
+      cancelSelection();
+      if (failed > 0) {
+        window.alert(
+          `${failed} notificação${failed === 1 ? '' : 'ões'} não ${failed === 1 ? 'pôde' : 'puderam'} ser apagada${failed === 1 ? '' : 's'}. A lista foi atualizada.`
+        );
+      }
+    } finally {
+      setDeletingSelected(false);
+    }
+  };
+
   const unread = (deadlines?.unread ?? 0) + (gmailAlerts?.unread ?? 0);
   const hasItems = deadlineItems.length > 0 || gmailItems.length > 0;
   const permissionDescription = useMemo(
@@ -343,13 +409,18 @@ export function DeadlineNotifications() {
     []
   );
 
+  const togglePopover = () => {
+    if (open) cancelSelection();
+    setOpen((value) => !value);
+  };
+
   return (
     <div className="notification-area">
       <button
         className={`notification-button ${unread ? 'has-unread' : ''}`}
         aria-label="Notificações"
         title="Notificações"
-        onClick={() => setOpen((value) => !value)}
+        onClick={togglePopover}
       >
         <Bell size={20} />
         {!!unread && <span className="notification-count">{unread > 99 ? '99+' : unread}</span>}
@@ -359,16 +430,88 @@ export function DeadlineNotifications() {
           <div className="notification-popover-header">
             <div>
               <strong>Alertas</strong>
-              <small>{unread} não lido(s)</small>
+              <small>
+                {selectionMode
+                  ? `${selectedCount} selecionada(s)`
+                  : `${unread} não lido(s)`}
+              </small>
             </div>
-            {!!unread && (
-              <button onClick={() => void markAll()} title="Marcar todos como lidos">
-                <CheckCheck size={17} />
-              </button>
-            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              {!selectionMode && !!unread && (
+                <button onClick={() => void markAll()} title="Marcar todos como lidos">
+                  <CheckCheck size={17} />
+                </button>
+              )}
+              {hasItems && (
+                <button
+                  onClick={() => {
+                    if (selectionMode) cancelSelection();
+                    else {
+                      setSelectedAlerts(new Set<SelectedAlertKey>());
+                      setSelectionMode(true);
+                    }
+                  }}
+                  title={selectionMode ? 'Cancelar seleção' : 'Selecionar notificações para apagar'}
+                  aria-label={selectionMode ? 'Cancelar seleção' : 'Selecionar notificações para apagar'}
+                  style={selectionMode ? { color: '#b42318', background: '#fff1f2' } : undefined}
+                >
+                  <Trash2 size={17} />
+                </button>
+              )}
+            </div>
           </div>
 
-          {desktopPermission === 'default' && (
+          {selectionMode && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 10,
+                padding: '10px 12px',
+                borderBottom: '1px solid var(--line)',
+                background: '#f8fafc'
+              }}
+            >
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  minWidth: 0,
+                  color: '#344054',
+                  fontSize: 12,
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  onChange={toggleSelectAll}
+                  aria-label="Selecionar todas as notificações"
+                />
+                <span>{allSelected ? 'Desmarcar todas' : 'Selecionar todas'}</span>
+              </label>
+              <button
+                className="secondary-button"
+                disabled={selectedCount === 0 || deletingSelected}
+                onClick={() => void deleteSelectedAlerts()}
+                style={{
+                  padding: '7px 10px',
+                  background: '#fff1f2',
+                  color: '#b42318',
+                  border: '1px solid #fecdd3',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                <Trash2 size={14} />
+                {deletingSelected ? 'Apagando...' : `Apagar (${selectedCount})`}
+              </button>
+            </div>
+          )}
+
+          {!selectionMode && desktopPermission === 'default' && (
             <button className="desktop-notification-enable" onClick={() => void requestDesktopPermission()}>
               <MonitorCheck size={17} />
               <span>
@@ -377,19 +520,19 @@ export function DeadlineNotifications() {
               </span>
             </button>
           )}
-          {desktopPermission === 'granted' && (
+          {!selectionMode && desktopPermission === 'granted' && (
             <div className="desktop-notification-status enabled">
               <MonitorCheck size={16} />
               <span>Notificações do computador ativadas</span>
             </div>
           )}
-          {desktopPermission === 'denied' && (
+          {!selectionMode && desktopPermission === 'denied' && (
             <div className="desktop-notification-status blocked">
               As notificações estão bloqueadas no navegador. Libere a permissão deste site para receber
               pop-ups.
             </div>
           )}
-          {desktopPermission === 'unsupported' && (
+          {!selectionMode && desktopPermission === 'unsupported' && (
             <div className="desktop-notification-status blocked">
               Este navegador não disponibilizou notificações do computador para esta página.
             </div>
@@ -402,66 +545,131 @@ export function DeadlineNotifications() {
                 <MailWarning size={14} /> E-mail
               </div>
             )}
-            {gmailItems.map((item) => (
-              <div key={item.key} className={`notification-item gmail ${item.read ? 'read' : 'unread'}`}>
-                <button className="notification-item-open" onClick={() => void openGmailAlert(item)}>
-                  <span className="deadline-dot urgent" />
-                  <span>
-                    <strong>{item.subject || 'Aviso importante'}</strong>
-                    <small>
-                      {item.companyName} · {formatDateTime(item.receivedAt)}
-                    </small>
-                    <em>
-                      {item.bidId ? 'Aviso vinculado à licitação' : 'Aviso importante recebido por e-mail'}
-                    </em>
-                  </span>
-                </button>
-                <button
-                  className="notification-dismiss"
-                  title="Apagar notificação"
-                  aria-label={`Apagar notificação ${item.subject || 'Aviso importante'}`}
-                  onClick={() => void dismissGmailAlert(item)}
+            {gmailItems.map((item) => {
+              const selectionKey = gmailSelectionKey(item);
+              const selected = selectedAlerts.has(selectionKey);
+              return (
+                <div
+                  key={item.key}
+                  className={`notification-item gmail ${item.read ? 'read' : 'unread'}`}
+                  style={selectionMode && selected ? { background: '#eef4ff' } : undefined}
                 >
-                  <Trash2 size={15} />
-                </button>
-              </div>
-            ))}
+                  {selectionMode && (
+                    <label
+                      style={{
+                        display: 'grid',
+                        placeItems: 'center',
+                        padding: '0 2px 0 12px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selected}
+                        onChange={() => toggleSelection(selectionKey)}
+                        aria-label={`Selecionar notificação ${item.subject || 'Aviso importante'}`}
+                      />
+                    </label>
+                  )}
+                  <button
+                    className="notification-item-open"
+                    onClick={() =>
+                      selectionMode ? toggleSelection(selectionKey) : void openGmailAlert(item)
+                    }
+                  >
+                    <span className="deadline-dot urgent" />
+                    <span>
+                      <strong>{item.subject || 'Aviso importante'}</strong>
+                      <small>
+                        {item.companyName} · {formatDateTime(item.receivedAt)}
+                      </small>
+                      <em>
+                        {item.bidId ? 'Aviso vinculado à licitação' : 'Aviso importante recebido por e-mail'}
+                      </em>
+                    </span>
+                  </button>
+                  {!selectionMode && (
+                    <button
+                      className="notification-dismiss"
+                      title="Apagar notificação"
+                      aria-label={`Apagar notificação ${item.subject || 'Aviso importante'}`}
+                      onClick={() => void dismissGmailAlert(item)}
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
             {deadlineItems.length > 0 && <div className="notification-section-label">Prazos</div>}
-            {deadlineItems.map((item) => (
-              <div key={item.key} className={`notification-item ${item.read ? 'read' : 'unread'}`}>
-                <button
-                  className="notification-item-open"
-                  onClick={() => void openDeadline(item.key, item.tenderId)}
+            {deadlineItems.map((item) => {
+              const selectionKey = deadlineSelectionKey(item);
+              const selected = selectedAlerts.has(selectionKey);
+              return (
+                <div
+                  key={item.key}
+                  className={`notification-item ${item.read ? 'read' : 'unread'}`}
+                  style={selectionMode && selected ? { background: '#eef4ff' } : undefined}
                 >
-                  <span className={`deadline-dot ${item.severity.toLowerCase()}`} />
-                  <span>
-                    <strong>{item.title}</strong>
-                    <small>
-                      {item.noticeNumber || item.processNumber || item.municipality} · {formatDate(item.date)}
-                    </small>
-                    <em>{relativeLabel(item.days)}</em>
-                  </span>
-                </button>
-                <button
-                  className="notification-dismiss"
-                  title="Apagar notificação"
-                  aria-label={`Apagar notificação ${item.title}`}
-                  onClick={() => void dismissDeadline(item)}
-                >
-                  <Trash2 size={15} />
-                </button>
-              </div>
-            ))}
+                  {selectionMode && (
+                    <label
+                      style={{
+                        display: 'grid',
+                        placeItems: 'center',
+                        padding: '0 2px 0 12px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selected}
+                        onChange={() => toggleSelection(selectionKey)}
+                        aria-label={`Selecionar notificação ${item.title}`}
+                      />
+                    </label>
+                  )}
+                  <button
+                    className="notification-item-open"
+                    onClick={() =>
+                      selectionMode
+                        ? toggleSelection(selectionKey)
+                        : void openDeadline(item.key, item.tenderId)
+                    }
+                  >
+                    <span className={`deadline-dot ${item.severity.toLowerCase()}`} />
+                    <span>
+                      <strong>{item.title}</strong>
+                      <small>
+                        {item.noticeNumber || item.processNumber || item.municipality} · {formatDate(item.date)}
+                      </small>
+                      <em>{relativeLabel(item.days)}</em>
+                    </span>
+                  </button>
+                  {!selectionMode && (
+                    <button
+                      className="notification-dismiss"
+                      title="Apagar notificação"
+                      aria-label={`Apagar notificação ${item.title}`}
+                      onClick={() => void dismissDeadline(item)}
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
           </div>
-          <button
-            className="notification-view-all"
-            onClick={() => {
-              setOpen(false);
-              navigate('/prazos');
-            }}
-          >
-            Ver todos os prazos
-          </button>
+          {!selectionMode && (
+            <button
+              className="notification-view-all"
+              onClick={() => {
+                setOpen(false);
+                navigate('/prazos');
+              }}
+            >
+              Ver todos os prazos
+            </button>
+          )}
         </div>
       )}
     </div>
