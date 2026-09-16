@@ -18,7 +18,16 @@ import { Link } from 'react-router-dom';
 import { Modal } from '../components/Modal';
 import { useAuth } from '../contexts/AuthContext';
 import { api, errorMessage } from '../services/api';
-import type { ApiResponse, BidProgress, BidSituation, CompanySummary, Paginated, Tender } from '../types';
+import type {
+  ApiResponse,
+  BidProgress,
+  BidSituation,
+  CompanySummary,
+  Paginated,
+  Tender,
+  TenderFilterOptions,
+  TenderWorkflowStatus
+} from '../types';
 import { formatCurrency, formatDate, progressOptions, situationOptions } from '../utils/bid';
 
 const monthOptions = [
@@ -62,7 +71,9 @@ export function TendersPage() {
   const [data, setData] = useState<Paginated<Tender> | null>(null);
   const [companies, setCompanies] = useState<CompanySummary[]>([]);
   const [search, setSearch] = useState('');
-  const [listStatus, setListStatus] = useState<'PENDENTE' | 'ANEXADA'>('PENDENTE');
+  const [workflowStatus, setWorkflowStatus] = useState<TenderWorkflowStatus>('PENDENTE');
+  const [city, setCity] = useState('');
+  const [cityOptions, setCityOptions] = useState<string[]>([]); // LICITAGESTAO_WORKFLOW_CITY_LAYOUT_V3_PAGE
   const [day, setDay] = useState('all');
   const [month, setMonth] = useState(String(currentMonth));
   const [year, setYear] = useState(currentYear);
@@ -85,7 +96,8 @@ export function TendersPage() {
       const response = await api.get<ApiResponse<Paginated<Tender>>>('/tenders', {
         params: {
           search: search || undefined,
-          listStatus,
+          workflowStatus,
+          municipality: city || undefined,
           ...range,
           page,
           pageSize: 20
@@ -97,12 +109,44 @@ export function TendersPage() {
     } finally {
       setLoading(false);
     }
-  }, [search, listStatus, day, month, year, page]);
+  }, [search, workflowStatus, city, day, month, year, page]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => void load(), 250);
     return () => window.clearTimeout(timer);
   }, [load]);
+
+  const loadCityOptions = useCallback(async () => {
+    try {
+      const range = dateRange(year, month, day);
+      const response = await api.get<ApiResponse<TenderFilterOptions>>('/tenders/filter-options', {
+        params: {
+          workflowStatus,
+          ...range
+        }
+      });
+      const municipalities = response.data.data.municipalities ?? [];
+      setCityOptions(municipalities);
+      if (city && !municipalities.includes(city)) {
+        setCity('');
+        setPage(1);
+      }
+    } catch (err) {
+      setError(errorMessage(err));
+    }
+  }, [workflowStatus, day, month, year, city]);
+
+  useEffect(() => {
+    void loadCityOptions();
+  }, [loadCityOptions]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      void load();
+      void loadCityOptions();
+    }, 60_000);
+    return () => window.clearInterval(timer);
+  }, [load, loadCityOptions]);
 
   useEffect(() => {
     void api
@@ -181,25 +225,27 @@ export function TendersPage() {
       {error && <div className="alert alert-error">{error}</div>}
 
       <div className="tender-status-tabs">
-        <button
-          className={listStatus === 'PENDENTE' ? 'active' : ''}
-          onClick={() => {
-            setListStatus('PENDENTE');
-            setPage(1);
-          }}
-        >
-          Pendentes
-        </button>
-        <button
-          className={listStatus === 'ANEXADA' ? 'active' : ''}
-          onClick={() => {
-            setListStatus('ANEXADA');
-            setPage(1);
-          }}
-        >
-          Já anexadas
-        </button>
-      </div>
+        {(
+          [
+            ['PENDENTE', 'Pendentes'],
+            ['ANEXADA', 'Já anexadas'],
+            ['INICIADA', 'Iniciadas'],
+            ['SUSPENSA', 'Suspensas'],
+            ['CONVOCADA', 'Convocadas']
+          ] as Array<[TenderWorkflowStatus, string]>
+        ).map(([status, label]) => (
+          <button
+            key={status}
+            className={workflowStatus === status ? 'active' : ''}
+            onClick={() => {
+              setWorkflowStatus(status);
+              setCity('');
+              setPage(1);
+            }}
+          >
+            {label}
+          </button>
+        ))}      </div>
 
       <section className="table-card tender-control-card">
         <div className="tender-date-filter-bar">
@@ -218,6 +264,23 @@ export function TendersPage() {
                 {dayOptions.map((option) => (
                   <option key={option} value={option}>
                     {String(option).padStart(2, '0')}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="tender-city-filter">
+              <span>Cidade</span>
+              <select
+                value={city}
+                onChange={(event) => {
+                  setCity(event.target.value);
+                  setPage(1);
+                }}
+              >
+                <option value="">Todas</option>
+                {cityOptions.map((municipality) => (
+                  <option key={municipality} value={municipality}>
+                    {municipality}
                   </option>
                 ))}
               </select>
@@ -276,6 +339,7 @@ export function TendersPage() {
             className="secondary-button"
             onClick={() => {
               setSearch('');
+              setCity('');
               setDay('all');
               setMonth(String(currentMonth));
               setYear(currentYear);
@@ -349,6 +413,19 @@ export function TendersPage() {
                           >
                             Garantia: {tender.guaranteeType === 'NAO_EXIGIDA' ? 'Não' : 'Sim'}
                           </small>
+                          {tender.workflowStatus === 'CONVOCADA' && (
+                            <small className="tender-workflow-note convoked">
+                              {(tender.convokedCompanies?.length ?? 0) === 1 ? 'Convocada: ' : 'Convocadas: '}
+                              {(tender.convokedCompanies?.length ?? 0) > 0
+                                ? tender.convokedCompanies!.map((company) => company.name).join(', ')
+                                : 'empresa identificada pelo aviso'}
+                            </small>
+                          )}
+                          {tender.workflowStatus === 'SUSPENSA' && (
+                            <small className="tender-workflow-note suspended">
+                              Suspensa por aviso recebido
+                            </small>
+                          )}
                         </div>
                       </td>
                       <td className="tender-date-cell">

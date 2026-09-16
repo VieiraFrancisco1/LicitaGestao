@@ -5828,3 +5828,64 @@ td small {
     min-height: 0;
   }
 }
+
+
+/* LICITAGESTAO_WORKFLOW_CITY_LAYOUT_V3_CSS */
+.tender-status-tabs {
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+
+.tender-date-selectors {
+  flex-wrap: wrap;
+}
+
+.tender-city-filter select {
+  min-width: 180px;
+}
+
+.organized-tenders-table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.organized-tenders-table thead th:not(:last-child),
+.organized-tenders-table tbody td:not(:last-child) {
+  border-right: 1px solid #cbd6e5;
+}
+
+.organized-tenders-table tbody tr + tr td {
+  border-top: 2px solid #c4cfdd;
+}
+
+.organized-tenders-table thead th {
+  border-bottom: 1px solid #c4cfdd;
+}
+
+.organized-tenders-table tbody tr:nth-child(even) td {
+  background: #fbfcfe;
+}
+
+.organized-tenders-table tbody tr:hover td {
+  background: #f5f9ff;
+}
+
+.tender-workflow-note {
+  margin-top: 4px !important;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.tender-workflow-note.convoked {
+  color: #8a4b08;
+}
+
+.tender-workflow-note.suspended {
+  color: #b42318;
+}
+
+@media (max-width: 980px) {
+  .tender-city-filter select {
+    min-width: 150px;
+  }
+}

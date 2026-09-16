@@ -3,6 +3,15 @@ import { prisma } from '../config/database.js';
 import { AppError } from '../utils/app-error.js';
 import { requireOrganizationId, type AuthScope } from './access.service.js';
 
+// LICITAGESTAO_WORKFLOW_CITY_LAYOUT_V3_SERVICE
+export type TenderWorkflowStatus = 'PENDENTE' | 'ANEXADA' | 'INICIADA' | 'SUSPENSA' | 'CONVOCADA';
+
+export type TenderFilterOptionsQuery = {
+  workflowStatus?: TenderWorkflowStatus;
+  dateFrom?: Date;
+  dateTo?: Date;
+};
+
 export type TenderInput = {
   modality?: string | null;
   noticeNumber?: string | null;
@@ -30,6 +39,7 @@ export type TenderQuery = {
   municipality?: string;
   platformId?: string;
   listStatus?: TenderListStatus;
+  workflowStatus?: TenderWorkflowStatus;
   dateFrom?: Date;
   dateTo?: Date;
   page: number;
@@ -151,15 +161,189 @@ export const getTender = async (id: string, auth: AuthScope) => {
   return (await addAttachmentProgress([tender]))[0]!;
 };
 
+const normalizeWorkflowText = (value: string | null | undefined) =>
+  (value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+
+type WorkflowEventType = 'SUSPENDED' | 'RESUMED' | 'CONVOCATED';
+
+const classifyWorkflowMessage = (message: {
+  subject: string | null;
+  snippet: string | null;
+  textContent: string | null;
+  convocationReason: string | null;
+}): { type: WorkflowEventType; reason: string } | null => {
+  const combined = normalizeWorkflowText(
+    [message.subject, message.snippet, message.textContent, message.convocationReason]
+      .filter(Boolean)
+      .join('\n')
+  );
+
+  const resumedTerms = [
+    'retorno da suspensao',
+    'retorno de suspensao',
+    'volta da suspensao',
+    'fim da suspensao',
+    'levantamento da suspensao',
+    'retomada do certame',
+    'retomada da sessao',
+    'sessao retomada',
+    'reabertura da sessao',
+    'sessao reaberta',
+    'reinicio da sessao',
+    'reinicio do certame',
+    'prosseguimento do certame',
+    'prosseguimento da sessao',
+    'continuidade do certame',
+    'continuidade da sessao',
+    'nova data da sessao'
+  ];
+
+  const resumed = resumedTerms.find((term) => combined.includes(term));
+  if (resumed) return { type: 'RESUMED', reason: resumed };
+
+  const suspendedTerms = [
+    'aviso de suspensao',
+    'suspensao do certame',
+    'suspensao da sessao',
+    'certame suspenso',
+    'sessao suspensa',
+    'licitacao suspensa',
+    'processo suspenso',
+    'fica suspenso',
+    'fica suspensa'
+  ];
+
+  const suspended = suspendedTerms.find((term) => combined.includes(term));
+  if (suspended) return { type: 'SUSPENDED', reason: suspended };
+
+  const convocationTerms = [
+    'termo de convocacao identificado',
+    'convocacao',
+    'convocado',
+    'convocada',
+    'convocamos',
+    'fica convocado',
+    'fica convocada',
+    'empresa convocada',
+    'empresa convocado',
+    'proposta readequada',
+    'readequacao da proposta',
+    'enviar proposta readequada',
+    'apresentar proposta readequada',
+    'enviar a readequada',
+    'enviar readequada',
+    'apresentar a readequada',
+    'proposta ajustada'
+  ];
+
+  const convocated = convocationTerms.find((term) => combined.includes(term));
+  if (convocated) return { type: 'CONVOCATED', reason: convocated };
+
+  return null;
+};
+
+const todayInFortaleza = () =>
+  new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Fortaleza',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(new Date());
+
+const addWorkflowMetadata = async <
+  T extends { id: string; sessionDate: Date; listStatus: TenderListStatus }
+>(
+  items: T[]
+) => {
+  if (items.length === 0) return [];
+
+  const messages = await prisma.emailMessage.findMany({
+    where: { tenderId: { in: items.map((item) => item.id) } },
+    select: {
+      tenderId: true,
+      companyId: true,
+      receivedAt: true,
+      subject: true,
+      snippet: true,
+      textContent: true,
+      convocationReason: true,
+      company: { select: { id: true, legalName: true, tradeName: true } }
+    },
+    orderBy: { receivedAt: 'asc' }
+  });
+
+  const messagesByTender = new Map<string, typeof messages>();
+  for (const message of messages) {
+    if (!message.tenderId) continue;
+    const current = messagesByTender.get(message.tenderId) ?? [];
+    current.push(message);
+    messagesByTender.set(message.tenderId, current);
+  }
+
+  const today = todayInFortaleza();
+
+  return items.map((item) => {
+    const tenderMessages = messagesByTender.get(item.id) ?? [];
+    let latestEventType: WorkflowEventType | null = null;
+    let latestEventReason: string | null = null;
+    let latestEventAt: Date | null = null;
+    const convokedCompanies = new Map<string, { id: string; name: string }>();
+
+    for (const message of tenderMessages) {
+      const event = classifyWorkflowMessage(message);
+      if (!event) continue;
+
+      latestEventType = event.type;
+      latestEventReason = event.reason;
+      latestEventAt = message.receivedAt;
+
+      if (event.type === 'CONVOCATED') {
+        convokedCompanies.set(message.companyId, {
+          id: message.company.id,
+          name: message.company.tradeName || message.company.legalName
+        });
+      }
+    }
+
+    let workflowStatus: TenderWorkflowStatus;
+
+    if (latestEventType === 'SUSPENDED') {
+      workflowStatus = 'SUSPENSA';
+    } else if (latestEventType === 'CONVOCATED') {
+      workflowStatus = 'CONVOCADA';
+    } else if (latestEventType === 'RESUMED') {
+      workflowStatus = 'INICIADA';
+    } else if (item.sessionDate.toISOString().slice(0, 10) <= today) {
+      workflowStatus = 'INICIADA';
+    } else {
+      workflowStatus = item.listStatus === TenderListStatus.ANEXADA ? 'ANEXADA' : 'PENDENTE';
+    }
+
+    return {
+      ...item,
+      workflowStatus,
+      workflowEventAt: latestEventAt,
+      workflowEventReason: latestEventReason,
+      convokedCompanies: Array.from(convokedCompanies.values())
+    };
+  });
+};
+
+const tenderDateWhere = (dateFrom?: Date, dateTo?: Date): Prisma.TenderWhereInput =>
+  dateFrom || dateTo
+    ? { sessionDate: { ...(dateFrom ? { gte: dateFrom } : {}), ...(dateTo ? { lte: dateTo } : {}) } }
+    : {};
+
 export const listTenders = async (query: TenderQuery, auth: AuthScope) => {
   const where: Prisma.TenderWhereInput = {
     organizationId: requireOrganizationId(auth),
-    ...(query.municipality ? { municipality: { contains: query.municipality, mode: 'insensitive' } } : {}),
+    ...(query.municipality ? { municipality: { equals: query.municipality, mode: 'insensitive' } } : {}),
     ...(query.platformId ? { platformId: query.platformId } : {}),
-    ...(query.listStatus ? { listStatus: query.listStatus } : {}),
-    ...(query.dateFrom || query.dateTo
-      ? { sessionDate: { ...(query.dateFrom ? { gte: query.dateFrom } : {}), ...(query.dateTo ? { lte: query.dateTo } : {}) } }
-      : {}),
+    ...(query.listStatus && !query.workflowStatus ? { listStatus: query.listStatus } : {}),
+    ...tenderDateWhere(query.dateFrom, query.dateTo),
     ...(query.search
       ? {
           OR: [
@@ -172,18 +356,59 @@ export const listTenders = async (query: TenderQuery, auth: AuthScope) => {
         }
       : {})
   };
+
   const orderBy = { [query.sort]: query.direction } as Prisma.TenderOrderByWithRelationInput;
-  const [items, total] = await prisma.$transaction([
-    prisma.tender.findMany({
-      where,
-      orderBy,
-      skip: (query.page - 1) * query.pageSize,
-      take: query.pageSize,
-      include: includeTender(auth)
-    }),
-    prisma.tender.count({ where })
-  ]);
-  return { items: await addAttachmentProgress(items), total, page: query.page, pageSize: query.pageSize, pages: Math.ceil(total / query.pageSize) };
+
+  const rawItems = await prisma.tender.findMany({
+    where,
+    orderBy,
+    include: includeTender(auth)
+  });
+
+  const withAttachments = await addAttachmentProgress(rawItems);
+  const withWorkflow = await addWorkflowMetadata(withAttachments);
+  const filtered = query.workflowStatus
+    ? withWorkflow.filter((item) => item.workflowStatus === query.workflowStatus)
+    : withWorkflow;
+
+  const total = filtered.length;
+  const start = (query.page - 1) * query.pageSize;
+  const items = filtered.slice(start, start + query.pageSize);
+
+  return {
+    items,
+    total,
+    page: query.page,
+    pageSize: query.pageSize,
+    pages: Math.ceil(total / query.pageSize)
+  };
+};
+
+export const listTenderFilterOptions = async (query: TenderFilterOptionsQuery, auth: AuthScope) => {
+  const baseItems = await prisma.tender.findMany({
+    where: {
+      organizationId: requireOrganizationId(auth),
+      ...tenderDateWhere(query.dateFrom, query.dateTo)
+    },
+    select: {
+      id: true,
+      municipality: true,
+      sessionDate: true,
+      listStatus: true
+    },
+    orderBy: { municipality: 'asc' }
+  });
+
+  const withWorkflow = await addWorkflowMetadata(baseItems);
+  const filtered = query.workflowStatus
+    ? withWorkflow.filter((item) => item.workflowStatus === query.workflowStatus)
+    : withWorkflow;
+
+  const municipalities = Array.from(
+    new Set(filtered.map((item) => item.municipality.trim()).filter(Boolean))
+  ).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+
+  return { municipalities };
 };
 
 const addAttachmentProgress = async <T extends { id: string; _count: { bids: number } }>(items: T[]) => {

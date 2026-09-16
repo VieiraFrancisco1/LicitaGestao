@@ -3,6 +3,7 @@ import {
   createTender,
   deleteTender,
   getTender,
+  listTenderFilterOptions,
   listTenders,
   setSpreadsheetReady,
   setSpreadsheetResponsibility,
@@ -15,6 +16,15 @@ import { relinkPotentialConvocationsForTender } from '../services/gmail.service.
 
 export const index = async (req: Request, res: Response) => {
   const result = await listTenders(req.query as unknown as Parameters<typeof listTenders>[0], req.auth!);
+  res.json({ success: true, data: result });
+};
+
+// LICITAGESTAO_WORKFLOW_CITY_LAYOUT_V3_CONTROLLER
+export const filterOptions = async (req: Request, res: Response) => {
+  const result = await listTenderFilterOptions(
+    req.query as unknown as Parameters<typeof listTenderFilterOptions>[0],
+    req.auth!
+  );
   res.json({ success: true, data: result });
 };
 

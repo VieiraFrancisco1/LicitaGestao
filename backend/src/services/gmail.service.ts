@@ -320,6 +320,10 @@ function evaluateCandidate(candidate: MatchCandidate, message: MatchMessage) {
   if (processMatch) score += 100;
   if (noticeMatch) score += 70;
   if (municipalityMatch) score += 18;
+  // LICITAGESTAO_WORKFLOW_CITY_LAYOUT_V3_GMAIL_MATCH
+  // Município + número da concorrência/edital tornam o vínculo ainda mais seguro.
+  if (municipalityMatch && noticeMatch) score += 45;
+  if (municipalityMatch && processMatch) score += 30;
   if (modalityMatch) score += 12;
   if (platformMatch) score += 12;
   score += Math.min(keywordMatches, 3) * 4;

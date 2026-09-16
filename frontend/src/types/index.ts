@@ -66,6 +66,13 @@ export type BidSituation =
 
 export type GuaranteeType = 'NAO_EXIGIDA' | 'APOLICE' | 'PROPOSTA_INICIAL' | 'FIANCA' | 'CAUCAO' | 'OUTRO';
 
+// LICITAGESTAO_WORKFLOW_CITY_LAYOUT_V3_TYPES
+export type TenderWorkflowStatus = 'PENDENTE' | 'ANEXADA' | 'INICIADA' | 'SUSPENSA' | 'CONVOCADA';
+
+export type TenderFilterOptions = {
+  municipalities: string[];
+};
+
 export type Platform = {
   id: string;
   name: string;
@@ -115,6 +122,10 @@ export type Tender = {
   spreadsheetNotes: string | null;
   spreadsheetNotesUpdatedAt: string | null;
   listStatus: 'PENDENTE' | 'ANEXADA';
+  workflowStatus?: TenderWorkflowStatus;
+  workflowEventAt?: string | null;
+  workflowEventReason?: string | null;
+  convokedCompanies?: Array<{ id: string; name: string }>;
   attachedCompanies: number;
   allCompaniesAttached: boolean;
   createdAt: string;

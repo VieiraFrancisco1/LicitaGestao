@@ -11,6 +11,7 @@ import {
   spreadsheetNotesSchema,
   spreadsheetReadySchema,
   spreadsheetResponsibilitySchema,
+  tenderFilterOptionsSchema,
   tenderIdSchema,
   tenderListStatusSchema,
   updateTenderSchema
@@ -20,6 +21,12 @@ export const tenderRouter = Router();
 
 tenderRouter.use(authenticate);
 tenderRouter.get('/', validate(listTendersSchema), asyncHandler(tenderController.index));
+// LICITAGESTAO_WORKFLOW_CITY_LAYOUT_V3_ROUTES
+tenderRouter.get(
+  '/filter-options',
+  validate(tenderFilterOptionsSchema),
+  asyncHandler(tenderController.filterOptions)
+);
 tenderRouter.post('/', validate(createTenderSchema), asyncHandler(tenderController.create));
 tenderRouter.patch(
   '/:id/spreadsheet-ready',
