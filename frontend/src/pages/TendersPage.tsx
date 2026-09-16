@@ -335,7 +335,20 @@ export function TendersPage() {
                       <td className="tender-identity-cell compact-license-cell">
                         <div className="tender-cell-content">
                           <strong>{tender.municipality}</strong>
-                          {tenderLabel && <small>{tenderLabel}</small>}
+                          {tenderLabel && (
+                            <small style={{ marginTop: '-2px', lineHeight: 1.15 }}>
+                              {tenderLabel}
+                            </small>
+                          )}
+                          <small
+                            style={{
+                              marginTop: '2px',
+                              color: '#687386',
+                              fontWeight: 650
+                            }}
+                          >
+                            Garantia: {tender.guaranteeType === 'NAO_EXIGIDA' ? 'Não' : 'Sim'}
+                          </small>
                         </div>
                       </td>
                       <td className="tender-date-cell">

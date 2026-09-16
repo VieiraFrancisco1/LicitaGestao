@@ -65,7 +65,7 @@ export function BidsPage({ fixedCompanyId }: { fixedCompanyId?: string }) {
   const canCreate =
     user?.role === 'ADMIN' || user?.role === 'EMPRESA' || Boolean(user?.assignedCompanies.length);
   const embeddedInCompany = Boolean(fixedCompanyId);
-  const columnCount = embeddedInCompany ? 8 : 11;
+  const columnCount = embeddedInCompany ? 9 : 11;
 
   return (
     <div className="page-stack">
@@ -150,14 +150,15 @@ export function BidsPage({ fixedCompanyId }: { fixedCompanyId?: string }) {
             <thead>
               {embeddedInCompany ? (
                 <tr>
-                  <th style={{ width: '14%' }}>Licitação</th>
-                  <th style={{ width: '9%' }}>Data</th>
-                  <th style={{ width: '24%' }}>Objeto</th>
-                  <th style={{ width: '9%' }}>Validade</th>
-                  <th style={{ width: '14%' }}>Valor e plataforma</th>
-                  <th style={{ width: '11%' }}>Andamento</th>
-                  <th style={{ width: '9%' }}>Situação</th>
-                  <th style={{ width: '10%' }}>Ações</th>
+                  <th>Licitação</th>
+                  <th>Data</th>
+                  <th>Objeto</th>
+                  <th>Validade</th>
+                  <th>Garantia</th>
+                  <th>Valor e plataforma</th>
+                  <th>Andamento</th>
+                  <th>Situação</th>
+                  <th>Ações</th>
                 </tr>
               ) : (
                 <tr>
@@ -199,7 +200,7 @@ export function BidsPage({ fixedCompanyId }: { fixedCompanyId?: string }) {
                         <td className="company-tender-identity">
                           <strong>{bid.tender.municipality}</strong>
                           {(bid.tender.modality || bid.tender.noticeNumber || bid.tender.processNumber) && (
-                            <small style={{ marginTop: '-2px', lineHeight: 1.15 }}>
+                            <small>
                               {[
                                 bid.tender.modality,
                                 bid.tender.noticeNumber ? `Nº ${bid.tender.noticeNumber}` : null,
@@ -209,15 +210,6 @@ export function BidsPage({ fixedCompanyId }: { fixedCompanyId?: string }) {
                                 .join(' · ')}
                             </small>
                           )}
-                          <small
-                            style={{
-                              marginTop: '2px',
-                              color: '#687386',
-                              fontWeight: 650
-                            }}
-                          >
-                            Garantia: {bid.tender.guaranteeType === 'NAO_EXIGIDA' ? 'Não' : 'Sim'}
-                          </small>
                         </td>
                         <td className="company-tender-date">
                           <strong>{formatDate(bid.tender.sessionDate)}</strong>
@@ -229,6 +221,15 @@ export function BidsPage({ fixedCompanyId }: { fixedCompanyId?: string }) {
                           <strong>
                             {bid.tender.proposalValidityDays ? `${bid.tender.proposalValidityDays} dias` : '—'}
                           </strong>
+                        </td>
+                        <td>
+                          <span
+                            className={`company-guarantee-pill ${
+                              bid.tender.guaranteeType === 'NAO_EXIGIDA' ? 'not-required' : 'required'
+                            }`}
+                          >
+                            {bid.tender.guaranteeType === 'NAO_EXIGIDA' ? 'Não' : 'Sim'}
+                          </span>
                         </td>
                         <td className="company-tender-value">
                           <strong>{formatCurrency(bid.proposalValue ?? bid.tender.estimatedValue)}</strong>
