@@ -5889,3 +5889,16 @@ td small {
     min-width: 150px;
   }
 }
+
+/* divisao visual entre licitacoes */
+.table-card table tbody tr + tr td,
+.tenders-table tbody tr + tr td,
+.bids-table tbody tr + tr td {
+  border-top: 2px solid #45b36b !important;
+}
+
+.table-card table tbody tr + tr:hover td,
+.tenders-table tbody tr + tr:hover td,
+.bids-table tbody tr + tr:hover td {
+  border-top-color: #2d9b55 !important;
+}
