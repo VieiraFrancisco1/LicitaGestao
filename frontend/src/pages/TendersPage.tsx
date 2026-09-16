@@ -137,7 +137,8 @@ export function TendersPage() {
   }, [workflowStatus, day, month, year, city]);
 
   useEffect(() => {
-    void loadCityOptions();
+    const timer = window.setTimeout(() => void loadCityOptions(), 0);
+    return () => window.clearTimeout(timer);
   }, [loadCityOptions]);
 
   useEffect(() => {
