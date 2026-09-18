@@ -254,10 +254,20 @@ async function mercadoPagoFetch<T>(resource: string, init?: RequestInit): Promis
           ? (body as { error: string }).error
           : null;
 
+    const providerMessage =
+      body &&
+      typeof body === 'object' &&
+      'message' in body &&
+      typeof (body as { message?: unknown }).message === 'string'
+        ? (body as { message: string }).message
+        : null;
+
     throw new AppError(
       providerCode
         ? `Mercado Pago recusou a cobrança (${providerCode}).`
-        : 'Não foi possível comunicar com o Mercado Pago agora. Tente novamente em instantes.',
+        : providerMessage
+          ? `Mercado Pago recusou a cobrança: ${providerMessage}`
+          : 'Não foi possível comunicar com o Mercado Pago agora. Tente novamente em instantes.',
       502,
       'PAYMENT_PROVIDER_ERROR'
     );
@@ -449,9 +459,14 @@ export async function createBillingPix(
         processing_mode: 'automatic',
         total_amount: selectedPlan.amountText,
         external_reference: payment.id,
-        payer: {
-          email: payerEmail
-        },
+        payer: env.MERCADO_PAGO_TEST_PAYER_EMAIL
+          ? {
+              email: 'test_user_br@testuser.com',
+              first_name: 'APRO'
+            }
+          : {
+              email: payerEmail
+            },
         transactions: {
           payments: [
             {
@@ -462,7 +477,7 @@ export async function createBillingPix(
               }
             }
           ]
-        }
+        } // LICITAGESTAO_PIX_TEST_V14
       })
     });
 
