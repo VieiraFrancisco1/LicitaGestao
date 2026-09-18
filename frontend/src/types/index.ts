@@ -369,7 +369,13 @@ export type GmailConvocationAlert = {
   receivedAt: string;
   snippet: string | null;
   priority: boolean; // LICITAGESTAO_EMAIL_PRIORITY_V1_TYPES
-  priorityKind: 'SUSPENSAO' | 'ESCLARECIMENTO' | 'CONVOCACAO' | 'READEQUACAO' | null;
+  priorityKind:
+    | 'SUSPENSAO'
+    | 'ESCLARECIMENTO'
+    | 'CONVOCACAO'
+    | 'READEQUACAO'
+    | 'PRIMEIRO_COLOCADO'
+    | null; // LICITAGESTAO_PRIORITY_FIRST_PLACE_V1
   tenderId: string | null;
   bidId: string | null;
   tender: Pick<Tender, 'modality' | 'noticeNumber' | 'processNumber' | 'municipality'> | null;

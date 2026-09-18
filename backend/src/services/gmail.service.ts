@@ -916,7 +916,12 @@ export async function linkGmailConvocationToBid(messageId: string, bidId: string
 }
 
 
-type PriorityEmailKind = 'SUSPENSAO' | 'ESCLARECIMENTO' | 'CONVOCACAO' | 'READEQUACAO';
+type PriorityEmailKind =
+  | 'SUSPENSAO'
+  | 'ESCLARECIMENTO'
+  | 'CONVOCACAO'
+  | 'READEQUACAO'
+  | 'PRIMEIRO_COLOCADO'; // LICITAGESTAO_PRIORITY_FIRST_PLACE_V1
 
 function normalizePriorityEmailText(value: string | null | undefined) {
   return (value ?? '')
@@ -940,6 +945,23 @@ function priorityEmailKind(message: {
   if (combined.includes('suspens')) return 'SUSPENSAO';
   if (combined.includes('esclareciment')) return 'ESCLARECIMENTO';
   if (combined.includes('readequa')) return 'READEQUACAO';
+
+  const firstPlaceTerms = [
+    'primeiro colocado',
+    'primeira colocada',
+    'novo primeiro colocado',
+    'nova primeira colocada',
+    '1 colocado',
+    '1a colocada',
+    'primeiro lugar',
+    'ficou em primeiro',
+    'passou para primeiro',
+    'mudanca de vencedor',
+    'novo vencedor',
+    'nova vencedora'
+  ];
+  if (firstPlaceTerms.some((term) => combined.includes(term))) return 'PRIMEIRO_COLOCADO';
+
   if (combined.includes('convocacao') || combined.includes('convocad') || combined.includes('convocamos')) {
     return 'CONVOCACAO';
   }

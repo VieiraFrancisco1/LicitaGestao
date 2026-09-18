@@ -13,7 +13,7 @@ function formatDateTime(value: string) {
   }).format(new Date(value));
 }
 
-export function ConvocationsPage() { // LICITAGESTAO_PREQUAL_ALL_EMAILS_V1_EMAIL_PAGE
+export function ConvocationsPage() { // LICITAGESTAO_PRIORITY_FIRST_PLACE_V1 // LICITAGESTAO_PREQUAL_ALL_EMAILS_V1_EMAIL_PAGE
   const { user, activeCompanyId, setActiveCompanyId } = useAuth();
   const [data, setData] = useState<GmailConvocationAlertData>({ items: [], unread: 0 });
   const [companies, setCompanies] = useState<CompanySummary[]>([]);
@@ -269,7 +269,7 @@ export function ConvocationsPage() { // LICITAGESTAO_PREQUAL_ALL_EMAILS_V1_EMAIL
                           textTransform: 'uppercase'
                         }}
                       >
-                        Prioridade
+                        {item.priorityKind === 'PRIMEIRO_COLOCADO' ? 'Primeiro colocado' : 'Prioridade'}
                       </span>
                     )}
                     <time>{formatDateTime(item.receivedAt)}</time>

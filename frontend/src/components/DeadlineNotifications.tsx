@@ -87,7 +87,7 @@ function gmailDesktopBody(item: GmailConvocationAlert) {
 const gmailSelectionKey = (item: GmailConvocationAlert): SelectedAlertKey => `gmail:${item.messageId}`;
 const deadlineSelectionKey = (item: DeadlineAlert): SelectedAlertKey => `deadline:${item.key}`;
 
-export function DeadlineNotifications() {
+export function DeadlineNotifications() { // LICITAGESTAO_PRIORITY_FIRST_PLACE_V1
   const [open, setOpen] = useState(false);
   const [deadlines, setDeadlines] = useState<DeadlineData | null>(null);
   const [gmailAlerts, setGmailAlerts] = useState<GmailConvocationAlertData | null>(null);
@@ -150,7 +150,11 @@ export function DeadlineNotifications() {
         .forEach((item) => {
           const notificationKey = `${item.key}:${day}`;
           if (history.has(notificationKey)) return;
-          const notification = new Notification(`Alerta prioritário — ${item.companyName}`, {
+          const priorityTitle =
+            item.priorityKind === 'PRIMEIRO_COLOCADO'
+              ? `Primeiro colocado — ${item.companyName}`
+              : `Alerta prioritário — ${item.companyName}`;
+          const notification = new Notification(priorityTitle, {
             body: gmailDesktopBody(item),
             tag: item.key,
             requireInteraction: true
