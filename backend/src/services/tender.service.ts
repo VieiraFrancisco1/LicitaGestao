@@ -246,6 +246,25 @@ const classifyWorkflowMessage = (message: {
   return null;
 };
 
+const isStrongWorkflowEmailMatch = (message: {
+  convocationMatchMethod: string | null;
+  convocationMatchConfidence: number | null;
+}) => {
+  // LICITAGESTAO_STRONG_WORKFLOW_EMAIL_MATCH_V1
+  // Um e-mail pode continuar aparecendo vinculado por contexto (cidade + plataforma),
+  // mas só pode mudar o andamento da licitação quando a identificação for forte.
+  if (message.convocationMatchMethod === 'MANUAL') return true;
+  if (message.convocationMatchMethod === 'PROCESS_NUMBER') {
+    return (message.convocationMatchConfidence ?? 0) >= 100;
+  }
+  if (message.convocationMatchMethod === 'NOTICE_NUMBER') {
+    // 95+ normalmente significa que, além do número da concorrência/edital,
+    // houve contexto suficiente para diferenciar a licitação (ex.: município).
+    return (message.convocationMatchConfidence ?? 0) >= 95;
+  }
+  return false;
+};
+
 const todayInFortaleza = () =>
   new Intl.DateTimeFormat('en-CA', {
     timeZone: 'America/Fortaleza',
@@ -271,6 +290,8 @@ const addWorkflowMetadata = async <
       snippet: true,
       textContent: true,
       convocationReason: true,
+      convocationMatchMethod: true,
+      convocationMatchConfidence: true,
       company: { select: { id: true, legalName: true, tradeName: true } }
     },
     orderBy: { receivedAt: 'asc' }
@@ -294,6 +315,11 @@ const addWorkflowMetadata = async <
     const convokedCompanies = new Map<string, { id: string; name: string }>();
 
     for (const message of tenderMessages) {
+      // E-mails ligados somente por contexto não podem marcar uma licitação
+      // como SUSPENSA, CONVOCADA ou retomada. Eles continuam visíveis na área
+      // de e-mails, mas não alteram o andamento.
+      if (!isStrongWorkflowEmailMatch(message)) continue;
+
       const event = classifyWorkflowMessage(message);
       if (!event) continue;
 
