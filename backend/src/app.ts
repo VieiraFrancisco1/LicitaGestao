@@ -17,14 +17,23 @@ app.use(
       directives: {
         'script-src': [
           "'self'",
-          'https://sdk.mercadopago.com'
+          'https://sdk.mercadopago.com',
+          'https://http2.mlstatic.com'
+        ],
+        'script-src-elem': [
+          "'self'",
+          'https://sdk.mercadopago.com',
+          'https://http2.mlstatic.com',
+          "'sha256-P6qpcpvRfKkLqu0h54NnY4i2nLM5bClv4Uw+WiJsaBQ='"
         ],
         'connect-src': [
           "'self'",
           'https://api.mercadopago.com',
           'https://events.mercadopago.com',
           'https://*.mercadopago.com',
-          'https://*.mercadopago.com.br'
+          'https://*.mercadopago.com.br',
+          'https://http2.mlstatic.com',
+          'https://api.mercadolibre.com'
         ],
         'frame-src': [
           "'self'",
@@ -41,7 +50,7 @@ app.use(
       }
     }
   })
-); // LICITAGESTAO_MERCADOPAGO_CSP_V10
+); // LICITAGESTAO_MERCADOPAGO_CSP_V11
 app.use(cors({ origin: env.FRONTEND_URL, credentials: true }));
 app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
