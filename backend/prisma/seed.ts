@@ -17,8 +17,8 @@ async function main() {
   const passwordHash = await bcrypt.hash(password, 12);
   const organization = await prisma.organization.upsert({
     where: { loginEmail: email },
-    update: { name: organizationName, active: true },
-    create: { name: organizationName, loginEmail: email, passwordHash, active: true }
+    update: { name: organizationName, active: true, billingExempt: true },
+    create: { name: organizationName, loginEmail: email, passwordHash, active: true, billingExempt: true } // LICITAGESTAO_BILLING_ORDERS_API_V2_SEED
   });
 
   await prisma.user.upsert({

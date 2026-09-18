@@ -26,14 +26,16 @@ import { ReportsPage } from './pages/ReportsPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { SuperAdminPage } from './pages/SuperAdminPage';
 import { HelpPage } from './pages/HelpPage';
+import { PaymentPage } from './pages/PaymentPage';
 
-export default function App() { // LICITAGESTAO_SAAS_RENTAL_V1_APP
+export default function App() { // LICITAGESTAO_SAAS_RENTAL_V1_APP LICITAGESTAO_BILLING_ORDERS_API_V2_APP
   return (
     <BrowserRouter>
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/criar-conta" element={<RegisterPage />} />
+          <Route path="/pagamento" element={<PaymentPage />} />
           <Route path="/esqueci-senha" element={<ForgotPasswordPage />} />
           <Route path="/redefinir-senha" element={<ResetPasswordPage />} />
 

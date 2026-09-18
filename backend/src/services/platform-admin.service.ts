@@ -7,7 +7,18 @@ export async function getPlatformOverview() {
   const [organizations, pendingGmailRequests] = await Promise.all([
     prisma.organization.findMany({
       orderBy: { createdAt: 'desc' },
-      include: { _count: { select: { users: true, companies: true, tenders: true } } }
+      select: {
+        id: true,
+        name: true,
+        loginEmail: true,
+        active: true,
+        billingExempt: true,
+        subscriptionStatus: true,
+        subscriptionPlan: true,
+        subscriptionExpiresAt: true,
+        createdAt: true,
+        _count: { select: { users: true, companies: true, tenders: true } }
+      } // LICITAGESTAO_BILLING_ORDERS_API_V2_PLATFORM_ADMIN
     }),
     prisma.gmailAccessRequest.count({ where: { status: GmailAccessRequestStatus.PENDING } })
   ]);

@@ -4,6 +4,7 @@ import type { UserRole } from '@prisma/client';
 import { prisma } from '../config/database.js';
 import { env } from '../config/env.js';
 import { AppError } from '../utils/app-error.js';
+import { organizationHasPaidAccess } from '../services/billing.service.js';
 
 type AccessPayload = jwt.JwtPayload & {
   sub: string;
@@ -27,7 +28,15 @@ export const authenticate: RequestHandler = (req, _res, next) => {
       .findUnique({
         where: { id: payload.sub },
         include: {
-          organization: { select: { id: true, active: true } },
+          organization: {
+            select: {
+              id: true,
+              active: true,
+              billingExempt: true,
+              subscriptionStatus: true,
+              subscriptionExpiresAt: true
+            }
+          },
           company: { select: { active: true, organizationId: true } }
         }
       })
@@ -35,6 +44,9 @@ export const authenticate: RequestHandler = (req, _res, next) => {
         if (!user?.active || !user.organization.active) {
           return next(new AppError('Usuário sem acesso ao sistema', 403));
         }
+        if (!organizationHasPaidAccess(user.organization)) {
+          return next(new AppError('A assinatura desta organização está pendente ou vencida.', 402, 'SUBSCRIPTION_REQUIRED'));
+        } // LICITAGESTAO_BILLING_ORDERS_API_V2_MIDDLEWARE
         if (payload.organizationId !== user.organizationId || user.organization.id !== user.organizationId) {
           return next(new AppError('Sessão inválida', 401));
         }

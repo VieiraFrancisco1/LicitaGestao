@@ -6053,3 +6053,211 @@ td small {
     flex-direction: column;
   }
 }
+/* LICITAGESTAO_BILLING_ORDERS_API_V2_CSS */
+.payment-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+  background:
+    radial-gradient(circle at top left, rgba(37, 99, 235, 0.12), transparent 34%),
+    #f4f7fb;
+}
+
+.payment-shell {
+  width: min(940px, 100%);
+  display: grid;
+  gap: 22px;
+  padding: 28px;
+  border: 1px solid #d9e2ef;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 24px 70px rgba(30, 53, 84, 0.12);
+}
+
+.payment-brand {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.payment-brand img,
+.compact-payment-message > img {
+  width: 155px;
+  max-height: 60px;
+  object-fit: contain;
+}
+
+.payment-brand h2,
+.payment-approved h2,
+.compact-payment-message h2 {
+  margin: 4px 0 6px;
+  color: #172a46;
+}
+
+.payment-brand p,
+.payment-approved p,
+.compact-payment-message p {
+  margin: 0;
+  color: #667085;
+}
+
+.billing-plans {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.billing-plan-card {
+  display: grid;
+  gap: 7px;
+  padding: 20px;
+  border: 1px solid #d8e1ed;
+  border-radius: 15px;
+  text-align: left;
+  background: #fff;
+  color: #233955;
+  cursor: pointer;
+  transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.billing-plan-card:hover {
+  transform: translateY(-1px);
+  border-color: #9bbcf7;
+}
+
+.billing-plan-card.selected {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  background: #f8fbff;
+}
+
+.billing-plan-card > span {
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.billing-plan-card > strong {
+  font-size: 28px;
+  color: #163968;
+}
+
+.billing-plan-card > small {
+  color: #69768a;
+}
+
+.billing-plan-card > em {
+  margin-top: 6px;
+  color: #2563eb;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.payment-methods-preview {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.payment-methods-preview > div {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 15px;
+  border: 1px solid #dfe6ef;
+  border-radius: 12px;
+  background: #fafcff;
+  color: #2563eb;
+}
+
+.payment-methods-preview span {
+  display: grid;
+  gap: 3px;
+  color: #223852;
+}
+
+.payment-methods-preview small {
+  color: #738096;
+}
+
+.payment-checkout-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px;
+  border: 1px solid #d7e2f2;
+  border-radius: 14px;
+  background: #f7faff;
+}
+
+.payment-checkout-box > div {
+  display: grid;
+  gap: 2px;
+}
+
+.payment-checkout-box small { color: #738096; }
+.payment-checkout-box strong { color: #213954; }
+.payment-checkout-box span {
+  color: #0f4aa1;
+  font-size: 20px;
+  font-weight: 850;
+}
+
+.payment-security-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  color: #607086;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.payment-security-note svg {
+  flex: 0 0 auto;
+  color: #2f7b58;
+}
+
+.payment-back-link {
+  justify-self: center;
+  color: #55708f;
+  font-size: 12px;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.payment-approved,
+.compact-payment-message {
+  width: min(520px, 100%);
+  text-align: center;
+  justify-items: center;
+}
+
+.payment-success-icon {
+  display: grid;
+  width: 70px;
+  height: 70px;
+  place-items: center;
+  border-radius: 999px;
+  color: #24744d;
+  background: #e9f8ef;
+}
+
+@media (max-width: 760px) {
+  .payment-page { padding: 14px; }
+  .payment-shell { padding: 20px; }
+  .billing-plans,
+  .payment-methods-preview { grid-template-columns: 1fr; }
+  .payment-brand,
+  .payment-checkout-box {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .payment-checkout-box .primary-button {
+    width: 100%;
+    justify-content: center;
+  }
+}

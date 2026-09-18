@@ -6,6 +6,8 @@ export type OrganizationAccess = {
   organizationToken: string;
   organization: OrganizationSummary;
   members: OrganizationMember[];
+  paymentRequired?: boolean;
+  billingToken?: string;
 };
 
 export type CompanySummary = { id: string; legalName: string; tradeName: string | null };
@@ -475,6 +477,10 @@ export type PlatformOrganization = {
   name: string;
   loginEmail: string;
   active: boolean;
+  billingExempt: boolean;
+  subscriptionStatus: 'PENDING' | 'ACTIVE' | 'EXPIRED' | 'SUSPENDED';
+  subscriptionPlan: BillingPlanCode | null;
+  subscriptionExpiresAt: string | null;
   createdAt: string;
   _count: { users: number; companies: number; tenders: number };
 };
@@ -487,3 +493,12 @@ export type PlatformOverview = {
     pendingGmailRequests: number;
   };
 };
+
+// LICITAGESTAO_BILLING_ORDERS_API_V2_TYPES
+export type BillingPlanCode = 'MONTHLY' | 'QUARTERLY' | 'SEMIANNUAL';
+
+export type BillingPlan = { code: BillingPlanCode; name: string; months: number; amount: number; displayPrice: string };
+export type BillingPlansData = { configured: boolean; plans: BillingPlan[] };
+export type BillingPayment = { id: string; plan: BillingPlanCode; amount: string; status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | 'REFUNDED' | 'FAILED'; providerOrderId: string | null; providerPaymentId: string | null; paymentMethod: string | null; providerStatus: string | null; providerStatusDetail: string | null; paidAt: string | null; createdAt: string };
+export type BillingStatusData = { organization: { id: string; name: string; loginEmail: string }; billingExempt: boolean; subscriptionStatus: 'PENDING' | 'ACTIVE' | 'EXPIRED' | 'SUSPENDED'; subscriptionPlan: BillingPlanCode | null; subscriptionExpiresAt: string | null; accessGranted: boolean; latestPayment: BillingPayment | null };
+export type BillingCheckoutData = { paymentId: string; orderId: string; checkoutUrl: string; plan: BillingPlan };

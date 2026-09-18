@@ -24,14 +24,15 @@ export function RegisterPage() {
     setError('');
     setSubmitting(true);
     try {
-      await rawApi.post('/auth/register', {
+      const response = await rawApi.post<{ success: true; data: { id: string; name: string; loginEmail: string; paymentRequired: boolean; billingToken: string } }>('/auth/register', {
         organizationName,
         adminName,
         email,
         password,
         confirmPassword
       });
-      navigate('/login?cadastro=sucesso', { replace: true });
+      window.sessionStorage.setItem('licitagestao.billing-token', response.data.data.billingToken);
+      navigate('/pagamento', { replace: true }); // LICITAGESTAO_BILLING_ORDERS_API_V2_REGISTER
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -61,7 +62,7 @@ export function RegisterPage() {
           <div>
             <span className="eyebrow">Criar conta</span>
             <h2>Nova organização</h2>
-            <p>O primeiro usuário será o administrador da sua organização.</p>
+            <p>O primeiro usuário será o administrador. O acesso será liberado automaticamente após a confirmação do pagamento.</p>
           </div>
           {error && <div className="alert alert-error">{error}</div>}
 

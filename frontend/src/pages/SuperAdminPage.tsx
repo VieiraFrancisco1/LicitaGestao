@@ -12,6 +12,9 @@ import type {
 const formatDate = (value: string) =>
   new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(value));
 
+const subscriptionLabel = (status: PlatformOverview['organizations'][number]['subscriptionStatus']) =>
+  status === 'ACTIVE' ? 'Ativa' : status === 'EXPIRED' ? 'Vencida' : status === 'SUSPENDED' ? 'Suspensa' : 'Aguardando pagamento'; // LICITAGESTAO_BILLING_ORDERS_API_V2_SUPERADMIN
+
 export function SuperAdminPage() {
   const [overview, setOverview] = useState<PlatformOverview | null>(null);
   const [requests, setRequests] = useState<GmailAccessRequest[]>([]);
@@ -122,7 +125,7 @@ export function SuperAdminPage() {
         </div>
         <div className="table-wrap">
           <table>
-            <thead><tr><th>Organização</th><th>Usuários</th><th>Empresas</th><th>Licitações</th><th>Status</th><th>Ação</th></tr></thead>
+            <thead><tr><th>Organização</th><th>Usuários</th><th>Empresas</th><th>Licitações</th><th>Assinatura</th><th>Status</th><th>Ação</th></tr></thead>
             <tbody>
               {overview?.organizations.map((organization) => (
                 <tr key={organization.id}>
@@ -130,6 +133,11 @@ export function SuperAdminPage() {
                   <td>{organization._count.users}</td>
                   <td>{organization._count.companies}</td>
                   <td>{organization._count.tenders}</td>
+                  <td>
+                    {organization.billingExempt ? <span className="status-pill active">Isenta</span> : (
+                      <><span className={`status-pill ${organization.subscriptionStatus === 'ACTIVE' ? 'active' : 'inactive'}`}>{subscriptionLabel(organization.subscriptionStatus)}</span>{organization.subscriptionExpiresAt && <small>até {new Intl.DateTimeFormat('pt-BR').format(new Date(organization.subscriptionExpiresAt))}</small>}</>
+                    )}
+                  </td>
                   <td><span className={`status-pill ${organization.active ? 'active' : 'inactive'}`}>{organization.active ? 'Ativa' : 'Suspensa'}</span></td>
                   <td>
                     <button

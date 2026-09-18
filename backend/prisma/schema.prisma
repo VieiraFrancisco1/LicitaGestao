@@ -77,6 +77,28 @@ enum GmailAccessRequestStatus {
   REJECTED
 }
 
+enum SubscriptionStatus {
+  PENDING
+  ACTIVE
+  EXPIRED
+  SUSPENDED
+}
+
+enum SubscriptionPlan {
+  MONTHLY
+  QUARTERLY
+  SEMIANNUAL
+}
+
+enum BillingPaymentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+  REFUNDED
+  FAILED
+}
+
 enum DocumentCategory {
   EDITAL
   ANEXO
@@ -100,6 +122,11 @@ model Organization {
   passwordHash          String                            @map("password_hash") @db.VarChar(255)
   sessionVersion        Int                               @default(0) @map("session_version")
   active                Boolean                           @default(true)
+  billingExempt         Boolean                           @default(false) @map("billing_exempt")
+  subscriptionStatus    SubscriptionStatus                @default(PENDING) @map("subscription_status")
+  subscriptionPlan      SubscriptionPlan?                 @map("subscription_plan")
+  subscriptionExpiresAt DateTime?                         @map("subscription_expires_at")
+  billingPayments       BillingPayment[]
   users                 User[]
   companies             Company[]
   platforms             Platform[]
@@ -462,6 +489,32 @@ model EmailMessage {
   @@map("email_messages")
 }
 
+
+
+model BillingPayment {
+  id                   String               @id @default(uuid()) @db.Uuid
+  organizationId       String               @map("organization_id") @db.Uuid
+  organization         Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  plan                 SubscriptionPlan
+  amount               Decimal              @db.Decimal(10, 2)
+  status               BillingPaymentStatus @default(PENDING)
+  provider             String               @default("MERCADO_PAGO") @db.VarChar(40)
+  providerOrderId      String?              @unique @map("provider_order_id") @db.VarChar(180)
+  providerPaymentId    String?              @map("provider_payment_id") @db.VarChar(180)
+  paymentMethod        String?              @map("payment_method") @db.VarChar(100)
+  providerStatus       String?              @map("provider_status") @db.VarChar(80)
+  providerStatusDetail String?              @map("provider_status_detail") @db.VarChar(120)
+  paidAt               DateTime?            @map("paid_at")
+  createdAt            DateTime             @default(now()) @map("created_at")
+  updatedAt            DateTime             @updatedAt @map("updated_at")
+
+  @@index([organizationId, createdAt])
+  @@index([status])
+  @@index([providerPaymentId])
+  @@map("billing_payments")
+}
+
+// LICITAGESTAO_BILLING_ORDERS_API_V2_SCHEMA
 
 model GmailAccessRequest {
   id             String                   @id @default(uuid()) @db.Uuid

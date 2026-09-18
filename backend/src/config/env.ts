@@ -38,7 +38,10 @@ const envSchema = z.object({
   MICROSOFT_REDIRECT_URI: z.string().url().optional(),
   MICROSOFT_OAUTH_STATE_SECRET: z.string().min(32).optional(),
   MICROSOFT_TOKEN_ENCRYPTION_KEY: z.string().min(32).optional(),
-  OUTLOOK_POLL_INTERVAL_MS: z.coerce.number().int().min(60_000).max(900_000).default(120_000)
+  OUTLOOK_POLL_INTERVAL_MS: z.coerce.number().int().min(60_000).max(900_000).default(120_000),
+  MERCADO_PAGO_ACCESS_TOKEN: z.string().trim().min(1).optional(),
+  MERCADO_PAGO_WEBHOOK_SECRET: z.string().trim().min(16).optional(),
+  MERCADO_PAGO_WEBHOOK_URL: z.string().url().optional() // LICITAGESTAO_BILLING_ORDERS_API_V2_ENV
 });
 
 const parsed = envSchema.safeParse(process.env);

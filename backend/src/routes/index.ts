@@ -19,6 +19,7 @@ import { reportRouter } from './report.routes.js';
 import { platformAdminRouter } from './platform-admin.routes.js';
 import { notificationRouter } from './notification.routes.js';
 import { supportRouter } from './support.routes.js';
+import { billingRouter } from './billing.routes.js';
 
 export const apiRouter = Router();
 
@@ -54,3 +55,6 @@ apiRouter.use('/reports', reportRouter);
 apiRouter.use('/platform-admin', platformAdminRouter);
 apiRouter.use('/notifications', notificationRouter);
 apiRouter.use('/support', supportRouter);
+
+// LICITAGESTAO_BILLING_ORDERS_API_V2_ROUTES
+apiRouter.use('/billing', billingRouter);

@@ -7,6 +7,7 @@ import { env } from '../config/env.js';
 import { AppError } from '../utils/app-error.js';
 import { publicUser } from '../utils/public-user.js';
 import { passwordResetEmailConfigured, sendOrganizationPasswordResetEmail } from './transactional-email.service.js';
+import { issueBillingToken, organizationHasPaidAccess } from './billing.service.js';
 
 type TokenUser = {
   id: string;
@@ -105,7 +106,13 @@ export async function registerOrganization(input: {
       });
       return createdOrganization;
     });
-    return { id: organization.id, name: organization.name, loginEmail: organization.loginEmail };
+    return {
+      id: organization.id,
+      name: organization.name,
+      loginEmail: organization.loginEmail,
+      paymentRequired: true,
+      billingToken: issueBillingToken(organization.id)
+    }; // LICITAGESTAO_BILLING_ORDERS_API_V2_AUTH
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
       throw new AppError('Este e-mail principal já está cadastrado', 409);
@@ -122,6 +129,16 @@ export async function loginOrganization(email: string, password: string) {
   });
   if (!organization || !organization.active || !(await bcrypt.compare(password, organization.passwordHash))) {
     throw new AppError('E-mail ou senha da empresa inválidos', 401);
+  }
+
+  if (!organizationHasPaidAccess(organization)) {
+    return {
+      organizationToken: '',
+      organization: { id: organization.id, name: organization.name },
+      members: [],
+      paymentRequired: true,
+      billingToken: issueBillingToken(organization.id)
+    };
   }
 
   const members = await prisma.user.findMany({
@@ -157,6 +174,9 @@ export async function authenticateOrganizationMember(
   if (!organization?.active || organization.sessionVersion !== payload.sessionVersion) {
     throw new AppError('O acesso da empresa não está mais válido. Entre novamente.', 401);
   }
+  if (!organizationHasPaidAccess(organization)) {
+    throw new AppError('A assinatura desta organização está pendente ou vencida.', 402, 'SUBSCRIPTION_REQUIRED');
+  }
 
   const user = await prisma.user.findFirst({
     where: { id: userId, organizationId: organization.id, active: true },
@@ -185,6 +205,9 @@ export const authenticateUser = async (email: string, password: string) => {
   const user = users.length === 1 ? users[0] : undefined;
   if (!user || !user.organization.active || !(await bcrypt.compare(password, user.passwordHash))) {
     throw new AppError('E-mail ou senha inválidos', 401);
+  }
+  if (!organizationHasPaidAccess(user.organization)) {
+    throw new AppError('A assinatura desta organização está pendente ou vencida.', 402, 'SUBSCRIPTION_REQUIRED');
   }
   if (user.role === 'EMPRESA' && (!user.company || !user.company.active)) {
     throw new AppError('Empresa sem acesso ao sistema', 403);
@@ -216,6 +239,7 @@ export const rotateRefreshToken = async (token: string) => {
     !user ||
     !user.active ||
     !user.organization.active ||
+    !organizationHasPaidAccess(user.organization) ||
     (user.role === 'EMPRESA' && !user.company?.active)
   ) {
     throw new AppError('Usuário sem acesso ao sistema', 403);

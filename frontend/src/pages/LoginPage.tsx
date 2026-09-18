@@ -36,6 +36,7 @@ export function LoginPage() {
 
   const passwordChanged = searchParams.get('senha') === 'alterada';
   const accountCreated = searchParams.get('cadastro') === 'sucesso';
+  const paymentApproved = searchParams.get('pagamento') === 'aprovado';
   const sortedMembers = useMemo(() => organizationAccess?.members ?? [], [organizationAccess]);
 
   if (user) return <Navigate to="/" replace />;
@@ -46,7 +47,12 @@ export function LoginPage() {
     setSubmitting(true);
     try {
       const access = await organizationLogin(email, organizationPassword);
-      setOrganizationAccess(access);
+      if (access.paymentRequired && access.billingToken) {
+        window.sessionStorage.setItem('licitagestao.billing-token', access.billingToken);
+        navigate('/pagamento', { replace: true });
+        return;
+      }
+      setOrganizationAccess(access); // LICITAGESTAO_BILLING_ORDERS_API_V2_LOGIN
       setOrganizationPassword('');
       setSelectedMember(null);
       setMemberPassword('');
@@ -115,6 +121,9 @@ export function LoginPage() {
             )}
             {accountCreated && (
               <div className="alert alert-success">Conta criada com sucesso. Entre com o e-mail e a senha cadastrados.</div>
+            )}
+            {paymentApproved && (
+              <div className="alert alert-success">Pagamento confirmado. Seu acesso ao LicitaGestão está liberado.</div>
             )}
             {error && <div className="alert alert-error">{error}</div>}
 

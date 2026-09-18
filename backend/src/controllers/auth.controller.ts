@@ -28,7 +28,7 @@ export const register = async (req: Request, res: Response) => {
   const data = await registerOrganization(req.body);
   res.status(201).json({
     success: true,
-    message: 'Conta criada. Entre com o e-mail e a senha cadastrados.',
+    message: 'Conta criada. Escolha um plano e conclua o pagamento para liberar o acesso.', // LICITAGESTAO_BILLING_ORDERS_API_V2_CONTROLLER
     data
   });
 }; // LICITAGESTAO_SAAS_RENTAL_V1_REGISTER
