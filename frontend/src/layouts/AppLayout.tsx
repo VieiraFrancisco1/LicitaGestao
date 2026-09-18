@@ -29,7 +29,7 @@ const titles: Record<string, string> = {
   '/': 'Dashboard',
   '/licitacoes': 'Licitações',
   '/empresas': 'Empresas',
-  '/convocacoes': 'Avisos por e-mail',
+  '/convocacoes': 'E-mails', // LICITAGESTAO_PREQUAL_ALL_EMAILS_V1_LAYOUT
   '/prazos': 'Prazos',
   '/documentos': 'Documentos',
   '/plataformas': 'Plataformas',
@@ -63,7 +63,7 @@ export function AppLayout() {
           label: user?.role === 'EMPRESA' ? 'Minha empresa' : 'Empresas',
           icon: Building2
         },
-        { to: '/convocacoes', label: 'Avisos por e-mail', icon: Bell },
+        { to: '/convocacoes', label: 'E-mails', icon: Bell },
         { to: '/prazos', label: 'Prazos', icon: CalendarClock },
         { to: '/documentos', label: 'Documentos', icon: FileText }
       ]

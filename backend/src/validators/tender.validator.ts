@@ -19,6 +19,7 @@ export const tenderBody = z.object({
   noticeNumber: z.string().trim().max(120).optional(),
   processNumber: z.string().trim().max(120).optional(),
   executionTerm: z.string().trim().max(120).optional(),
+  isPreQualification: z.boolean().optional(), // LICITAGESTAO_PREQUAL_ALL_EMAILS_V1_VALIDATOR
   municipality: z.string().trim().min(2).max(120),
   sessionDate: date,
   object: z.string().trim().min(5).max(10000),

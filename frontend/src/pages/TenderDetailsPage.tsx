@@ -236,6 +236,7 @@ export function TenderDetailsPage() {
       )}
       <div className="details-grid">
         <Info label="Modalidade" value={tender.modality || 'Não informada'} />
+        <Info label="Pré-qualificação" value={tender.isPreQualification ? 'Sim' : 'Não'} /> {/* LICITAGESTAO_PREQUAL_ALL_EMAILS_V1_DETAILS */}
         <Info label="Número da licitação" value={tender.noticeNumber || 'Não informado'} />
         <Info label="Processo administrativo" value={tender.processNumber || 'Não informado'} />
         <Info label="Prazo de execução" value={tender.executionTerm || 'Não informado'} />

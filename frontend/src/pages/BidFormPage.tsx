@@ -4,11 +4,12 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api, errorMessage } from '../services/api';
 import type { ApiResponse, Platform, Tender } from '../types';
 
-type TenderForm = {
+type TenderForm = { // LICITAGESTAO_PREQUAL_ALL_EMAILS_V1_FORM
   modality: string;
   noticeNumber: string;
   processNumber: string;
   executionTerm: string;
+  isPreQualification: boolean;
   municipality: string;
   sessionDate: string;
   object: string;
@@ -25,6 +26,7 @@ const emptyForm: TenderForm = {
   noticeNumber: '',
   processNumber: '',
   executionTerm: '',
+  isPreQualification: false,
   municipality: '',
   sessionDate: '',
   object: '',
@@ -63,6 +65,7 @@ export function BidFormPage() {
           noticeNumber: tender.noticeNumber ?? '',
           processNumber: tender.processNumber ?? '',
           executionTerm: tender.executionTerm ?? '',
+          isPreQualification: tender.isPreQualification,
           municipality: tender.municipality,
           sessionDate: tender.sessionDate.slice(0, 10),
           object: tender.object,
@@ -142,6 +145,19 @@ export function BidFormPage() {
               <option value="Outro">Outro</option>
             </select>
             <small className="field-help">Ajuda a relacionar convocações e avisos recebidos por e-mail.</small>
+          </label>
+          <label>
+            É pré-qualificação?
+            <select
+              value={form.isPreQualification ? 'sim' : 'nao'}
+              onChange={(event) => field('isPreQualification', event.target.value === 'sim')}
+            >
+              <option value="nao">Não</option>
+              <option value="sim">Sim</option>
+            </select>
+            <small className="field-help">
+              Se for, o controle geral mostrará “Pré-qualificação” abaixo da modalidade.
+            </small>
           </label>
           <label>
             Número da licitação

@@ -10,7 +10,7 @@ import type {
   GmailConvocationAlertData
 } from '../types';
 
-const DESKTOP_NOTIFIED_STORAGE_KEY = 'licitagestao.desktop-notifications.v2';
+const DESKTOP_NOTIFIED_STORAGE_KEY = 'licitagestao.desktop-notifications.v2'; // LICITAGESTAO_PREQUAL_ALL_EMAILS_V1_NOTIFICATIONS
 
 type DesktopPermission = NotificationPermission | 'unsupported';
 type SelectedAlertKey = `gmail:${string}` | `deadline:${string}`;
@@ -78,7 +78,10 @@ function deadlineDesktopBody(item: DeadlineAlert) {
 
 function gmailDesktopBody(item: GmailConvocationAlert) {
   const subject = item.subject || 'E-mail sem assunto';
-  return `${item.companyName} · ${subject} · De: ${item.sender}`;
+  const tender = item.tender
+    ? ` · ${item.tender.municipality} · ${item.tender.noticeNumber || item.tender.processNumber || 'Licitação'}`
+    : '';
+  return `${item.companyName} · ${subject}${tender} · De: ${item.sender}`;
 }
 
 const gmailSelectionKey = (item: GmailConvocationAlert): SelectedAlertKey => `gmail:${item.messageId}`;
@@ -147,7 +150,7 @@ export function DeadlineNotifications() {
         .forEach((item) => {
           const notificationKey = `${item.key}:${day}`;
           if (history.has(notificationKey)) return;
-          const notification = new Notification(`Alerta de licitação — ${item.companyName}`, {
+          const notification = new Notification(`E-mail recebido — ${item.companyName}`, {
             body: gmailDesktopBody(item),
             tag: item.key,
             requireInteraction: true
@@ -161,7 +164,9 @@ export function DeadlineNotifications() {
             navigate(
               item.bidId
                 ? `/participacoes/${item.bidId}?tab=convocations&message=${item.messageId}`
-                : `/empresas/${item.companyId}?tab=convocations&message=${item.messageId}`
+                : item.tenderId
+                  ? `/licitacoes/${item.tenderId}`
+                  : `/empresas/${item.companyId}?tab=convocations&message=${item.messageId}`
             );
           };
           history.add(notificationKey);
@@ -243,7 +248,7 @@ export function DeadlineNotifications() {
     setDesktopPermission(permission);
     if (permission === 'granted') {
       new Notification('LicitaGestão', {
-        body: 'Notificações ativadas. Você será avisado sobre prazos, convocações e avisos das plataformas.',
+        body: 'Notificações ativadas. Você será avisado sobre prazos e todos os e-mails recebidos nas contas conectadas.',
         tag: 'licitagestao-notifications-enabled'
       });
       if (deadlines) showDesktopDeadlineAlerts(deadlines, permission);
@@ -286,7 +291,9 @@ export function DeadlineNotifications() {
     navigate(
       item.bidId
         ? `/participacoes/${item.bidId}?tab=convocations&message=${item.messageId}`
-        : `/empresas/${item.companyId}?tab=convocations&message=${item.messageId}`
+        : item.tenderId
+          ? `/licitacoes/${item.tenderId}`
+          : `/empresas/${item.companyId}?tab=convocations&message=${item.messageId}`
     );
   };
 
@@ -405,7 +412,7 @@ export function DeadlineNotifications() {
   const unread = (deadlines?.unread ?? 0) + (gmailAlerts?.unread ?? 0);
   const hasItems = deadlineItems.length > 0 || gmailItems.length > 0;
   const permissionDescription = useMemo(
-    () => 'Receba pop-ups do Windows para prazos, convocações e avisos importantes das plataformas.',
+    () => 'Receba pop-ups do Windows para prazos e todos os e-mails das contas conectadas.',
     []
   );
 
@@ -584,7 +591,9 @@ export function DeadlineNotifications() {
                         {item.companyName} · {formatDateTime(item.receivedAt)}
                       </small>
                       <em>
-                        {item.bidId ? 'Aviso vinculado à licitação' : 'Aviso importante recebido por e-mail'}
+                        {item.tender
+                          ? `${item.tender.municipality} · ${item.tender.noticeNumber || item.tender.processNumber || 'Licitação vinculada'}`
+                          : 'E-mail recebido — licitação não identificada'}
                       </em>
                     </span>
                   </button>

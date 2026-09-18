@@ -457,7 +457,7 @@ export async function syncOutlookIntegration(companyId: string) {
             subject,
             receivedAt,
             snippet,
-            textContent: detection.detected && textContent ? textContent : null,
+            textContent: textContent || null,
             processingStatus: 'PROCESSADO',
             isPotentialConvocation: detection.detected,
             convocationReason: detection.reason
@@ -465,10 +465,8 @@ export async function syncOutlookIntegration(companyId: string) {
           select: { id: true }
         });
         inserted += 1;
-        if (detection.detected) {
-          convocations += 1;
-          await autoLinkConvocationMessage(created.id);
-        }
+        if (detection.detected) convocations += 1;
+        await autoLinkConvocationMessage(created.id); // LICITAGESTAO_PREQUAL_ALL_EMAILS_V1_OUTLOOK
       } catch (error) {
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') continue;
         throw error;

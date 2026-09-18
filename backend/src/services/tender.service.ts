@@ -17,6 +17,7 @@ export type TenderInput = {
   noticeNumber?: string | null;
   processNumber?: string | null;
   executionTerm?: string | null;
+  isPreQualification?: boolean; // LICITAGESTAO_PREQUAL_ALL_EMAILS_V1_SERVICE
   municipality?: string;
   state?: string | null;
   agency?: string | null;

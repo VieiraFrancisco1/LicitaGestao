@@ -99,6 +99,7 @@ export type Tender = {
   modality: string | null;
   noticeNumber: string | null;
   processNumber: string | null;
+  isPreQualification: boolean; // LICITAGESTAO_PREQUAL_ALL_EMAILS_V1_TYPES
   executionTerm: string | null;
   municipality: string;
   state: string | null;

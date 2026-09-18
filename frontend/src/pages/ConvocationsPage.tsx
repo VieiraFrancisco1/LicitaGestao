@@ -13,7 +13,7 @@ function formatDateTime(value: string) {
   }).format(new Date(value));
 }
 
-export function ConvocationsPage() {
+export function ConvocationsPage() { // LICITAGESTAO_PREQUAL_ALL_EMAILS_V1_EMAIL_PAGE
   const { user, activeCompanyId, setActiveCompanyId } = useAuth();
   const [data, setData] = useState<GmailConvocationAlertData>({ items: [], unread: 0 });
   const [companies, setCompanies] = useState<CompanySummary[]>([]);
@@ -74,7 +74,9 @@ export function ConvocationsPage() {
     navigate(
       item.bidId
         ? `/participacoes/${item.bidId}?tab=convocations&message=${item.messageId}`
-        : `/empresas/${item.companyId}?tab=convocations&message=${item.messageId}`
+        : item.tenderId
+          ? `/licitacoes/${item.tenderId}`
+          : `/empresas/${item.companyId}?tab=convocations&message=${item.messageId}`
     );
   };
 
@@ -142,8 +144,8 @@ export function ConvocationsPage() {
       <div className="page-heading">
         <div>
           <span className="eyebrow">E-mail</span>
-          <h2>Avisos por e-mail</h2>
-          <p>Convocações e avisos importantes identificados automaticamente nos e-mails das plataformas.</p>
+          <h2>E-mails recebidos</h2>
+          <p>Todos os e-mails das contas conectadas aparecem aqui, com associação automática à licitação quando houver correspondência segura.</p>
         </div>
         <div className="page-heading-actions">
           {!!selectedUnread && (
@@ -211,7 +213,7 @@ export function ConvocationsPage() {
           <MailWarning size={36} />
           <h2>Nenhum aviso encontrado para este escopo</h2>
           <p>
-            Quando o Gmail ou Outlook receber um aviso de licitação dentro do escopo selecionado, ele aparecerá aqui.
+            Quando o Gmail ou Outlook receber qualquer e-mail dentro do escopo selecionado, ele aparecerá aqui.
           </p>
         </section>
       ) : (

@@ -210,6 +210,7 @@ model Tender {
   modality                     String?               @db.VarChar(80)
   noticeNumber                 String?               @map("notice_number") @db.VarChar(120)
   processNumber                String?               @map("process_number") @db.VarChar(120)
+  isPreQualification           Boolean               @default(false) @map("is_pre_qualification") // LICITAGESTAO_PREQUAL_ALL_EMAILS_V1_SCHEMA
   municipality                 String                @db.VarChar(120)
   state                        String?               @db.Char(2)
   agency                       String?               @db.VarChar(180)

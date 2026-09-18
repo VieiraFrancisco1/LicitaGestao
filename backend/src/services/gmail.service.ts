@@ -20,7 +20,7 @@ const STATE_TTL_MS = 10 * 60_000;
 const SYNC_OVERLAP_MS = 2 * 60_000;
 const MAX_GMAIL_PAGES = 20;
 
-const db = prisma as any;
+const db = prisma as any; // LICITAGESTAO_PREQUAL_ALL_EMAILS_V1_EMAILS
 
 let pollTimer: NodeJS.Timeout | null = null;
 let firstPollTimer: NodeJS.Timeout | null = null;
@@ -220,7 +220,7 @@ function emailAccessWhere(auth: AuthScope): Record<string, unknown> {
 }
 
 type MatchCandidate = {
-  id: string;
+  id: string | null;
   companyId: string;
   tenderId: string;
   tender: {
@@ -247,7 +247,7 @@ type MatchMessage = {
 };
 
 type ConvocationMatch = {
-  bidId: string;
+  bidId: string | null;
   tenderId: string;
   method: 'PROCESS_NUMBER' | 'NOTICE_NUMBER' | 'CONTEXT';
   confidence: number;
@@ -345,28 +345,54 @@ async function findBestConvocationMatch(
   companyId: string,
   message: MatchMessage
 ): Promise<ConvocationMatch | null> {
-  const candidates = (await db.bid.findMany({
-    where: { companyId },
+  const company = (await db.company.findUnique({
+    where: { id: companyId },
+    select: { organizationId: true }
+  })) as { organizationId: string } | null;
+  if (!company) return null;
+
+  const tenders = (await db.tender.findMany({
+    where: { organizationId: company.organizationId },
     select: {
       id: true,
-      companyId: true,
-      tenderId: true,
-      tender: {
-        select: {
-          id: true,
-          modality: true,
-          noticeNumber: true,
-          processNumber: true,
-          municipality: true,
-          object: true,
-          sessionDate: true,
-          platform: { select: { id: true, name: true } }
-        }
-      }
+      modality: true,
+      noticeNumber: true,
+      processNumber: true,
+      municipality: true,
+      object: true,
+      sessionDate: true,
+      platform: { select: { id: true, name: true } },
+      bids: { where: { companyId }, select: { id: true }, take: 1 }
     },
-    orderBy: { tender: { sessionDate: 'desc' } },
-    take: 500
-  })) as MatchCandidate[];
+    orderBy: { sessionDate: 'desc' },
+    take: 1000
+  })) as Array<{
+    id: string;
+    modality: string | null;
+    noticeNumber: string | null;
+    processNumber: string | null;
+    municipality: string;
+    object: string;
+    sessionDate: Date;
+    platform: { id: string; name: string } | null;
+    bids: Array<{ id: string }>;
+  }>;
+
+  const candidates: MatchCandidate[] = tenders.map((tender) => ({
+    id: tender.bids[0]?.id ?? null,
+    companyId,
+    tenderId: tender.id,
+    tender: {
+      id: tender.id,
+      modality: tender.modality,
+      noticeNumber: tender.noticeNumber,
+      processNumber: tender.processNumber,
+      municipality: tender.municipality,
+      object: tender.object,
+      sessionDate: tender.sessionDate,
+      platform: tender.platform
+    }
+  }));
 
   const ranked = candidates
     .map((candidate) => ({ candidate, ...evaluateCandidate(candidate, message) }))
@@ -405,7 +431,7 @@ export async function autoLinkConvocationMessage(messageId: string) {
       convocationMatchMethod: true
     }
   })) as MatchMessage | null;
-  if (!message?.isPotentialConvocation) return null;
+  if (!message) return null;
   if (message.bidId && message.convocationMatchMethod === 'MANUAL') return null;
 
   const match = await findBestConvocationMatch(message.companyId, message);
@@ -424,24 +450,27 @@ export async function autoLinkConvocationMessage(messageId: string) {
 }
 
 export async function relinkPotentialConvocationsForTender(tenderId: string) {
-  const bids = (await db.bid.findMany({
-    where: { tenderId },
-    select: { id: true, companyId: true }
-  })) as Array<{
-    id: string;
-    companyId: string;
-  }>;
-  const companyIds = Array.from(new Set(bids.map((bid) => bid.companyId)));
-  for (const companyId of companyIds) {
+  const tender = (await db.tender.findUnique({
+    where: { id: tenderId },
+    select: { organizationId: true }
+  })) as { organizationId: string } | null;
+  if (!tender) return;
+
+  const companies = (await db.company.findMany({
+    where: { organizationId: tender.organizationId },
+    select: { id: true }
+  })) as Array<{ id: string }>;
+
+  for (const company of companies) {
     const messages = (await db.emailMessage.findMany({
       where: {
-        companyId,
-        isPotentialConvocation: true,
-        OR: [{ bidId: null }, { convocationMatchMethod: { not: 'MANUAL' } }]
+        companyId: company.id,
+        receivedAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60_000) },
+        OR: [{ convocationMatchMethod: null }, { convocationMatchMethod: { not: 'MANUAL' } }]
       },
       select: { id: true },
       orderBy: { receivedAt: 'desc' },
-      take: 200
+      take: 1000
     })) as Array<{ id: string }>;
     for (const message of messages) await autoLinkConvocationMessage(message.id);
   }
@@ -464,7 +493,7 @@ export async function relinkUnmatchedConvocations(companyId?: string) {
       convocationReason: true
     },
     orderBy: { receivedAt: 'desc' },
-    take: 1000
+    take: 2000
   })) as Array<{
     id: string;
     sender: string;
@@ -474,6 +503,7 @@ export async function relinkUnmatchedConvocations(companyId?: string) {
     isPotentialConvocation: boolean;
     convocationReason: string | null;
   }>;
+
   let reclassified = 0;
   let discarded = 0;
   for (const message of recentMessages) {
@@ -483,41 +513,18 @@ export async function relinkUnmatchedConvocations(companyId?: string) {
       snippet: message.snippet,
       text: message.textContent
     });
-    if (
-      detection.detected === message.isPotentialConvocation &&
-      detection.reason === message.convocationReason
-    ) {
-      continue;
+    if (detection.detected !== message.isPotentialConvocation || detection.reason !== message.convocationReason) {
+      await db.emailMessage.update({
+        where: { id: message.id },
+        data: detection.detected
+          ? { isPotentialConvocation: true, convocationReason: detection.reason }
+          : { isPotentialConvocation: false, convocationReason: null }
+      });
+      if (detection.detected) reclassified += 1;
+      else discarded += 1;
     }
-    await db.emailMessage.update({
-      where: { id: message.id },
-      data: detection.detected
-        ? { isPotentialConvocation: true, convocationReason: detection.reason }
-        : {
-            isPotentialConvocation: false,
-            convocationReason: null,
-            tenderId: null,
-            bidId: null,
-            convocationMatchMethod: null,
-            convocationMatchConfidence: null,
-            convocationMatchedAt: null
-          }
-    });
-    if (detection.detected) reclassified += 1;
-    else discarded += 1;
+    await autoLinkConvocationMessage(message.id);
   }
-
-  const messages = (await db.emailMessage.findMany({
-    where: {
-      ...(companyId ? { companyId } : {}),
-      isPotentialConvocation: true,
-      bidId: null
-    },
-    select: { id: true },
-    orderBy: { receivedAt: 'desc' },
-    take: 500
-  })) as Array<{ id: string }>;
-  for (const message of messages) await autoLinkConvocationMessage(message.id);
   return { checked: recentMessages.length, reclassified, discarded };
 }
 
@@ -727,7 +734,7 @@ export async function syncGmailIntegration(companyId: string) {
             subject,
             receivedAt,
             snippet,
-            textContent: detection.detected && textContent ? textContent : null,
+            textContent: textContent || null,
             processingStatus: 'PROCESSADO',
             isPotentialConvocation: detection.detected,
             convocationReason: detection.reason
@@ -735,10 +742,8 @@ export async function syncGmailIntegration(companyId: string) {
           select: { id: true }
         });
         inserted += 1;
-        if (detection.detected) {
-          convocations += 1;
-          await autoLinkConvocationMessage(created.id);
-        }
+        if (detection.detected) convocations += 1;
+        await autoLinkConvocationMessage(created.id);
       } catch (error) {
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') continue;
         throw error;
@@ -874,7 +879,7 @@ export async function listCompanyEmailMessages(
 
 export async function linkGmailConvocationToBid(messageId: string, bidId: string | null, auth: AuthScope) {
   const message = await db.emailMessage.findFirst({
-    where: { id: messageId, ...emailAccessWhere(auth), isPotentialConvocation: true },
+    where: { id: messageId, ...emailAccessWhere(auth) },
     select: { id: true, companyId: true }
   });
   if (!message) throw new AppError('Convocação não encontrada', 404);
@@ -912,7 +917,7 @@ export async function linkGmailConvocationToBid(messageId: string, bidId: string
 
 export async function listGmailConvocationAlerts(auth: AuthScope) {
   const messages = (await db.emailMessage.findMany({
-    where: { ...emailAccessWhere(auth), isPotentialConvocation: true },
+    where: { ...emailAccessWhere(auth) },
     select: {
       id: true,
       companyId: true,
@@ -927,7 +932,7 @@ export async function listGmailConvocationAlerts(auth: AuthScope) {
       company: { select: { legalName: true, tradeName: true } }
     },
     orderBy: { receivedAt: 'desc' },
-    take: 50
+    take: 100
   })) as Array<{
     id: string;
     companyId: string;
@@ -980,7 +985,7 @@ export async function listGmailConvocationAlerts(auth: AuthScope) {
 
 export async function markGmailConvocationRead(auth: AuthScope, messageId: string) {
   const message = await db.emailMessage.findFirst({
-    where: { id: messageId, ...emailAccessWhere(auth), isPotentialConvocation: true },
+    where: { id: messageId, ...emailAccessWhere(auth) },
     select: { id: true }
   });
   if (!message) throw new AppError('Convocação não encontrada', 404);
@@ -1009,7 +1014,7 @@ export async function markAllGmailConvocationsRead(auth: AuthScope) {
 
 export async function dismissGmailConvocationAlert(auth: AuthScope, messageId: string) {
   const message = await db.emailMessage.findFirst({
-    where: { id: messageId, ...emailAccessWhere(auth), isPotentialConvocation: true },
+    where: { id: messageId, ...emailAccessWhere(auth) },
     select: { id: true }
   });
   if (!message) throw new AppError('Notificação não encontrada', 404);

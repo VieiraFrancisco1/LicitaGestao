@@ -405,6 +405,18 @@ export function TendersPage() {
                               {tenderLabel}
                             </small>
                           )}
+                          {tender.isPreQualification && (
+                            <small
+                              style={{
+                                marginTop: '1px',
+                                color: '#2563eb',
+                                fontWeight: 800,
+                                lineHeight: 1.15
+                              }}
+                            >
+                              Pré-qualificação
+                            </small>
+                          )} {/* LICITAGESTAO_PREQUAL_ALL_EMAILS_V1_LIST */}
                           <small
                             style={{
                               marginTop: '2px',
