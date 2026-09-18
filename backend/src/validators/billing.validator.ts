@@ -43,7 +43,7 @@ export const billingCardSchema = z.object({
     cardToken: z.string().trim().min(10).max(500),
     paymentMethodId: z.string().trim().min(2).max(80),
     paymentTypeId: z.enum(['credit_card', 'debit_card']),
-    installments: z.coerce.number().int().min(1).max(24),
+    installments: z.coerce.number().int().min(1).max(3),
     payerEmail: z.string().trim().email().optional(),
     identification: z
       .object({

@@ -70,9 +70,9 @@ export const BILLING_PLANS = {
     code: SubscriptionPlan.SEMIANNUAL,
     name: '6 meses',
     months: 6,
-    amount: 500,
-    amountText: '500.00',
-    displayPrice: 'R$ 500,00'
+    amount: 400,
+    amountText: '400.00',
+    displayPrice: 'R$ 400,00'
   }
 } as const;
 

@@ -71,7 +71,7 @@ export function PaymentPage() {
   }, []);
 
   useEffect(() => {
-    if (!token) return;
+    if (!token || method === 'CARD') return;
 
     const first = window.setTimeout(() => void loadStatus(), 0);
     const polling = window.setInterval(() => void loadStatus(), 5_000);
@@ -80,7 +80,7 @@ export function PaymentPage() {
       window.clearTimeout(first);
       window.clearInterval(polling);
     };
-  }, [token, loadStatus]);
+  }, [token, loadStatus, method]); // LICITAGESTAO_CHECKOUT_V13
 
   const selected = useMemo(
     () =>
@@ -335,10 +335,6 @@ export function PaymentPage() {
               <div>
                 <span className="eyebrow">Cartão</span>
                 <h3>Pagamento na própria tela</h3>
-                <p>
-                  Os dados do cartão são tokenizados pelo Mercado Pago e não
-                  ficam armazenados no LicitaGestão.
-                </p>
               </div>
               <strong>{selected?.displayPrice ?? '—'}</strong>
             </div>
@@ -359,6 +355,12 @@ export function PaymentPage() {
                     amount: selected.amount,
                     payer: {
                       email: status.payerEmail
+                    }
+                  }}
+                  customization={{
+                    paymentMethods: {
+                      minInstallments: 1,
+                      maxInstallments: 3
                     }
                   }}
                   onSubmit={async (formData, additionalData) => {
