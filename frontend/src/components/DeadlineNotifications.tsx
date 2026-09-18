@@ -146,11 +146,11 @@ export function DeadlineNotifications() {
       let changed = false;
 
       gmailData.items
-        .filter((item) => !item.read)
+        .filter((item) => item.priority && !item.read)
         .forEach((item) => {
           const notificationKey = `${item.key}:${day}`;
           if (history.has(notificationKey)) return;
-          const notification = new Notification(`E-mail recebido — ${item.companyName}`, {
+          const notification = new Notification(`Alerta prioritário — ${item.companyName}`, {
             body: gmailDesktopBody(item),
             tag: item.key,
             requireInteraction: true
@@ -248,7 +248,7 @@ export function DeadlineNotifications() {
     setDesktopPermission(permission);
     if (permission === 'granted') {
       new Notification('LicitaGestão', {
-        body: 'Notificações ativadas. Você será avisado sobre prazos e todos os e-mails recebidos nas contas conectadas.',
+        body: 'Notificações ativadas. Todos os e-mails continuam no sistema, mas os pop-ups serão reservados para suspensão, esclarecimento, convocação e readequação.',
         tag: 'licitagestao-notifications-enabled'
       });
       if (deadlines) showDesktopDeadlineAlerts(deadlines, permission);
@@ -348,7 +348,10 @@ export function DeadlineNotifications() {
     }
   };
 
-  const gmailItems = gmailAlerts?.items ?? [];
+  const gmailItems = useMemo(
+    () => (gmailAlerts?.items ?? []).filter((item) => item.priority),
+    [gmailAlerts?.items]
+  ); // LICITAGESTAO_EMAIL_PRIORITY_V1_NOTIFICATIONS
   const deadlineItems = deadlines?.items ?? [];
   const allSelectionKeys = useMemo<SelectedAlertKey[]>(
     () => [
@@ -409,10 +412,11 @@ export function DeadlineNotifications() {
     }
   };
 
-  const unread = (deadlines?.unread ?? 0) + (gmailAlerts?.unread ?? 0);
+  const priorityEmailUnread = gmailItems.filter((item) => !item.read).length;
+  const unread = (deadlines?.unread ?? 0) + priorityEmailUnread;
   const hasItems = deadlineItems.length > 0 || gmailItems.length > 0;
   const permissionDescription = useMemo(
-    () => 'Receba pop-ups do Windows para prazos e todos os e-mails das contas conectadas.',
+    () => 'Todos os e-mails ficam salvos no sistema; os pop-ups destacam somente suspensão, esclarecimento, convocação e readequação.',
     []
   );
 
@@ -549,7 +553,7 @@ export function DeadlineNotifications() {
             {!hasItems && <div className="notification-empty">Nenhum alerta urgente no momento.</div>}
             {gmailItems.length > 0 && (
               <div className="notification-section-label">
-                <MailWarning size={14} /> E-mail
+                <MailWarning size={14} /> E-mails prioritários
               </div>
             )}
             {gmailItems.map((item) => {

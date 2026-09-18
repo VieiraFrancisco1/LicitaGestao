@@ -368,6 +368,8 @@ export type GmailConvocationAlert = {
   subject: string | null;
   receivedAt: string;
   snippet: string | null;
+  priority: boolean; // LICITAGESTAO_EMAIL_PRIORITY_V1_TYPES
+  priorityKind: 'SUSPENSAO' | 'ESCLARECIMENTO' | 'CONVOCACAO' | 'READEQUACAO' | null;
   tenderId: string | null;
   bidId: string | null;
   tender: Pick<Tender, 'modality' | 'noticeNumber' | 'processNumber' | 'municipality'> | null;

@@ -915,6 +915,39 @@ export async function linkGmailConvocationToBid(messageId: string, bidId: string
   });
 }
 
+
+type PriorityEmailKind = 'SUSPENSAO' | 'ESCLARECIMENTO' | 'CONVOCACAO' | 'READEQUACAO';
+
+function normalizePriorityEmailText(value: string | null | undefined) {
+  return (value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
+function priorityEmailKind(message: {
+  subject: string | null;
+  snippet: string | null;
+  textContent?: string | null;
+  convocationReason?: string | null;
+}): PriorityEmailKind | null {
+  const combined = normalizePriorityEmailText(
+    [message.subject, message.snippet, message.textContent, message.convocationReason]
+      .filter(Boolean)
+      .join('\n')
+  );
+
+  if (combined.includes('suspens')) return 'SUSPENSAO';
+  if (combined.includes('esclareciment')) return 'ESCLARECIMENTO';
+  if (combined.includes('readequa')) return 'READEQUACAO';
+  if (combined.includes('convocacao') || combined.includes('convocad') || combined.includes('convocamos')) {
+    return 'CONVOCACAO';
+  }
+  return null;
+}
+
+// LICITAGESTAO_EMAIL_PRIORITY_V1_SERVICE
+
 export async function listGmailConvocationAlerts(auth: AuthScope) {
   const messages = (await db.emailMessage.findMany({
     where: { ...emailAccessWhere(auth) },
@@ -926,6 +959,8 @@ export async function listGmailConvocationAlerts(auth: AuthScope) {
       subject: true,
       receivedAt: true,
       snippet: true,
+      textContent: true,
+      convocationReason: true,
       tenderId: true,
       bidId: true,
       tender: { select: { modality: true, noticeNumber: true, processNumber: true, municipality: true } },
@@ -941,6 +976,8 @@ export async function listGmailConvocationAlerts(auth: AuthScope) {
     subject: string | null;
     receivedAt: Date;
     snippet: string | null;
+    textContent: string | null;
+    convocationReason: string | null;
     tenderId: string | null;
     bidId: string | null;
     tender: {
@@ -964,6 +1001,7 @@ export async function listGmailConvocationAlerts(auth: AuthScope) {
     .filter((message) => !dismissedKeys.has(`GMAIL_CONVOCATION:${message.id}`))
     .map((message) => {
       const key = `GMAIL_CONVOCATION:${message.id}`;
+      const priorityKind = priorityEmailKind(message);
       return {
         key,
         messageId: message.id,
@@ -974,12 +1012,18 @@ export async function listGmailConvocationAlerts(auth: AuthScope) {
         subject: message.subject,
         receivedAt: message.receivedAt,
         snippet: message.snippet,
+        priority: Boolean(priorityKind),
+        priorityKind,
         tenderId: message.tenderId,
         bidId: message.bidId,
         tender: message.tender,
         read: readKeys.has(key)
       };
     });
+  items.sort((a, b) => {
+    if (a.priority !== b.priority) return a.priority ? -1 : 1;
+    return b.receivedAt.getTime() - a.receivedAt.getTime();
+  });
   return { items, unread: items.filter((item) => !item.read).length };
 }
 

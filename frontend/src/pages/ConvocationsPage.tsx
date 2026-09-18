@@ -18,6 +18,7 @@ export function ConvocationsPage() { // LICITAGESTAO_PREQUAL_ALL_EMAILS_V1_EMAIL
   const [data, setData] = useState<GmailConvocationAlertData>({ items: [], unread: 0 });
   const [companies, setCompanies] = useState<CompanySummary[]>([]);
   const [selectedCompanyId, setSelectedCompanyId] = useState('');
+  const [emailFilter, setEmailFilter] = useState<'IMPORTANTES' | 'TODOS'>('IMPORTANTES'); // LICITAGESTAO_EMAIL_PRIORITY_V1_PAGE
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [removingId, setRemovingId] = useState('');
@@ -82,7 +83,10 @@ export function ConvocationsPage() { // LICITAGESTAO_PREQUAL_ALL_EMAILS_V1_EMAIL
 
   const markAll = async () => {
     const unreadItems = data.items.filter(
-      (item) => (!selectedCompanyId || item.companyId === selectedCompanyId) && !item.read
+      (item) =>
+        (!selectedCompanyId || item.companyId === selectedCompanyId) &&
+        (emailFilter === 'TODOS' || item.priority) &&
+        !item.read
     );
     if (unreadItems.length === 0) return;
     await Promise.all(
@@ -106,11 +110,16 @@ export function ConvocationsPage() { // LICITAGESTAO_PREQUAL_ALL_EMAILS_V1_EMAIL
     return counts;
   }, [data.items]);
 
-  const visibleItems = useMemo(
+  const companyItems = useMemo(
     () => selectedCompanyId ? data.items.filter((item) => item.companyId === selectedCompanyId) : data.items,
     [data.items, selectedCompanyId]
   );
-  const selectedUnread = selectedCompanyId ? (unreadByCompany.get(selectedCompanyId) ?? 0) : data.unread;
+  const importantCount = companyItems.filter((item) => item.priority).length;
+  const visibleItems = useMemo(
+    () => emailFilter === 'IMPORTANTES' ? companyItems.filter((item) => item.priority) : companyItems,
+    [companyItems, emailFilter]
+  );
+  const selectedUnread = visibleItems.filter((item) => !item.read).length;
   const selectedCompany = companies.find((company) => company.id === selectedCompanyId);
 
   const selectCompany = (companyId: string | null) => {
@@ -192,6 +201,21 @@ export function ConvocationsPage() { // LICITAGESTAO_PREQUAL_ALL_EMAILS_V1_EMAIL
         </nav>
       )}
 
+      <nav className="tender-status-tabs" aria-label="Filtrar e-mails por prioridade">
+        <button
+          className={emailFilter === 'IMPORTANTES' ? 'active' : ''}
+          onClick={() => setEmailFilter('IMPORTANTES')}
+        >
+          Importantes ({importantCount})
+        </button>
+        <button
+          className={emailFilter === 'TODOS' ? 'active' : ''}
+          onClick={() => setEmailFilter('TODOS')}
+        >
+          Todos ({companyItems.length})
+        </button>
+      </nav>
+
       <div className="convocation-summary-card">
         <MailWarning size={22} />
         <div>
@@ -229,7 +253,25 @@ export function ConvocationsPage() { // LICITAGESTAO_PREQUAL_ALL_EMAILS_V1_EMAIL
                 </span>
                 <div className="convocation-content">
                   <div className="convocation-title-row">
-                    <strong>{item.subject || 'Aviso importante'}</strong>
+                    <strong>{item.subject || 'E-mail sem assunto'}</strong>
+                    {item.priority && (
+                      <span
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          padding: '3px 7px',
+                          borderRadius: 999,
+                          background: '#fff4e5',
+                          color: '#9a6700',
+                          fontSize: 10,
+                          fontWeight: 800,
+                          letterSpacing: '0.04em',
+                          textTransform: 'uppercase'
+                        }}
+                      >
+                        Prioridade
+                      </span>
+                    )}
                     <time>{formatDateTime(item.receivedAt)}</time>
                   </div>
                   <small>
