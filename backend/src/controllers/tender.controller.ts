@@ -35,7 +35,12 @@ export const show = async (req: Request, res: Response) => {
 
 export const create = async (req: Request, res: Response) => {
   const tender = await createTender(req.body, req.auth!);
-  await recordAudit(req.auth!, {
+
+  // Responde assim que a licitação foi gravada no banco.
+  // Auditoria e associação de e-mails continuam em segundo plano sem travar o botão Salvar.
+  res.status(201).json({ success: true, message: 'Licitação adicionada ao controle geral', data: tender }); // LICITAGESTAO_INSTANT_TENDER_SAVE_V1
+
+  void recordAudit(req.auth!, {
     action: AuditActions.CREATE,
     entityType: 'TENDER',
     entityId: tender.id,
@@ -43,15 +48,19 @@ export const create = async (req: Request, res: Response) => {
     description: 'Licitação cadastrada',
     metadata: { changedFields: Object.keys(req.body) }
   });
-  await relinkPotentialConvocationsForTender(tender.id).catch((error) =>
-    console.error('Falha ao reavaliar convocações após cadastro da licitação:', error)
+
+  void relinkPotentialConvocationsForTender(tender.id).catch((error) =>
+    console.error('Falha ao reavaliar e-mails após cadastro da licitação:', error)
   );
-  res.status(201).json({ success: true, message: 'Licitação adicionada ao controle geral', data: tender });
 };
 
 export const update = async (req: Request, res: Response) => {
   const tender = await updateTender(req.params.id as string, req.body, req.auth!);
-  await recordAudit(req.auth!, {
+
+  // O usuário não precisa esperar a varredura dos e-mails para concluir a edição.
+  res.json({ success: true, message: 'Licitação geral atualizada', data: tender });
+
+  void recordAudit(req.auth!, {
     action: AuditActions.UPDATE,
     entityType: 'TENDER',
     entityId: tender.id,
@@ -59,10 +68,10 @@ export const update = async (req: Request, res: Response) => {
     description: 'Licitação atualizada',
     metadata: { changedFields: Object.keys(req.body) }
   });
-  await relinkPotentialConvocationsForTender(tender.id).catch((error) =>
-    console.error('Falha ao reavaliar convocações após atualização da licitação:', error)
+
+  void relinkPotentialConvocationsForTender(tender.id).catch((error) =>
+    console.error('Falha ao reavaliar e-mails após atualização da licitação:', error)
   );
-  res.json({ success: true, message: 'Licitação geral atualizada', data: tender });
 };
 
 export const spreadsheetReady = async (req: Request, res: Response) => {
