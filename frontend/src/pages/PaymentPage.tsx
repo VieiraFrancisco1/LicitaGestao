@@ -71,16 +71,43 @@ export function PaymentPage() {
   }, []);
 
   useEffect(() => {
-    if (!token || method === 'CARD') return;
+    if (!token || method === 'CARD' || status?.accessGranted) return;
 
-    const first = window.setTimeout(() => void loadStatus(), 0);
-    const polling = window.setInterval(() => void loadStatus(), 5_000);
+    const checkPayment = async () => {
+      if (method === 'PIX' && pixData?.orderId) {
+        try {
+          const response = await rawApi.post<ApiResponse<BillingStatusData>>(
+            '/billing/reconcile',
+            {
+              token,
+              orderId: pixData.orderId
+            }
+          );
+          setStatus(response.data.data);
+          setError('');
+        } catch (err) {
+          setError(errorMessage(err));
+        }
+        return;
+      }
+
+      await loadStatus();
+    };
+
+    const first = window.setTimeout(() => void checkPayment(), 0);
+    const polling = window.setInterval(() => void checkPayment(), 12_000);
 
     return () => {
       window.clearTimeout(first);
       window.clearInterval(polling);
     };
-  }, [token, loadStatus, method]); // LICITAGESTAO_CHECKOUT_V13
+  }, [
+    token,
+    loadStatus,
+    method,
+    pixData?.orderId,
+    status?.accessGranted
+  ]); // LICITAGESTAO_PIX_RECONCILE_V16
 
   const selected = useMemo(
     () =>
