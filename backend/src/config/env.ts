@@ -41,7 +41,8 @@ const envSchema = z.object({
   OUTLOOK_POLL_INTERVAL_MS: z.coerce.number().int().min(60_000).max(900_000).default(120_000),
   MERCADO_PAGO_ACCESS_TOKEN: z.string().trim().min(1).optional(),
   MERCADO_PAGO_WEBHOOK_SECRET: z.string().trim().min(16).optional(),
-  MERCADO_PAGO_WEBHOOK_URL: z.string().url().optional() // LICITAGESTAO_BILLING_ORDERS_API_V2_ENV
+  MERCADO_PAGO_WEBHOOK_URL: z.string().url().optional(),
+  MERCADO_PAGO_TEST_PAYER_EMAIL: z.string().email().optional() // LICITAGESTAO_BILLING_ORDERS_API_V7_ENV
 });
 
 const parsed = envSchema.safeParse(process.env);

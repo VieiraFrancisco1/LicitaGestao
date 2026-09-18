@@ -233,8 +233,24 @@ async function mercadoPagoFetch<T>(resource: string, init?: RequestInit): Promis
 
   if (!response.ok) {
     console.error('Mercado Pago respondeu com erro:', response.status, body);
+
+    const providerCode =
+      body &&
+      typeof body === 'object' &&
+      'code' in body &&
+      typeof (body as { code?: unknown }).code === 'string'
+        ? (body as { code: string }).code
+        : body &&
+            typeof body === 'object' &&
+            'error' in body &&
+            typeof (body as { error?: unknown }).error === 'string'
+          ? (body as { error: string }).error
+          : null;
+
     throw new AppError(
-      'Não foi possível comunicar com o Mercado Pago agora. Tente novamente em instantes.',
+      providerCode
+        ? `Mercado Pago recusou a cobrança (${providerCode}).`
+        : 'Não foi possível comunicar com o Mercado Pago agora. Tente novamente em instantes.',
       502,
       'PAYMENT_PROVIDER_ERROR'
     );
@@ -272,7 +288,9 @@ export async function createBillingCheckout(token: string, plan: SubscriptionPla
   });
 
   const frontendUrl = env.FRONTEND_URL.replace(/\/$/, '');
-  const notificationUrl = env.MERCADO_PAGO_WEBHOOK_URL!;
+  const payerEmail =
+    env.MERCADO_PAGO_TEST_PAYER_EMAIL?.trim().toLowerCase() ||
+    organization.loginEmail;
 
   try {
     const order = await mercadoPagoFetch<MercadoPagoOrder>('/v1/orders', {
@@ -288,7 +306,7 @@ export async function createBillingCheckout(token: string, plan: SubscriptionPla
         external_reference: payment.id,
         description: `LicitaGestão - Plano ${selectedPlan.name}`,
         payer: {
-          email: organization.loginEmail
+          email: payerEmail
         },
         items: [
           {
@@ -296,13 +314,10 @@ export async function createBillingCheckout(token: string, plan: SubscriptionPla
             title: `LicitaGestão - Plano ${selectedPlan.name}`,
             description: `Acesso ao LicitaGestão por ${selectedPlan.months} mês(es)`,
             quantity: 1,
-            unit_price: selectedPlan.amountText,
-            unit_measure: 'unit',
-            total_amount: selectedPlan.amountText
+            unit_price: selectedPlan.amountText
           }
         ],
         config: {
-          notification_url: notificationUrl,
           online: {
             success_url: `${frontendUrl}/pagamento?resultado=sucesso`,
             pending_url: `${frontendUrl}/pagamento?resultado=pendente`,
@@ -313,7 +328,7 @@ export async function createBillingCheckout(token: string, plan: SubscriptionPla
             not_allowed_types: ['ticket', 'debit_card', 'prepaid_card', 'account_money'],
             max_installments: 1
           }
-        }
+        } // LICITAGESTAO_BILLING_ORDERS_API_V7_PAYLOAD
       })
     });
 
