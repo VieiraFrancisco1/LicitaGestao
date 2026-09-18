@@ -484,17 +484,13 @@ export async function createBillingPix(
     const transaction = order.transactions?.payments?.[0] ?? null;
     const paymentMethod = transaction?.payment_method;
 
-    if (
-      !order.id ||
-      !paymentMethod?.qr_code ||
-      !paymentMethod.qr_code_base64
-    ) {
+    if (!order.id || !paymentMethod?.qr_code) {
       throw new AppError(
-        'O Mercado Pago não retornou o QR Code do Pix.',
+        'O Mercado Pago não retornou o código Pix.',
         502,
         'INVALID_PROVIDER_RESPONSE'
       );
-    }
+    } // LICITAGESTAO_PIX_SANDBOX_V15
 
     await prisma.billingPayment.update({
       where: { id: payment.id },
