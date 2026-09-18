@@ -641,20 +641,56 @@ function addPlanMonths(date: Date, plan: SubscriptionPlan) {
 }
 
 function mapOrderStatus(order: MercadoPagoOrder) {
-  if (order.status === 'processed' && order.status_detail === 'accredited') {
+  const payments = order.transactions?.payments ?? [];
+
+  const approvedTransaction = payments.some(
+    (payment) =>
+      payment.status === 'processed' &&
+      payment.status_detail === 'accredited'
+  );
+
+  if (
+    approvedTransaction ||
+    (order.status === 'processed' && order.status_detail === 'accredited')
+  ) {
     return BillingPaymentStatus.APPROVED;
   }
+
+  const refundedTransaction = payments.some(
+    (payment) =>
+      payment.status === 'refunded' ||
+      (payment.status === 'processed' &&
+        (payment.status_detail === 'refunded' ||
+          payment.status_detail === 'partially_refunded'))
+  );
+
   if (
+    refundedTransaction ||
     order.status === 'refunded' ||
     (order.status === 'processed' &&
-      (order.status_detail === 'refunded' || order.status_detail === 'partially_refunded'))
+      (order.status_detail === 'refunded' ||
+        order.status_detail === 'partially_refunded'))
   ) {
     return BillingPaymentStatus.REFUNDED;
   }
-  if (order.status === 'canceled') return BillingPaymentStatus.CANCELLED;
-  if (order.status === 'failed') return BillingPaymentStatus.REJECTED;
+
+  const failedTransaction = payments.some(
+    (payment) => payment.status === 'failed'
+  );
+  const cancelledTransaction = payments.some(
+    (payment) => payment.status === 'canceled'
+  );
+
+  if (cancelledTransaction || order.status === 'canceled') {
+    return BillingPaymentStatus.CANCELLED;
+  }
+
+  if (failedTransaction || order.status === 'failed') {
+    return BillingPaymentStatus.REJECTED;
+  }
+
   return BillingPaymentStatus.PENDING;
-}
+} // LICITAGESTAO_PIX_TRANSACTION_STATUS_V17
 
 function paymentTransactionFromOrder(order: MercadoPagoOrder) {
   const transactions = order.transactions?.payments ?? [];
