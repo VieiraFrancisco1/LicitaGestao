@@ -11,7 +11,37 @@ import { apiRouter } from './routes/index.js';
 export const app = express();
 
 app.disable('x-powered-by');
-app.use(helmet());
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        'script-src': [
+          "'self'",
+          'https://sdk.mercadopago.com'
+        ],
+        'connect-src': [
+          "'self'",
+          'https://api.mercadopago.com',
+          'https://events.mercadopago.com',
+          'https://*.mercadopago.com',
+          'https://*.mercadopago.com.br'
+        ],
+        'frame-src': [
+          "'self'",
+          'https://*.mercadopago.com',
+          'https://*.mercadopago.com.br'
+        ],
+        'img-src': [
+          "'self'",
+          'data:',
+          'https://*.mercadopago.com',
+          'https://*.mercadopago.com.br',
+          'https://http2.mlstatic.com'
+        ]
+      }
+    }
+  })
+); // LICITAGESTAO_MERCADOPAGO_CSP_V10
 app.use(cors({ origin: env.FRONTEND_URL, credentials: true }));
 app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
