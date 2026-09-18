@@ -13,6 +13,8 @@ import {
   Menu,
   Search,
   Settings,
+  Shield,
+  CircleHelp,
   Users,
   X
 } from 'lucide-react';
@@ -38,10 +40,12 @@ const titles: Record<string, string> = {
   '/backups': 'Backup e recuperação',
   '/saude-sistema': 'Saúde do sistema',
   '/relatorios': 'Relatórios',
-  '/configuracoes': 'Configurações'
+  '/configuracoes': 'Configurações',
+  '/ajuda': 'Ajuda',
+  '/super-admin': 'Super Admin'
 };
 
-export function AppLayout() {
+export function AppLayout() { // LICITAGESTAO_SAAS_RENTAL_V1_LAYOUT
   const { user, logout, activeCompanyId, setActiveCompanyId } = useAuth();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -74,10 +78,12 @@ export function AppLayout() {
         { to: '/plataformas', label: 'Plataformas', icon: Gavel },
         { to: '/usuarios', label: 'Usuários', icon: Users, adminOnly: true },
         { to: '/auditoria', label: 'Auditoria', icon: History, adminOnly: true },
-        { to: '/backups', label: 'Backup', icon: DatabaseBackup, adminOnly: true },
-        { to: '/saude-sistema', label: 'Saúde do sistema', icon: Activity, adminOnly: true },
+        { to: '/backups', label: 'Backup', icon: DatabaseBackup, superAdminOnly: true },
+        { to: '/saude-sistema', label: 'Saúde do sistema', icon: Activity, superAdminOnly: true },
         { to: '/relatorios', label: 'Relatórios', icon: FileBarChart },
-        { to: '/configuracoes', label: 'Configurações', icon: Settings }
+        { to: '/configuracoes', label: 'Configurações', icon: Settings },
+        { to: '/ajuda', label: 'Ajuda', icon: CircleHelp },
+        { to: '/super-admin', label: 'Super Admin', icon: Shield, superAdminOnly: true }
       ]
     }
   ];
@@ -89,7 +95,7 @@ export function AppLayout() {
     'LicitaGestão';
 
   const activeAssignments = user?.assignedCompanies.filter((company) => company.active) ?? [];
-  const switcherCompanies = user?.role === 'ADMIN' ? adminCompanies : activeAssignments;
+  const switcherCompanies = (user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') ? adminCompanies : activeAssignments;
 
   useEffect(() => {
     if (user?.role !== 'ADMIN') return;
@@ -137,7 +143,11 @@ export function AppLayout() {
             <div className="nav-section" key={section.label}>
               <span className="nav-label">{section.label}</span>
               {section.items
-                .filter((item) => !item.adminOnly || user?.role === 'ADMIN')
+                .filter((item) => {
+                  const adminAllowed = !('adminOnly' in item) || !item.adminOnly || (user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN');
+                  const superAllowed = !('superAdminOnly' in item) || !item.superAdminOnly || user?.role === 'SUPER_ADMIN';
+                  return adminAllowed && superAllowed;
+                })
                 .map((item) => (
                   <NavLink
                     key={item.to}
@@ -178,7 +188,7 @@ export function AppLayout() {
                   }
                   aria-label="Trocar empresa ativa"
                 >
-                  {user?.role === 'ADMIN' && <option value="">Todas as empresas</option>}
+                  {(user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && <option value="">Todas as empresas</option>}
                   {switcherCompanies.map((company) => (
                     <option key={company.id} value={company.id}>
                       {company.tradeName || company.legalName}

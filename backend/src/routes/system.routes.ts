@@ -6,6 +6,6 @@ import { asyncHandler } from '../utils/async-handler.js';
 
 export const systemRouter = Router();
 
-systemRouter.use(authenticate, authorize(UserRole.ADMIN));
+systemRouter.use(authenticate, authorize(UserRole.SUPER_ADMIN));
 systemRouter.get('/health', asyncHandler(controller.health));
 

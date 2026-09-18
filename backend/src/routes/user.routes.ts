@@ -14,7 +14,7 @@ import {
 
 export const userRouter = Router();
 
-userRouter.use(authenticate, authorize(UserRole.ADMIN));
+userRouter.use(authenticate, authorize(UserRole.ADMIN, UserRole.SUPER_ADMIN));
 userRouter.get('/', validate(listUsersSchema), asyncHandler(controller.index));
 userRouter.get('/:id', validate(userIdSchema), asyncHandler(controller.show));
 userRouter.post('/', validate(createUserSchema), asyncHandler(controller.create));

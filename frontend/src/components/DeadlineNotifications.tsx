@@ -7,7 +7,9 @@ import type {
   DeadlineAlert,
   DeadlineData,
   GmailConvocationAlert,
-  GmailConvocationAlertData
+  GmailConvocationAlertData,
+  UserNotification,
+  UserNotificationData
 } from '../types';
 
 const DESKTOP_NOTIFIED_STORAGE_KEY = 'licitagestao.desktop-notifications.v2'; // LICITAGESTAO_PREQUAL_ALL_EMAILS_V1_NOTIFICATIONS
@@ -87,10 +89,11 @@ function gmailDesktopBody(item: GmailConvocationAlert) {
 const gmailSelectionKey = (item: GmailConvocationAlert): SelectedAlertKey => `gmail:${item.messageId}`;
 const deadlineSelectionKey = (item: DeadlineAlert): SelectedAlertKey => `deadline:${item.key}`;
 
-export function DeadlineNotifications() { // LICITAGESTAO_PRIORITY_FIRST_PLACE_V1
+export function DeadlineNotifications() { // LICITAGESTAO_PRIORITY_FIRST_PLACE_V1 LICITAGESTAO_SAAS_RENTAL_V1_NOTIFICATIONS
   const [open, setOpen] = useState(false);
   const [deadlines, setDeadlines] = useState<DeadlineData | null>(null);
   const [gmailAlerts, setGmailAlerts] = useState<GmailConvocationAlertData | null>(null);
+  const [systemNotifications, setSystemNotifications] = useState<UserNotificationData | null>(null);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedAlerts, setSelectedAlerts] = useState<Set<SelectedAlertKey>>(() => new Set());
   const [deletingSelected, setDeletingSelected] = useState(false);
@@ -182,9 +185,10 @@ export function DeadlineNotifications() { // LICITAGESTAO_PRIORITY_FIRST_PLACE_V
   );
 
   const loadAlerts = useCallback(async () => {
-    const [deadlineResult, gmailResult] = await Promise.allSettled([
+    const [deadlineResult, gmailResult, systemResult] = await Promise.allSettled([
       api.get<ApiResponse<DeadlineData>>('/deadlines/alerts?horizon=7&pastDays=7'),
-      api.get<ApiResponse<GmailConvocationAlertData>>('/integrations/gmail/alerts')
+      api.get<ApiResponse<GmailConvocationAlertData>>('/integrations/gmail/alerts'),
+      api.get<ApiResponse<UserNotificationData>>('/notifications')
     ]);
     if (deadlineResult.status === 'fulfilled') {
       setDeadlines(deadlineResult.value.data.data);
@@ -193,6 +197,9 @@ export function DeadlineNotifications() { // LICITAGESTAO_PRIORITY_FIRST_PLACE_V
     if (gmailResult.status === 'fulfilled') {
       setGmailAlerts(gmailResult.value.data.data);
       showDesktopGmailAlerts(gmailResult.value.data.data);
+    }
+    if (systemResult.status === 'fulfilled') {
+      setSystemNotifications(systemResult.value.data.data);
     }
   }, [showDesktopDeadlineAlerts, showDesktopGmailAlerts]);
 
@@ -301,10 +308,28 @@ export function DeadlineNotifications() { // LICITAGESTAO_PRIORITY_FIRST_PLACE_V
     );
   };
 
+  const openSystemNotification = async (item: UserNotification) => {
+    setSystemNotifications((current) =>
+      current
+        ? {
+            ...current,
+            unread: Math.max(0, current.unread - (item.readAt ? 0 : 1)),
+            items: current.items.map((currentItem) =>
+              currentItem.id === item.id ? { ...currentItem, readAt: currentItem.readAt || new Date().toISOString() } : currentItem
+            )
+          }
+        : current
+    );
+    setOpen(false);
+    void api.post(`/notifications/${item.id}/read`).catch(() => undefined);
+    if (item.link) navigate(item.link);
+  };
+
   const markAll = async () => {
     await Promise.allSettled([
       api.post('/deadlines/read-all'),
-      api.post('/integrations/gmail/alerts/read-all')
+      api.post('/integrations/gmail/alerts/read-all'),
+      api.post('/notifications/read-all')
     ]);
     setDeadlines((current) =>
       current
@@ -314,6 +339,15 @@ export function DeadlineNotifications() { // LICITAGESTAO_PRIORITY_FIRST_PLACE_V
     setGmailAlerts((current) =>
       current
         ? { ...current, unread: 0, items: current.items.map((item) => ({ ...item, read: true })) }
+        : current
+    );
+    setSystemNotifications((current) =>
+      current
+        ? {
+            ...current,
+            unread: 0,
+            items: current.items.map((item) => ({ ...item, readAt: item.readAt || new Date().toISOString() }))
+          }
         : current
     );
   };
@@ -417,8 +451,9 @@ export function DeadlineNotifications() { // LICITAGESTAO_PRIORITY_FIRST_PLACE_V
   };
 
   const priorityEmailUnread = gmailItems.filter((item) => !item.read).length;
-  const unread = (deadlines?.unread ?? 0) + priorityEmailUnread;
-  const hasItems = deadlineItems.length > 0 || gmailItems.length > 0;
+  const systemItems = systemNotifications?.items ?? [];
+  const unread = (deadlines?.unread ?? 0) + priorityEmailUnread + (systemNotifications?.unread ?? 0);
+  const hasItems = deadlineItems.length > 0 || gmailItems.length > 0 || systemItems.length > 0;
   const permissionDescription = useMemo(
     () => 'Todos os e-mails ficam salvos no sistema; os pop-ups destacam somente suspensão, esclarecimento, convocação e readequação.',
     []
@@ -555,6 +590,19 @@ export function DeadlineNotifications() { // LICITAGESTAO_PRIORITY_FIRST_PLACE_V
 
           <div className="notification-list">
             {!hasItems && <div className="notification-empty">Nenhum alerta urgente no momento.</div>}
+            {systemItems.length > 0 && <div className="notification-section-label">Sistema</div>}
+            {systemItems.map((item) => (
+              <div key={item.id} className={`notification-item ${item.readAt ? 'read' : 'unread'}`}>
+                <button className="notification-item-open" onClick={() => void openSystemNotification(item)}>
+                  <span className="deadline-dot urgent" />
+                  <span>
+                    <strong>{item.title}</strong>
+                    <small>{formatDateTime(item.createdAt)}</small>
+                    <em>{item.message}</em>
+                  </span>
+                </button>
+              </div>
+            ))}
             {gmailItems.length > 0 && (
               <div className="notification-section-label">
                 <MailWarning size={14} /> E-mails prioritários

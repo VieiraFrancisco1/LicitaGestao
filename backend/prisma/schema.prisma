@@ -8,6 +8,7 @@ datasource db {
 }
 
 enum UserRole {
+  SUPER_ADMIN
   ADMIN
   FUNCIONARIO
   EMPRESA
@@ -70,6 +71,12 @@ enum EmailProvider {
   OUTLOOK
 }
 
+enum GmailAccessRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum DocumentCategory {
   EDITAL
   ANEXO
@@ -100,6 +107,7 @@ model Organization {
   proposalLetterTemplates ProposalLetterTemplate[]
   auditLogs             AuditLog[]
   passwordResetTokens   OrganizationPasswordResetToken[]
+  gmailAccessRequests   GmailAccessRequest[]
   createdAt             DateTime                          @default(now()) @map("created_at")
   updatedAt             DateTime                          @updatedAt @map("updated_at")
 
@@ -130,6 +138,9 @@ model User {
   updatedDiscounts            DiscountCalculation[] @relation("DiscountUpdatedBy")
   auditLogs                   AuditLog[]
   notificationReads           NotificationRead[]
+  userNotifications            UserNotification[]
+  gmailAccessRequests          GmailAccessRequest[] @relation("GmailAccessRequestedBy")
+  gmailAccessReviews           GmailAccessRequest[] @relation("GmailAccessReviewedBy")
   spreadsheetResponsibilities Tender[]              @relation("TenderSpreadsheetResponsible")
   megaIntegration             MegaIntegration?
   createdAt                   DateTime              @default(now()) @map("created_at")
@@ -162,6 +173,7 @@ model Company {
   emailIntegration   EmailIntegration?
   outlookIntegration OutlookIntegration?
   emailMessages      EmailMessage[]
+  gmailAccessRequests GmailAccessRequest[]
   megaFolderLinks    MegaCompanyFolder[]
   createdAt          DateTime              @default(now()) @map("created_at")
   updatedAt          DateTime              @updatedAt @map("updated_at")
@@ -449,6 +461,57 @@ model EmailMessage {
   @@index([processingStatus])
   @@map("email_messages")
 }
+
+
+model GmailAccessRequest {
+  id             String                   @id @default(uuid()) @db.Uuid
+  organizationId String                   @map("organization_id") @db.Uuid
+  organization   Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  companyId      String                   @map("company_id") @db.Uuid
+  company        Company                  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  requestedById  String                   @map("requested_by_id") @db.Uuid
+  requestedBy    User                     @relation("GmailAccessRequestedBy", fields: [requestedById], references: [id], onDelete: Cascade)
+  email          String                   @db.VarChar(180)
+  status         GmailAccessRequestStatus @default(PENDING)
+  reviewNote     String?                  @map("review_note") @db.VarChar(500)
+  reviewedById   String?                  @map("reviewed_by_id") @db.Uuid
+  reviewedBy     User?                    @relation("GmailAccessReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  requestedAt    DateTime                 @default(now()) @map("requested_at")
+  reviewedAt     DateTime?                @map("reviewed_at")
+  createdAt      DateTime                 @default(now()) @map("created_at")
+  updatedAt      DateTime                 @updatedAt @map("updated_at")
+
+  @@index([organizationId, status, requestedAt])
+  @@index([companyId, requestedAt])
+  @@index([requestedById])
+  @@index([reviewedById])
+  @@map("gmail_access_requests")
+}
+
+model UserNotification {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String   @db.VarChar(180)
+  message   String   @db.VarChar(1000)
+  link      String?  @db.VarChar(500)
+  readAt    DateTime? @map("read_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId, readAt, createdAt])
+  @@map("user_notifications")
+}
+
+model PlatformSettings {
+  id              String   @id @default("default") @db.VarChar(40)
+  supportName     String   @default("Francisco") @map("support_name") @db.VarChar(120)
+  supportWhatsapp String?  @map("support_whatsapp") @db.VarChar(30)
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("platform_settings")
+}
+
+// LICITAGESTAO_SAAS_RENTAL_V1_SCHEMA
 
 model RefreshToken {
   id        String    @id @default(uuid()) @db.Uuid

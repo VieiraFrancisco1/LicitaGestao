@@ -23,66 +23,66 @@ export const companyRouter = Router();
 companyRouter.use(authenticate);
 companyRouter.get(
   '/',
-  authorize(UserRole.ADMIN, UserRole.FUNCIONARIO, UserRole.EMPRESA),
+  authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.FUNCIONARIO, UserRole.EMPRESA),
   validate(listCompaniesSchema),
   asyncHandler(controller.index)
 );
 companyRouter.get(
   '/options',
-  authorize(UserRole.ADMIN, UserRole.FUNCIONARIO, UserRole.EMPRESA),
+  authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.FUNCIONARIO, UserRole.EMPRESA),
   asyncHandler(controller.options)
 );
 companyRouter.get(
   '/:id',
-  authorize(UserRole.ADMIN, UserRole.FUNCIONARIO, UserRole.EMPRESA),
+  authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.FUNCIONARIO, UserRole.EMPRESA),
   validate(companyIdSchema),
   asyncHandler(controller.show)
 );
 companyRouter.get(
   '/:id/documents',
-  authorize(UserRole.ADMIN, UserRole.FUNCIONARIO, UserRole.EMPRESA),
+  authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.FUNCIONARIO, UserRole.EMPRESA),
   validate(companyIdSchema),
   asyncHandler(controller.documents)
 );
 companyRouter.get(
   '/:id/platforms',
-  authorize(UserRole.ADMIN, UserRole.FUNCIONARIO, UserRole.EMPRESA),
+  authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.FUNCIONARIO, UserRole.EMPRESA),
   validate(companyIdSchema),
   asyncHandler(controller.platforms)
 );
 companyRouter.get(
   '/:id/discounts',
-  authorize(UserRole.ADMIN, UserRole.FUNCIONARIO, UserRole.EMPRESA),
+  authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.FUNCIONARIO, UserRole.EMPRESA),
   validate(listDiscountsSchema),
   asyncHandler(discountController.index)
 );
 companyRouter.post(
   '/:id/discounts',
-  authorize(UserRole.ADMIN, UserRole.FUNCIONARIO, UserRole.EMPRESA),
+  authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.FUNCIONARIO, UserRole.EMPRESA),
   validate(createDiscountSchema),
   asyncHandler(discountController.create)
 );
 companyRouter.put(
   '/:id/discounts/:discountId',
-  authorize(UserRole.ADMIN, UserRole.FUNCIONARIO, UserRole.EMPRESA),
+  authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.FUNCIONARIO, UserRole.EMPRESA),
   validate(updateDiscountSchema),
   asyncHandler(discountController.update)
 );
 companyRouter.delete(
   '/:id/discounts/:discountId',
-  authorize(UserRole.ADMIN, UserRole.FUNCIONARIO, UserRole.EMPRESA),
+  authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.FUNCIONARIO, UserRole.EMPRESA),
   validate(deleteDiscountSchema),
   asyncHandler(discountController.remove)
 );
 companyRouter.post(
   '/',
-  authorize(UserRole.ADMIN),
+  authorize(UserRole.ADMIN, UserRole.SUPER_ADMIN),
   validate(createCompanySchema),
   asyncHandler(controller.create)
 );
 companyRouter.put(
   '/:id',
-  authorize(UserRole.ADMIN),
+  authorize(UserRole.ADMIN, UserRole.SUPER_ADMIN),
   validate(updateCompanySchema),
   asyncHandler(controller.update)
 );

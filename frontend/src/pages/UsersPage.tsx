@@ -18,7 +18,7 @@ const roles: { value: UserRole; label: string }[] = [
   { value: 'FUNCIONARIO', label: 'Funcionário' },
   { value: 'EMPRESA', label: 'Empresa' }
 ];
-const roleLabel = (role: UserRole) => roles.find((item) => item.value === role)?.label ?? role;
+const roleLabel = (role: UserRole) => role === 'SUPER_ADMIN' ? 'Super Admin' : roles.find((item) => item.value === role)?.label ?? role;
 
 export function UsersPage() {
   const [data, setData] = useState<Paginated<User> | null>(null);

@@ -15,13 +15,13 @@ platformRouter.use(authenticate);
 platformRouter.get('/', validate(listPlatformsSchema), asyncHandler(controller.index));
 platformRouter.post(
   '/',
-  authorize(UserRole.ADMIN),
+  authorize(UserRole.ADMIN, UserRole.SUPER_ADMIN),
   validate(createPlatformSchema),
   asyncHandler(controller.create)
 );
 platformRouter.put(
   '/:id',
-  authorize(UserRole.ADMIN),
+  authorize(UserRole.ADMIN, UserRole.SUPER_ADMIN),
   validate(updatePlatformSchema),
   asyncHandler(controller.update)
 );

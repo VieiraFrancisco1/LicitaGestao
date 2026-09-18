@@ -1,4 +1,4 @@
-export type UserRole = 'ADMIN' | 'FUNCIONARIO' | 'EMPRESA';
+export type UserRole = 'SUPER_ADMIN' | 'ADMIN' | 'FUNCIONARIO' | 'EMPRESA';
 
 export type OrganizationSummary = { id: string; name: string };
 export type OrganizationMember = { id: string; name: string; role: UserRole };
@@ -427,4 +427,63 @@ export type DashboardData = {
     upcomingSessions: number;
     pendingConvocations: number;
   }>;
+};
+
+// LICITAGESTAO_SAAS_RENTAL_V1_TYPES
+export type GmailAccessRequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+export type GmailAccessRequest = {
+  id: string;
+  organizationId: string;
+  companyId: string;
+  requestedById: string;
+  email: string;
+  status: GmailAccessRequestStatus;
+  reviewNote: string | null;
+  reviewedById: string | null;
+  requestedAt: string;
+  reviewedAt: string | null;
+  organization?: { id: string; name: string; loginEmail: string };
+  company?: { id: string; legalName: string; tradeName: string | null };
+  requestedBy?: { id: string; name: string; email: string };
+  reviewedBy?: { id: string; name: string } | null;
+};
+
+export type UserNotification = {
+  id: string;
+  title: string;
+  message: string;
+  link: string | null;
+  readAt: string | null;
+  createdAt: string;
+};
+
+export type UserNotificationData = {
+  items: UserNotification[];
+  unread: number;
+};
+
+export type SupportSettings = {
+  id: string;
+  supportName: string;
+  supportWhatsapp: string | null;
+  updatedAt: string;
+};
+
+export type PlatformOrganization = {
+  id: string;
+  name: string;
+  loginEmail: string;
+  active: boolean;
+  createdAt: string;
+  _count: { users: number; companies: number; tenders: number };
+};
+
+export type PlatformOverview = {
+  organizations: PlatformOrganization[];
+  totals: {
+    organizations: number;
+    activeOrganizations: number;
+    pendingGmailRequests: number;
+  };
 };

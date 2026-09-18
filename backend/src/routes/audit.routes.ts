@@ -7,5 +7,5 @@ import { asyncHandler } from '../utils/async-handler.js';
 import { listAuditSchema } from '../validators/audit.validator.js';
 
 export const auditRouter = Router();
-auditRouter.use(authenticate, authorize(UserRole.ADMIN));
+auditRouter.use(authenticate, authorize(UserRole.ADMIN, UserRole.SUPER_ADMIN));
 auditRouter.get('/', validate(listAuditSchema), asyncHandler(controller.index));

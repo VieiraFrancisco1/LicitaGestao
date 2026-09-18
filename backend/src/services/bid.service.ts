@@ -30,7 +30,7 @@ export type BidQuery = {
 
 export const accessibleBidWhere = (auth: AuthScope): Prisma.BidWhereInput => {
   const organizationId = requireOrganizationId(auth);
-  if (auth.role === UserRole.ADMIN) return { tender: { organizationId }, company: { organizationId } };
+  if ((auth.role === UserRole.ADMIN || auth.role === UserRole.SUPER_ADMIN)) return { tender: { organizationId }, company: { organizationId } };
   if (auth.role === UserRole.EMPRESA) {
     return {
       companyId: auth.companyId ?? '00000000-0000-0000-0000-000000000000',

@@ -9,7 +9,8 @@ import {
   forgotOrganizationPasswordSchema,
   memberLoginSchema,
   organizationLoginSchema,
-  resetOrganizationPasswordSchema
+  resetOrganizationPasswordSchema,
+  registerOrganizationSchema
 } from '../validators/auth.validator.js';
 
 export const authRouter = Router();
@@ -30,6 +31,7 @@ const recoveryLimiter = rateLimit({
   message: { success: false, message: 'Muitas solicitações de recuperação. Tente novamente mais tarde.' }
 });
 
+authRouter.post('/register', recoveryLimiter, validate(registerOrganizationSchema), asyncHandler(controller.register)); // LICITAGESTAO_SAAS_RENTAL_V1_REGISTER
 authRouter.post('/organization-login', loginLimiter, validate(organizationLoginSchema), asyncHandler(controller.organizationLogin));
 authRouter.post('/member-login', loginLimiter, validate(memberLoginSchema), asyncHandler(controller.memberLogin));
 authRouter.post('/forgot-password', recoveryLimiter, validate(forgotOrganizationPasswordSchema), asyncHandler(controller.forgotOrganizationPassword));

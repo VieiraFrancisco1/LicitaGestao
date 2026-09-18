@@ -33,7 +33,7 @@ export async function assertCompanyPortalAccess(companyId: string, auth: AuthSco
   });
   if (!company) throw new AppError('Empresa não encontrada', 404);
 
-  if (auth.role === UserRole.ADMIN) return;
+  if (auth.role === UserRole.ADMIN || auth.role === UserRole.SUPER_ADMIN) return;
   if (auth.role === UserRole.EMPRESA) {
     if (auth.companyId !== companyId) throw new AppError('Empresa não encontrada', 404);
     return;
@@ -62,7 +62,7 @@ export async function assertCompanyWriteAccess(companyId: string, auth: AuthScop
   });
   if (!company) throw new AppError('Empresa não encontrada', 404);
 
-  if (auth.role === UserRole.ADMIN) return;
+  if ((auth.role === UserRole.ADMIN || auth.role === UserRole.SUPER_ADMIN)) return;
   if (auth.role === UserRole.EMPRESA) {
     if (auth.companyId !== companyId) throw new AppError('Empresa não encontrada', 404);
     return;

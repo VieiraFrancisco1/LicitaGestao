@@ -16,6 +16,7 @@ import licitaGestaoLogo from '../assets/licitagestao-logo.png';
 import './access-flow.css';
 
 const roleLabels: Record<UserRole, string> = {
+  SUPER_ADMIN: 'Super Admin',
   ADMIN: 'Administrador',
   FUNCIONARIO: 'Funcionário',
   EMPRESA: 'Empresa'
@@ -34,6 +35,7 @@ export function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const passwordChanged = searchParams.get('senha') === 'alterada';
+  const accountCreated = searchParams.get('cadastro') === 'sucesso';
   const sortedMembers = useMemo(() => organizationAccess?.members ?? [], [organizationAccess]);
 
   if (user) return <Navigate to="/" replace />;
@@ -111,6 +113,9 @@ export function LoginPage() {
             {passwordChanged && (
               <div className="alert alert-success">Senha principal alterada. Entre com a nova senha.</div>
             )}
+            {accountCreated && (
+              <div className="alert alert-success">Conta criada com sucesso. Entre com o e-mail e a senha cadastrados.</div>
+            )}
             {error && <div className="alert alert-error">{error}</div>}
 
             <label>
@@ -158,6 +163,9 @@ export function LoginPage() {
               <ShieldCheck size={17} />
               <span>Depois desta etapa, cada pessoa entra com sua própria senha.</span>
             </div>
+            <div className="register-login-link">
+              Ainda não possui uma organização? <Link to="/criar-conta">Criar conta</Link>
+            </div> {/* LICITAGESTAO_SAAS_RENTAL_V1_REGISTER_LINK */}
           </form>
         ) : (
           <div className="login-card member-access-card">

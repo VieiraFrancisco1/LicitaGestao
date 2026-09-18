@@ -38,6 +38,7 @@ export const createUser = async (
   auth: AuthScope
 ) => {
   const organizationId = requireOrganizationId(auth);
+  if (data.role === UserRole.SUPER_ADMIN) throw new AppError('O perfil SUPER_ADMIN é reservado ao proprietário da plataforma', 403); // LICITAGESTAO_SAAS_RENTAL_V1_USER_GUARD
   const companyIds = [...new Set(data.companyIds ?? [])];
   ensureCompanyRule(data.role, data.companyId, companyIds);
   await assertCompaniesBelongToOrganization(organizationId, data.companyId, companyIds);
@@ -72,6 +73,9 @@ export const updateUser = async (id: string, actorId: string, data: UserInput, a
     include: { companyLinks: { select: { companyId: true } } }
   });
   if (!current) throw new AppError('Usuário não encontrado', 404);
+  if (data.role === UserRole.SUPER_ADMIN || current.role === UserRole.SUPER_ADMIN) {
+    throw new AppError('O perfil SUPER_ADMIN não pode ser alterado nesta tela', 403);
+  }
   const role = data.role ?? current.role;
   const companyId = data.companyId !== undefined ? data.companyId : current.companyId;
   const companyIds = [...new Set(data.companyIds ?? current.companyLinks.map((link) => link.companyId))];

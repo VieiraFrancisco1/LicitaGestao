@@ -28,3 +28,11 @@ export const gmailLinkMessageSchema = z.object({
   params: z.object({ messageId: uuid }),
   body: z.object({ bidId: uuid.nullable() })
 });
+
+// LICITAGESTAO_SAAS_RENTAL_V1_GMAIL_REQUEST
+export const gmailAccessRequestSchema = z.object({
+  params: z.object({ companyId: uuid }),
+  body: z.object({
+    email: z.string().email().transform((value) => value.trim().toLowerCase())
+  })
+});

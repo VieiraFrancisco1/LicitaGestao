@@ -6,6 +6,7 @@ import { validate } from '../middlewares/validate.js';
 import { asyncHandler } from '../utils/async-handler.js';
 import {
   gmailCompanyIdSchema,
+  gmailAccessRequestSchema,
   gmailDismissAlertSchema,
   gmailLinkMessageSchema,
   gmailMessagesSchema,
@@ -32,6 +33,12 @@ gmailRouter.put(
   validate(gmailLinkMessageSchema),
   asyncHandler(controller.linkMessage)
 );
+gmailRouter.get('/:companyId/access-request', validate(gmailCompanyIdSchema), asyncHandler(controller.accessRequest));
+gmailRouter.post(
+  '/:companyId/access-request',
+  validate(gmailAccessRequestSchema),
+  asyncHandler(controller.requestAccess)
+); // LICITAGESTAO_SAAS_RENTAL_V1_GMAIL_REQUEST
 gmailRouter.get('/:companyId/status', validate(gmailCompanyIdSchema), asyncHandler(controller.status));
 gmailRouter.get('/:companyId/auth-url', validate(gmailCompanyIdSchema), asyncHandler(controller.authUrl));
 gmailRouter.get('/:companyId/messages', validate(gmailMessagesSchema), asyncHandler(controller.messages));

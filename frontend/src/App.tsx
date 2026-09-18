@@ -23,13 +23,17 @@ import { BackupsPage } from './pages/BackupsPage';
 import { SystemHealthPage } from './pages/SystemHealthPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { ReportsPage } from './pages/ReportsPage';
+import { RegisterPage } from './pages/RegisterPage';
+import { SuperAdminPage } from './pages/SuperAdminPage';
+import { HelpPage } from './pages/HelpPage';
 
-export default function App() {
+export default function App() { // LICITAGESTAO_SAAS_RENTAL_V1_APP
   return (
     <BrowserRouter>
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/criar-conta" element={<RegisterPage />} />
           <Route path="/esqueci-senha" element={<ForgotPasswordPage />} />
           <Route path="/redefinir-senha" element={<ResetPasswordPage />} />
 
@@ -50,20 +54,24 @@ export default function App() {
               <Route path="prazos" element={<DeadlinesPage />} />
               <Route path="documentos" element={<DocumentsPage />} />
               <Route path="plataformas" element={<PlatformsPage />} />
-              <Route path="usuarios" element={<ProtectedRoute roles={['ADMIN']} />}>
+              <Route path="usuarios" element={<ProtectedRoute roles={['SUPER_ADMIN', 'ADMIN']} />}>
                 <Route index element={<UsersPage />} />
               </Route>
-              <Route path="auditoria" element={<ProtectedRoute roles={['ADMIN']} />}>
+              <Route path="auditoria" element={<ProtectedRoute roles={['SUPER_ADMIN', 'ADMIN']} />}>
                 <Route index element={<AuditPage />} />
               </Route>
-              <Route path="backups" element={<ProtectedRoute roles={['ADMIN']} />}>
+              <Route path="backups" element={<ProtectedRoute roles={['SUPER_ADMIN']} />}>
                 <Route index element={<BackupsPage />} />
               </Route>
-              <Route path="saude-sistema" element={<ProtectedRoute roles={['ADMIN']} />}>
+              <Route path="saude-sistema" element={<ProtectedRoute roles={['SUPER_ADMIN']} />}>
                 <Route index element={<SystemHealthPage />} />
               </Route>
               <Route path="relatorios" element={<ReportsPage />} />
               <Route path="configuracoes" element={<SettingsPage />} />
+              <Route path="ajuda" element={<HelpPage />} />
+              <Route path="super-admin" element={<ProtectedRoute roles={['SUPER_ADMIN']} />}>
+                <Route index element={<SuperAdminPage />} />
+              </Route>
             </Route>
           </Route>
 

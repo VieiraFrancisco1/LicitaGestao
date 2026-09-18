@@ -130,8 +130,8 @@ export function TenderDetailsPage() {
 
   const isResponsible = tender.spreadsheetResponsibleUserId === user?.id;
   const canManageSpreadsheet = user?.role !== 'EMPRESA';
-  const canEditNotes = user?.role === 'ADMIN' || isResponsible;
-  const canRelease = isResponsible || user?.role === 'ADMIN';
+  const canEditNotes = (user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') || isResponsible;
+  const canRelease = isResponsible || (user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN');
 
   return (
     <div className="page-stack">

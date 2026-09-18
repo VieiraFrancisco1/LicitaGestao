@@ -23,7 +23,7 @@ async function main() {
 
   await prisma.user.upsert({
     where: { organizationId_email: { organizationId: organization.id, email } },
-    update: { name, passwordHash, active: true, role: UserRole.ADMIN, companyId: null },
+    update: { name, passwordHash, active: true, companyId: null },
     create: { organizationId: organization.id, name, email, passwordHash, role: UserRole.ADMIN }
   });
   console.log(`Organização e administrador preparados: ${organizationName} / ${email}`);

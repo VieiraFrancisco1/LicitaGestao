@@ -25,7 +25,7 @@ export const createUserSchema = z.object({
       name: z.string().trim().min(2).max(120),
       email: z.string().email().transform((value) => value.trim().toLowerCase()),
       password: z.string().min(12, 'A senha deve possuir pelo menos 12 caracteres').max(128),
-      role: z.nativeEnum(UserRole),
+      role: z.nativeEnum(UserRole).refine((role) => role !== UserRole.SUPER_ADMIN, 'Perfil reservado ao proprietário da plataforma'), // LICITAGESTAO_SAAS_RENTAL_V1_USER_VALIDATOR
       companyId: z.string().uuid().nullable().optional(),
       companyIds: z.array(z.string().uuid()).max(100).optional().default([]),
       active: z.boolean().optional()
@@ -41,7 +41,7 @@ export const updateUserSchema = z.object({
       name: z.string().trim().min(2).max(120).optional(),
       email: z.string().email().transform((value) => value.trim().toLowerCase()).optional(),
       password: z.string().min(12, 'A senha deve possuir pelo menos 12 caracteres').max(128).optional(),
-      role: z.nativeEnum(UserRole).optional(),
+      role: z.nativeEnum(UserRole).refine((role) => role !== UserRole.SUPER_ADMIN, 'Perfil reservado ao proprietário da plataforma').optional(),
       companyId: z.string().uuid().nullable().optional(),
       companyIds: z.array(z.string().uuid()).max(100).optional(),
       active: z.boolean().optional()

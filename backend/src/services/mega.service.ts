@@ -478,7 +478,7 @@ async function resolveFolderForAction(auth: AuthScope, companyId: string | undef
 
 export async function createMegaFolder(auth: AuthScope, companyId: string | undefined, relativePath: string, name: string) {
   if (companyId) await assertCompanyWriteAccess(companyId, auth);
-  if (!companyId && auth.role !== UserRole.ADMIN) throw new AppError('Selecione uma empresa', 422);
+  if (!companyId && (auth.role !== UserRole.ADMIN && auth.role !== UserRole.SUPER_ADMIN)) throw new AppError('Selecione uma empresa', 422);
   const { folder } = await resolveFolderForAction(auth, companyId, relativePath);
   const cleanName = assertSafeName(name);
   if (folderChildren(folder).some((node) => node.directory && (node.name ?? '').toLowerCase() === cleanName.toLowerCase())) {
@@ -497,7 +497,7 @@ export async function uploadMegaFile(
   if (!file) throw new AppError('Selecione um arquivo', 422);
   assertSafeUploadFile(file);
   if (companyId) await assertCompanyWriteAccess(companyId, auth);
-  if (!companyId && auth.role !== UserRole.ADMIN) throw new AppError('Selecione uma empresa', 422);
+  if (!companyId && (auth.role !== UserRole.ADMIN && auth.role !== UserRole.SUPER_ADMIN)) throw new AppError('Selecione uma empresa', 422);
   const { folder } = await resolveFolderForAction(auth, companyId, relativePath);
   const name = assertSafeName(file.originalname);
   const duplicate = folderChildren(folder).find(
@@ -518,9 +518,9 @@ async function resolveNodeForAction(auth: AuthScope, companyId: string | undefin
 
 export async function renameMegaNode(auth: AuthScope, companyId: string | undefined, nodeId: string, name: string) {
   if (companyId) await assertCompanyWriteAccess(companyId, auth);
-  if (!companyId && auth.role !== UserRole.ADMIN) throw new AppError('Selecione uma empresa', 422);
+  if (!companyId && (auth.role !== UserRole.ADMIN && auth.role !== UserRole.SUPER_ADMIN)) throw new AppError('Selecione uma empresa', 422);
   const found = await resolveNodeForAction(auth, companyId, nodeId);
-  if (found.node.directory && auth.role !== UserRole.ADMIN) {
+  if (found.node.directory && (auth.role !== UserRole.ADMIN && auth.role !== UserRole.SUPER_ADMIN)) {
     throw new AppError('Somente um administrador pode renomear pastas', 403);
   }
   const cleanName = assertSafeName(name);
@@ -531,9 +531,9 @@ export async function renameMegaNode(auth: AuthScope, companyId: string | undefi
 
 export async function deleteMegaNode(auth: AuthScope, companyId: string | undefined, nodeId: string) {
   if (companyId) await assertCompanyWriteAccess(companyId, auth);
-  if (!companyId && auth.role !== UserRole.ADMIN) throw new AppError('Selecione uma empresa', 422);
+  if (!companyId && (auth.role !== UserRole.ADMIN && auth.role !== UserRole.SUPER_ADMIN)) throw new AppError('Selecione uma empresa', 422);
   const found = await resolveNodeForAction(auth, companyId, nodeId);
-  if (found.node.directory && auth.role !== UserRole.ADMIN) {
+  if (found.node.directory && (auth.role !== UserRole.ADMIN && auth.role !== UserRole.SUPER_ADMIN)) {
     throw new AppError('Somente um administrador pode mover pastas inteiras para a lixeira', 403);
   }
   await found.node.delete(false);

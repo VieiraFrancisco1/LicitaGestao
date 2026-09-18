@@ -14,6 +14,21 @@ import {
   markGmailConvocationRead,
   syncCompanyGmail
 } from '../services/gmail.service.js';
+import { getLatestGmailAccessRequest, requestGmailAccess } from '../services/gmail-access.service.js';
+
+export const accessRequest = async (req: Request, res: Response) => {
+  const data = await getLatestGmailAccessRequest(req.params.companyId as string, req.auth!);
+  res.json({ success: true, data });
+};
+
+export const requestAccess = async (req: Request, res: Response) => {
+  const data = await requestGmailAccess(req.params.companyId as string, req.body.email, req.auth!);
+  res.status(201).json({
+    success: true,
+    message: 'Solicitação enviada ao administrador principal.',
+    data
+  });
+}; // LICITAGESTAO_SAAS_RENTAL_V1_GMAIL_REQUEST
 
 export const status = async (req: Request, res: Response) => {
   const data = await getGmailStatus(req.params.companyId as string, req.auth!);

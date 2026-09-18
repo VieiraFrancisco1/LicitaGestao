@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import jwt, { type SignOptions } from 'jsonwebtoken';
-import type { Organization, UserRole } from '@prisma/client';
+import { Prisma, UserRole, type Organization } from '@prisma/client';
 import { prisma } from '../config/database.js';
 import { env } from '../config/env.js';
 import { AppError } from '../utils/app-error.js';
@@ -71,6 +71,50 @@ const memberSelect = {
   name: true,
   role: true
 } as const;
+
+export async function registerOrganization(input: {
+  organizationName: string;
+  adminName: string;
+  email: string;
+  password: string;
+}) {
+  const email = input.email.trim().toLowerCase();
+  const existing = await prisma.organization.findUnique({ where: { loginEmail: email }, select: { id: true } });
+  if (existing) throw new AppError('Este e-mail principal já está cadastrado', 409);
+
+  const passwordHash = await bcrypt.hash(input.password, 12);
+  try {
+    const organization = await prisma.$transaction(async (tx) => {
+      const createdOrganization = await tx.organization.create({
+        data: {
+          name: input.organizationName.trim(),
+          loginEmail: email,
+          passwordHash,
+          active: true
+        }
+      });
+      await tx.user.create({
+        data: {
+          organizationId: createdOrganization.id,
+          name: input.adminName.trim(),
+          email,
+          passwordHash,
+          role: UserRole.ADMIN,
+          active: true
+        }
+      });
+      return createdOrganization;
+    });
+    return { id: organization.id, name: organization.name, loginEmail: organization.loginEmail };
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      throw new AppError('Este e-mail principal já está cadastrado', 409);
+    }
+    throw error;
+  }
+}
+
+// LICITAGESTAO_SAAS_RENTAL_V1_REGISTER
 
 export async function loginOrganization(email: string, password: string) {
   const organization = await prisma.organization.findUnique({

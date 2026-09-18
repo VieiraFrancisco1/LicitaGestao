@@ -5,6 +5,7 @@ import {
   authenticateOrganizationMember,
   changeOwnPassword,
   loginOrganization,
+  registerOrganization,
   requestOrganizationPasswordReset,
   resetOrganizationPassword as resetOrganizationPasswordService,
   revokeRefreshToken,
@@ -22,6 +23,15 @@ const cookieOptions = {
   path: '/api/auth',
   maxAge: env.REFRESH_TOKEN_EXPIRES_IN_DAYS * 86_400_000
 };
+
+export const register = async (req: Request, res: Response) => {
+  const data = await registerOrganization(req.body);
+  res.status(201).json({
+    success: true,
+    message: 'Conta criada. Entre com o e-mail e a senha cadastrados.',
+    data
+  });
+}; // LICITAGESTAO_SAAS_RENTAL_V1_REGISTER
 
 export const organizationLogin = async (req: Request, res: Response) => {
   const result = await loginOrganization(req.body.email, req.body.password);

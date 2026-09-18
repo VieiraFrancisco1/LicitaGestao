@@ -26,7 +26,7 @@ function severity(days: number): DeadlineSeverity {
 
 function tenderScope(auth: AuthScope): Prisma.TenderWhereInput {
   const organizationId = requireOrganizationId(auth);
-  if (auth.role === UserRole.ADMIN) return { organizationId };
+  if ((auth.role === UserRole.ADMIN || auth.role === UserRole.SUPER_ADMIN)) return { organizationId };
   if (auth.role === UserRole.EMPRESA) {
     return {
       organizationId,

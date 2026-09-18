@@ -16,6 +16,7 @@ import { useAuth } from '../contexts/AuthContext';
 import './settings.css';
 
 const roleLabels = {
+  SUPER_ADMIN: 'Super Admin',
   ADMIN: 'Administrador',
   FUNCIONARIO: 'Funcionário',
   EMPRESA: 'Empresa'

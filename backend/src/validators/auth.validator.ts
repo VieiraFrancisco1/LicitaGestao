@@ -12,6 +12,24 @@ export const loginSchema = z.object({
   query: z.object({})
 });
 
+export const registerOrganizationSchema = z.object({
+  body: z
+    .object({
+      organizationName: z.string().trim().min(3).max(180),
+      adminName: z.string().trim().min(2).max(120),
+      email: normalizedEmail,
+      password: z.string().min(12, 'A senha deve possuir pelo menos 12 caracteres').max(128),
+      confirmPassword: z.string().min(1)
+    })
+    .superRefine((value, ctx) => {
+      if (value.password !== value.confirmPassword) {
+        ctx.addIssue({ code: 'custom', path: ['confirmPassword'], message: 'A confirmação da senha não confere' });
+      }
+    }),
+  params: z.object({}),
+  query: z.object({})
+}); // LICITAGESTAO_SAAS_RENTAL_V1_REGISTER
+
 export const organizationLoginSchema = z.object({
   body: z.object({
     email: normalizedEmail,

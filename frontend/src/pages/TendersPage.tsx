@@ -385,7 +385,7 @@ export function TendersPage() {
               {!loading &&
                 data?.items.map((tender) => {
                   const isResponsible = tender.spreadsheetResponsibleUserId === user?.id;
-                  const canRelease = isResponsible || user?.role === 'ADMIN';
+                  const canRelease = isResponsible || (user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN');
                   const canManageSpreadsheet = user?.role !== 'EMPRESA';
                   const hasAssociableCompanies = companies.some(
                     (company) => !tender.bids.some((bid) => bid.companyId === company.id)

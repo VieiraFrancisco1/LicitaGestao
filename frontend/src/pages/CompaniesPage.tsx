@@ -79,7 +79,7 @@ export function CompaniesPage() {
           <h2>Empresas clientes</h2>
           <span>Gerencie os dados e os acessos vinculados a cada empresa.</span>
         </div>
-        {user?.role === 'ADMIN' && (
+        {(user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && (
           <button className="primary-button" onClick={() => setEditing(null)}>
             <Plus size={18} />
             Nova empresa
@@ -162,7 +162,7 @@ export function CompaniesPage() {
                           <FolderOpen size={16} />
                           Abrir
                         </Link>
-                        {user?.role === 'ADMIN' && (
+                        {(user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && (
                           <button className="action-button" onClick={() => setEditing(company)}>
                             <Edit3 size={16} />
                             Editar

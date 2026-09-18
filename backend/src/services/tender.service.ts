@@ -54,7 +54,7 @@ const addDays = (date: Date, days: number | null | undefined) =>
 
 export const accessibleParticipationWhere = (auth: AuthScope): Prisma.BidWhereInput => {
   const organizationId = requireOrganizationId(auth);
-  if (auth.role === UserRole.ADMIN) return { tender: { organizationId } };
+  if ((auth.role === UserRole.ADMIN || auth.role === UserRole.SUPER_ADMIN)) return { tender: { organizationId } };
   if (auth.role === UserRole.EMPRESA) {
     return {
       companyId: auth.companyId ?? '00000000-0000-0000-0000-000000000000',
@@ -475,7 +475,7 @@ export const setSpreadsheetResponsibility = async (id: string, responsible: bool
     }
     return prisma.tender.update({ where: { id }, data: { spreadsheetResponsibleUserId: auth.userId, updatedById: auth.userId }, include: includeTender(auth) });
   }
-  if (tender.spreadsheetResponsibleUserId && tender.spreadsheetResponsibleUserId !== auth.userId && auth.role !== UserRole.ADMIN) {
+  if (tender.spreadsheetResponsibleUserId && tender.spreadsheetResponsibleUserId !== auth.userId && (auth.role !== UserRole.ADMIN && auth.role !== UserRole.SUPER_ADMIN)) {
     throw new AppError('Somente o responsável atual ou um administrador pode liberar esta planilha', 403);
   }
   return prisma.tender.update({ where: { id }, data: { spreadsheetResponsibleUserId: null, updatedById: auth.userId }, include: includeTender(auth) });
@@ -487,7 +487,7 @@ export const updateSpreadsheetNotes = async (id: string, notes: string | null, a
     select: { id: true, spreadsheetResponsibleUserId: true }
   });
   if (!tender) throw new AppError('Licitação geral não encontrada', 404);
-  if (auth.role !== UserRole.ADMIN && tender.spreadsheetResponsibleUserId !== auth.userId) {
+  if ((auth.role !== UserRole.ADMIN && auth.role !== UserRole.SUPER_ADMIN) && tender.spreadsheetResponsibleUserId !== auth.userId) {
     throw new AppError('Somente o responsável pela planilha pode alterar as observações', 403);
   }
   return prisma.tender.update({

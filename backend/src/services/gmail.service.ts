@@ -4,6 +4,7 @@ import { prisma } from '../config/database.js';
 import { env } from '../config/env.js';
 import { AppError } from '../utils/app-error.js';
 import { assertCompanyPortalAccess, type AuthScope } from './access.service.js';
+import { ensureApprovedGmailAddress, getApprovedGmailAccess } from './gmail-access.service.js';
 import {
   decryptSecret,
   detectPotentialConvocation,
@@ -42,6 +43,7 @@ type OAuthStatePayload = {
   userId: string;
   expiresAt: number;
   nonce: string;
+  approvedEmail?: string;
 };
 
 type GoogleTokenResponse = {
@@ -209,7 +211,7 @@ function safeGoogleError(error: unknown) {
 
 function emailAccessWhere(auth: AuthScope): Record<string, unknown> {
   const organizationId = auth.organizationId ?? '00000000-0000-0000-0000-000000000000';
-  if (auth.role === UserRole.ADMIN) return { company: { organizationId } };
+  if ((auth.role === UserRole.ADMIN || auth.role === UserRole.SUPER_ADMIN)) return { company: { organizationId } };
   if (auth.role === UserRole.EMPRESA) {
     return {
       companyId: auth.companyId ?? '00000000-0000-0000-0000-000000000000',
@@ -555,12 +557,14 @@ export async function getGmailStatus(companyId: string, auth: AuthScope): Promis
 export async function createGmailAuthorizationUrl(companyId: string, auth: AuthScope) {
   requireGmailConfig();
   await assertCompanyPortalAccess(companyId, auth);
+  const approval = await getApprovedGmailAccess(companyId, auth);
   const state = signState({
     companyId,
     userId: auth.userId,
     expiresAt: Date.now() + STATE_TTL_MS,
-    nonce: crypto.randomBytes(16).toString('hex')
-  });
+    nonce: crypto.randomBytes(16).toString('hex'),
+    ...(approval ? { approvedEmail: approval.email } : {})
+  }); // LICITAGESTAO_SAAS_RENTAL_V1_GMAIL_APPROVAL
   const query = new URLSearchParams({
     client_id: env.GOOGLE_CLIENT_ID!,
     redirect_uri: env.GOOGLE_REDIRECT_URI!,
@@ -619,6 +623,10 @@ export async function completeGmailOAuth(code: string, state: string) {
 
   const profile = await gmailGet<GmailProfile>('/users/me/profile', tokens.access_token);
   if (!profile.emailAddress) throw new AppError('Não foi possível identificar o e-mail conectado', 502);
+  await ensureApprovedGmailAddress(payload.companyId, profile.emailAddress, auth);
+  if (payload.approvedEmail && profile.emailAddress.trim().toLowerCase() !== payload.approvedEmail.trim().toLowerCase()) {
+    throw new AppError('Selecione no Google exatamente o e-mail aprovado pelo suporte.', 403, 'GMAIL_EMAIL_NOT_APPROVED');
+  }
   const now = new Date();
   const integration = await db.emailIntegration.upsert({
     where: { companyId: payload.companyId },

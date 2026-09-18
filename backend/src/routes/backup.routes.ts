@@ -7,7 +7,7 @@ import { asyncHandler } from '../utils/async-handler.js';
 
 export const backupRouter = Router();
 
-backupRouter.use(authenticate, authorize(UserRole.ADMIN));
+backupRouter.use(authenticate, authorize(UserRole.SUPER_ADMIN));
 backupRouter.get('/summary', asyncHandler(controller.summary));
 backupRouter.get('/download', asyncHandler(controller.download));
 backupRouter.post('/restore', uploadBackup, asyncHandler(controller.restore));
