@@ -11,6 +11,7 @@
     "preview": "vite preview --host 0.0.0.0"
   },
   "dependencies": {
+    "@mercadopago/sdk-react": "1.0.7",
     "axios": "latest",
     "lucide-react": "latest",
     "react": "latest",
@@ -27,8 +28,8 @@
     "eslint-plugin-react-hooks": "latest",
     "eslint-plugin-react-refresh": "latest",
     "globals": "latest",
-    "typescript": "latest",
     "tailwindcss": "latest",
+    "typescript": "latest",
     "typescript-eslint": "latest",
     "vite": "latest"
   }

@@ -1,17 +1,19 @@
+import { CardPayment, initMercadoPago } from '@mercadopago/sdk-react';
 import {
   CheckCircle2,
+  Copy,
   CreditCard,
-  LockKeyhole,
   QrCode,
   ShieldCheck
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, Navigate, useSearchParams } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { errorMessage, rawApi } from '../services/api';
 import type {
   ApiResponse,
-  BillingCheckoutData,
+  BillingCardResult,
+  BillingPixData,
   BillingPlanCode,
   BillingPlansData,
   BillingStatusData
@@ -20,6 +22,12 @@ import licitaGestaoLogo from '../assets/licitagestao-logo.png';
 import './access-flow.css';
 
 const TOKEN_KEY = 'licitagestao.billing-token';
+const MERCADO_PAGO_PUBLIC_KEY =
+  import.meta.env.VITE_MERCADO_PAGO_PUBLIC_KEY?.trim() ?? '';
+
+if (MERCADO_PAGO_PUBLIC_KEY) {
+  initMercadoPago(MERCADO_PAGO_PUBLIC_KEY);
+}
 
 const planCopy: Record<BillingPlanCode, string> = {
   MONTHLY: '1 mês de acesso',
@@ -27,26 +35,28 @@ const planCopy: Record<BillingPlanCode, string> = {
   SEMIANNUAL: '6 meses de acesso'
 };
 
+type PaymentMethodChoice = 'PIX' | 'CARD';
+
 export function PaymentPage() {
   const { user } = useAuth();
-  const [searchParams] = useSearchParams();
   const [token] = useState(() => window.sessionStorage.getItem(TOKEN_KEY) ?? '');
   const [plansData, setPlansData] = useState<BillingPlansData | null>(null);
   const [status, setStatus] = useState<BillingStatusData | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<BillingPlanCode>('MONTHLY');
+  const [method, setMethod] = useState<PaymentMethodChoice | null>(null);
+  const [pixData, setPixData] = useState<BillingPixData | null>(null);
   const [working, setWorking] = useState(false);
-  const [reconciledOrderId, setReconciledOrderId] = useState('');
+  const [copied, setCopied] = useState(false);
   const [error, setError] = useState('');
-
-  const result = searchParams.get('resultado');
-  const returnedOrderId = searchParams.get('order_id') ?? '';
 
   const loadStatus = useCallback(async () => {
     if (!token) return;
+
     try {
-      const response = await rawApi.get<ApiResponse<BillingStatusData>>('/billing/status', {
-        params: { token }
-      });
+      const response = await rawApi.get<ApiResponse<BillingStatusData>>(
+        '/billing/status',
+        { params: { token } }
+      );
       setStatus(response.data.data);
     } catch (err) {
       setError(errorMessage(err));
@@ -62,58 +72,69 @@ export function PaymentPage() {
 
   useEffect(() => {
     if (!token) return;
+
     const first = window.setTimeout(() => void loadStatus(), 0);
     const polling = window.setInterval(() => void loadStatus(), 5_000);
+
     return () => {
       window.clearTimeout(first);
       window.clearInterval(polling);
     };
   }, [token, loadStatus]);
 
-  useEffect(() => {
-    if (!token || !returnedOrderId) return;
-    let cancelled = false;
-    void rawApi
-      .post<ApiResponse<BillingStatusData>>('/billing/reconcile', {
-        token,
-        orderId: returnedOrderId
-      })
-      .then((response) => {
-        if (!cancelled) setStatus(response.data.data);
-      })
-      .catch((err) => {
-        if (!cancelled) setError(errorMessage(err));
-      })
-      .finally(() => {
-        if (!cancelled) setReconciledOrderId(returnedOrderId);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [token, returnedOrderId]);
-
-  const checking = Boolean(
-    token && returnedOrderId && reconciledOrderId !== returnedOrderId
-  );
-
   const selected = useMemo(
-    () => plansData?.plans.find((plan) => plan.code === selectedPlan) ?? null,
+    () =>
+      plansData?.plans.find((plan) => plan.code === selectedPlan) ?? null,
     [plansData, selectedPlan]
   );
 
-  const checkout = async () => {
+  const selectPlan = (plan: BillingPlanCode) => {
+    setSelectedPlan(plan);
+    setPixData(null);
+    setCopied(false);
+    setError('');
+  };
+
+  const selectMethod = (nextMethod: PaymentMethodChoice) => {
+    setMethod(nextMethod);
+    setPixData(null);
+    setCopied(false);
+    setError('');
+  };
+
+  const createPix = async () => {
     if (!token || !selected) return;
+
     setWorking(true);
     setError('');
+    setPixData(null);
+    setCopied(false);
+
     try {
-      const response = await rawApi.post<ApiResponse<BillingCheckoutData>>('/billing/checkout', {
-        token,
-        plan: selected.code
-      });
-      window.location.assign(response.data.data.checkoutUrl);
+      const response = await rawApi.post<ApiResponse<BillingPixData>>(
+        '/billing/pix',
+        {
+          token,
+          plan: selected.code
+        }
+      );
+      setPixData(response.data.data);
     } catch (err) {
       setError(errorMessage(err));
+    } finally {
       setWorking(false);
+    }
+  };
+
+  const copyPix = async () => {
+    if (!pixData?.qrCode) return;
+
+    try {
+      await navigator.clipboard.writeText(pixData.qrCode);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch {
+      setError('Não foi possível copiar o Pix. Selecione o código e copie manualmente.');
     }
   };
 
@@ -131,7 +152,8 @@ export function PaymentPage() {
           <img src={licitaGestaoLogo} alt="LicitaGestão" />
           <h2>Sessão de pagamento não encontrada</h2>
           <p>
-            Volte ao login. Se a assinatura estiver pendente ou vencida, o sistema abrirá esta tela novamente.
+            Volte ao login. Se a assinatura estiver pendente ou vencida,
+            o sistema abrirá esta tela novamente.
           </p>
           <Link className="primary-button" to="/login">
             Voltar ao login
@@ -153,7 +175,9 @@ export function PaymentPage() {
           <p>
             A assinatura de <strong>{status.organization.name}</strong> está ativa
             {status.subscriptionExpiresAt
-              ? ` até ${new Intl.DateTimeFormat('pt-BR').format(new Date(status.subscriptionExpiresAt))}`
+              ? ` até ${new Intl.DateTimeFormat('pt-BR').format(
+                  new Date(status.subscriptionExpiresAt)
+                )}`
               : ''}.
           </p>
           <button className="primary-button large" onClick={finish}>
@@ -184,23 +208,8 @@ export function PaymentPage() {
 
         {!plansData?.configured && (
           <div className="alert alert-warning">
-            Os pagamentos ainda não foram configurados pelo administrador do LicitaGestão.
-          </div>
-        )}
-
-        {checking && (
-          <div className="alert alert-info">Conferindo a confirmação diretamente no Mercado Pago...</div>
-        )}
-
-        {result === 'pendente' && (
-          <div className="alert alert-warning">
-            O pagamento está pendente. O acesso será liberado automaticamente assim que o Mercado Pago confirmar.
-          </div>
-        )}
-
-        {result === 'falha' && (
-          <div className="alert alert-error">
-            O pagamento não foi concluído. Você pode escolher o plano e tentar novamente.
+            Os pagamentos ainda não foram configurados pelo administrador
+            do LicitaGestão.
           </div>
         )}
 
@@ -209,54 +218,207 @@ export function PaymentPage() {
             <button
               type="button"
               key={plan.code}
-              className={`billing-plan-card ${selectedPlan === plan.code ? 'selected' : ''}`}
-              onClick={() => setSelectedPlan(plan.code)}
+              className={`billing-plan-card ${
+                selectedPlan === plan.code ? 'selected' : ''
+              }`}
+              onClick={() => selectPlan(plan.code)}
             >
               <span>{plan.name}</span>
               <strong>{plan.displayPrice}</strong>
               <small>{planCopy[plan.code]}</small>
-              <em>{selectedPlan === plan.code ? 'Selecionado' : 'Escolher plano'}</em>
+              <em>
+                {selectedPlan === plan.code
+                  ? 'Selecionado'
+                  : 'Escolher plano'}
+              </em>
             </button>
           ))}
         </div>
 
-        <div className="payment-methods-preview">
-          <div>
-            <QrCode size={23} />
-            <span>
-              <strong>Pix</strong>
-              <small>Liberação automática após a confirmação</small>
-            </span>
-          </div>
-          <div>
-            <CreditCard size={23} />
-            <span>
-              <strong>Cartão de crédito</strong>
-              <small>Pagamento no ambiente seguro do Mercado Pago</small>
-            </span>
-          </div>
+        <div className="payment-method-title">
+          <span>Forma de pagamento</span>
+          <small>Escolha como deseja pagar</small>
         </div>
 
-        <div className="payment-checkout-box">
-          <div>
-            <small>Plano selecionado</small>
-            <strong>{selected?.name ?? '—'}</strong>
-            <span>{selected?.displayPrice ?? '—'}</span>
-          </div>
+        <div className="payment-method-selector">
           <button
-            className="primary-button large"
-            disabled={working || !selected || !plansData?.configured}
-            onClick={() => void checkout()}
+            type="button"
+            className={method === 'PIX' ? 'selected' : ''}
+            onClick={() => selectMethod('PIX')}
           >
-            <LockKeyhole size={18} />
-            {working ? 'Abrindo checkout...' : 'Pagar com Pix ou cartão'}
+            <QrCode size={25} />
+            <span>
+              <strong>Pix</strong>
+              <small>QR Code e Pix Copia e Cola</small>
+            </span>
+          </button>
+
+          <button
+            type="button"
+            className={method === 'CARD' ? 'selected' : ''}
+            onClick={() => selectMethod('CARD')}
+          >
+            <CreditCard size={25} />
+            <span>
+              <strong>Cartão</strong>
+              <small>Preencha os dados sem sair do LicitaGestão</small>
+            </span>
           </button>
         </div>
+
+        {!method && (
+          <div className="payment-method-empty">
+            Selecione Pix ou Cartão para continuar.
+          </div>
+        )}
+
+        {method === 'PIX' && (
+          <section className="payment-method-panel">
+            <div className="payment-method-panel-heading">
+              <div>
+                <span className="eyebrow">Pix</span>
+                <h3>Pagamento instantâneo</h3>
+                <p>
+                  Será gerado um Pix dinâmico exclusivo para esta cobrança.
+                </p>
+              </div>
+              <strong>{selected?.displayPrice ?? '—'}</strong>
+            </div>
+
+            {!pixData ? (
+              <button
+                type="button"
+                className="primary-button large payment-action-button"
+                disabled={working || !selected || !plansData?.configured}
+                onClick={() => void createPix()}
+              >
+                <QrCode size={19} />
+                {working ? 'Gerando Pix...' : 'Gerar Pix'}
+              </button>
+            ) : (
+              <div className="pix-payment-result">
+                <div className="pix-qr-card">
+                  {pixData.qrCodeBase64 ? (
+                    <img
+                      src={`data:image/png;base64,${pixData.qrCodeBase64}`}
+                      alt="QR Code Pix"
+                    />
+                  ) : (
+                    <QrCode size={92} />
+                  )}
+                </div>
+
+                <div className="pix-copy-area">
+                  <span>Pix Copia e Cola</span>
+                  <textarea readOnly value={pixData.qrCode} rows={4} />
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    onClick={() => void copyPix()}
+                  >
+                    <Copy size={17} />
+                    {copied ? 'Copiado' : 'Copiar código Pix'}
+                  </button>
+                  <small>
+                    Após o pagamento, esta tela verifica automaticamente a
+                    confirmação e libera o acesso.
+                  </small>
+                </div>
+              </div>
+            )}
+          </section>
+        )}
+
+        {method === 'CARD' && (
+          <section className="payment-method-panel">
+            <div className="payment-method-panel-heading">
+              <div>
+                <span className="eyebrow">Cartão</span>
+                <h3>Pagamento na própria tela</h3>
+                <p>
+                  Os dados do cartão são tokenizados pelo Mercado Pago e não
+                  ficam armazenados no LicitaGestão.
+                </p>
+              </div>
+              <strong>{selected?.displayPrice ?? '—'}</strong>
+            </div>
+
+            {!MERCADO_PAGO_PUBLIC_KEY && (
+              <div className="alert alert-warning">
+                Configure VITE_MERCADO_PAGO_PUBLIC_KEY no frontend para habilitar
+                o formulário de cartão.
+              </div>
+            )}
+
+            {MERCADO_PAGO_PUBLIC_KEY && selected && status && (
+              <div className="card-payment-brick">
+                <CardPayment
+                  key={`${selected.code}-${selected.amount}`}
+                  locale="pt-BR"
+                  initialization={{
+                    amount: selected.amount,
+                    payer: {
+                      email: status.payerEmail
+                    }
+                  }}
+                  onSubmit={async (formData, additionalData) => {
+                    setError('');
+
+                    try {
+                      const paymentTypeId =
+                        (
+                          additionalData as
+                            | { paymentTypeId?: string }
+                            | undefined
+                        )?.paymentTypeId ?? 'credit_card';
+
+                      const response = await rawApi.post<
+                        ApiResponse<BillingCardResult>
+                      >('/billing/card', {
+                        token,
+                        plan: selected.code,
+                        cardToken: formData.token,
+                        paymentMethodId: formData.payment_method_id,
+                        paymentTypeId,
+                        installments: Number(formData.installments ?? 1),
+                        payerEmail: formData.payer?.email,
+                        identification: formData.payer?.identification
+                      });
+
+                      setStatus(response.data.data.status);
+
+                      if (!response.data.data.status.accessGranted) {
+                        const detail =
+                          response.data.data.status.latestPayment
+                            ?.providerStatusDetail;
+                        setError(
+                          detail
+                            ? `O cartão não foi aprovado (${detail}). Verifique os dados ou tente outro cartão.`
+                            : 'O pagamento não foi aprovado. Verifique os dados ou tente outro cartão.'
+                        );
+                      }
+                    } catch (err) {
+                      setError(errorMessage(err));
+                      throw err;
+                    }
+                  }}
+                  onError={() => {
+                    setError(
+                      'Não foi possível carregar ou validar o formulário do cartão.'
+                    );
+                  }}
+                />
+              </div>
+            )}
+          </section>
+        )}
 
         <div className="payment-security-note">
           <ShieldCheck size={18} />
           <span>
-            O LicitaGestão não recebe nem armazena os dados do cartão. A transação é concluída no Checkout Pro do Mercado Pago.
+            O LicitaGestão não armazena número do cartão, validade ou código de
+            segurança. O formulário seguro e a tokenização são fornecidos pelo
+            Mercado Pago.
           </span>
         </div>
 

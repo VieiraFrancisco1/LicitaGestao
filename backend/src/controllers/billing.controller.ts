@@ -1,6 +1,8 @@
 import type { Request, Response } from 'express';
 import {
+  createBillingCard,
   createBillingCheckout,
+  createBillingPix,
   getBillingPlans,
   getBillingStatus,
   processMercadoPagoOrderWithRetry,
@@ -22,6 +24,25 @@ export const checkout = async (req: Request, res: Response) => {
   const data = await createBillingCheckout(req.body.token, req.body.plan);
   res.status(201).json({ success: true, data });
 };
+
+export const pix = async (req: Request, res: Response) => {
+  const data = await createBillingPix(req.body.token, req.body.plan);
+  res.status(201).json({ success: true, data });
+};
+
+export const card = async (req: Request, res: Response) => {
+  const data = await createBillingCard(req.body.token, req.body.plan, {
+    cardToken: req.body.cardToken,
+    paymentMethodId: req.body.paymentMethodId,
+    paymentTypeId: req.body.paymentTypeId,
+    installments: req.body.installments,
+    payerEmail: req.body.payerEmail,
+    identification: req.body.identification
+  });
+  res.status(201).json({ success: true, data });
+};
+
+// LICITAGESTAO_BILLING_TRANSPARENTE_V8_CONTROLLER
 
 export const reconcile = async (req: Request, res: Response) => {
   const data = await reconcileBillingOrder(req.body.token, req.body.orderId);

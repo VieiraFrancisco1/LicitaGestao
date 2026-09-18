@@ -500,5 +500,23 @@ export type BillingPlanCode = 'MONTHLY' | 'QUARTERLY' | 'SEMIANNUAL';
 export type BillingPlan = { code: BillingPlanCode; name: string; months: number; amount: number; displayPrice: string };
 export type BillingPlansData = { configured: boolean; plans: BillingPlan[] };
 export type BillingPayment = { id: string; plan: BillingPlanCode; amount: string; status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | 'REFUNDED' | 'FAILED'; providerOrderId: string | null; providerPaymentId: string | null; paymentMethod: string | null; providerStatus: string | null; providerStatusDetail: string | null; paidAt: string | null; createdAt: string };
-export type BillingStatusData = { organization: { id: string; name: string; loginEmail: string }; billingExempt: boolean; subscriptionStatus: 'PENDING' | 'ACTIVE' | 'EXPIRED' | 'SUSPENDED'; subscriptionPlan: BillingPlanCode | null; subscriptionExpiresAt: string | null; accessGranted: boolean; latestPayment: BillingPayment | null };
+export type BillingStatusData = { organization: { id: string; name: string; loginEmail: string }; payerEmail: string; billingExempt: boolean; subscriptionStatus: 'PENDING' | 'ACTIVE' | 'EXPIRED' | 'SUSPENDED'; subscriptionPlan: BillingPlanCode | null; subscriptionExpiresAt: string | null; accessGranted: boolean; latestPayment: BillingPayment | null };
 export type BillingCheckoutData = { paymentId: string; orderId: string; checkoutUrl: string; plan: BillingPlan };
+
+export type BillingPixData = {
+  paymentId: string;
+  orderId: string;
+  qrCode: string;
+  qrCodeBase64: string;
+  ticketUrl: string | null;
+  status: string | null;
+  statusDetail: string | null;
+  plan: BillingPlan;
+};
+
+export type BillingCardResult = {
+  orderId: string;
+  status: BillingStatusData;
+};
+
+// LICITAGESTAO_BILLING_TRANSPARENTE_V8_TYPES

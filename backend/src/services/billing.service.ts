@@ -26,7 +26,11 @@ type MercadoPagoPaymentTransaction = {
   payment_method?: {
     id?: string;
     type?: string;
+    token?: string;
     installments?: number;
+    ticket_url?: string;
+    qr_code?: string;
+    qr_code_base64?: string;
   };
 };
 
@@ -200,6 +204,9 @@ export async function getBillingStatus(token: string) {
       name: organization.name,
       loginEmail: organization.loginEmail
     },
+    payerEmail:
+      env.MERCADO_PAGO_TEST_PAYER_EMAIL?.trim().toLowerCase() ||
+      organization.loginEmail,
     billingExempt: organization.billingExempt,
     subscriptionStatus,
     subscriptionPlan: organization.subscriptionPlan,
@@ -371,6 +378,250 @@ export async function createBillingCheckout(token: string, plan: SubscriptionPla
     throw error;
   }
 }
+
+
+type BillingCardInput = {
+  cardToken: string;
+  paymentMethodId: string;
+  paymentTypeId: 'credit_card' | 'debit_card';
+  installments: number;
+  payerEmail?: string;
+  identification?: {
+    type?: string;
+    number?: string;
+  };
+};
+
+async function prepareDirectBillingPayment(
+  token: string,
+  plan: SubscriptionPlan
+) {
+  const payload = verifyBillingToken(token);
+  requireCheckoutConfigured();
+
+  const organization = await prisma.organization.findUnique({
+    where: { id: payload.organizationId }
+  });
+
+  if (!organization || !organization.active) {
+    throw new AppError('Organização sem acesso ao pagamento', 403);
+  }
+
+  if (organization.billingExempt) {
+    throw new AppError('Esta organização não precisa realizar pagamento', 422);
+  }
+
+  const selectedPlan = planByCode(plan);
+  if (!selectedPlan) throw new AppError('Plano inválido', 422);
+
+  const payment = await prisma.billingPayment.create({
+    data: {
+      organizationId: organization.id,
+      plan,
+      amount: selectedPlan.amount,
+      status: BillingPaymentStatus.PENDING,
+      provider: 'MERCADO_PAGO'
+    }
+  });
+
+  const payerEmail =
+    env.MERCADO_PAGO_TEST_PAYER_EMAIL?.trim().toLowerCase() ||
+    organization.loginEmail;
+
+  return { organization, selectedPlan, payment, payerEmail };
+}
+
+export async function createBillingPix(
+  token: string,
+  plan: SubscriptionPlan
+) {
+  const { selectedPlan, payment, payerEmail } =
+    await prepareDirectBillingPayment(token, plan);
+
+  try {
+    const order = await mercadoPagoFetch<MercadoPagoOrder>('/v1/orders', {
+      method: 'POST',
+      headers: {
+        'X-Idempotency-Key': payment.id
+      },
+      body: JSON.stringify({
+        type: 'online',
+        processing_mode: 'automatic',
+        total_amount: selectedPlan.amountText,
+        external_reference: payment.id,
+        payer: {
+          email: payerEmail
+        },
+        transactions: {
+          payments: [
+            {
+              amount: selectedPlan.amountText,
+              payment_method: {
+                id: 'pix',
+                type: 'bank_transfer'
+              }
+            }
+          ]
+        }
+      })
+    });
+
+    const transaction = order.transactions?.payments?.[0] ?? null;
+    const paymentMethod = transaction?.payment_method;
+
+    if (
+      !order.id ||
+      !paymentMethod?.qr_code ||
+      !paymentMethod.qr_code_base64
+    ) {
+      throw new AppError(
+        'O Mercado Pago não retornou o QR Code do Pix.',
+        502,
+        'INVALID_PROVIDER_RESPONSE'
+      );
+    }
+
+    await prisma.billingPayment.update({
+      where: { id: payment.id },
+      data: {
+        providerOrderId: order.id,
+        providerPaymentId: transaction?.id ?? null,
+        paymentMethod: 'bank_transfer:pix',
+        providerStatus: order.status ?? transaction?.status ?? null,
+        providerStatusDetail:
+          order.status_detail ?? transaction?.status_detail ?? null
+      }
+    });
+
+    return {
+      paymentId: payment.id,
+      orderId: order.id,
+      qrCode: paymentMethod.qr_code,
+      qrCodeBase64: paymentMethod.qr_code_base64,
+      ticketUrl: paymentMethod.ticket_url ?? null,
+      status: order.status ?? transaction?.status ?? null,
+      statusDetail:
+        order.status_detail ?? transaction?.status_detail ?? null,
+      plan: {
+        code: selectedPlan.code,
+        name: selectedPlan.name,
+        months: selectedPlan.months,
+        amount: selectedPlan.amount,
+        displayPrice: selectedPlan.displayPrice
+      }
+    };
+  } catch (error) {
+    await prisma.billingPayment
+      .update({
+        where: { id: payment.id },
+        data: { status: BillingPaymentStatus.FAILED }
+      })
+      .catch(() => undefined);
+    throw error;
+  }
+}
+
+export async function createBillingCard(
+  token: string,
+  plan: SubscriptionPlan,
+  card: BillingCardInput
+) {
+  const { organization, selectedPlan, payment, payerEmail } =
+    await prepareDirectBillingPayment(token, plan);
+
+  const effectivePayerEmail =
+    env.MERCADO_PAGO_TEST_PAYER_EMAIL?.trim().toLowerCase() ||
+    card.payerEmail?.trim().toLowerCase() ||
+    payerEmail;
+
+  try {
+    const order = await mercadoPagoFetch<MercadoPagoOrder>('/v1/orders', {
+      method: 'POST',
+      headers: {
+        'X-Idempotency-Key': payment.id
+      },
+      body: JSON.stringify({
+        type: 'online',
+        processing_mode: 'automatic',
+        total_amount: selectedPlan.amountText,
+        external_reference: payment.id,
+        payer: {
+          email: effectivePayerEmail,
+          ...(card.identification?.type && card.identification?.number
+            ? {
+                identification: {
+                  type: card.identification.type,
+                  number: card.identification.number
+                }
+              }
+            : {})
+        },
+        transactions: {
+          payments: [
+            {
+              amount: selectedPlan.amountText,
+              payment_method: {
+                id: card.paymentMethodId,
+                type: card.paymentTypeId,
+                token: card.cardToken,
+                installments: card.installments
+              }
+            }
+          ]
+        }
+      })
+    });
+
+    if (!order.id) {
+      throw new AppError(
+        'O Mercado Pago não retornou o identificador da cobrança.',
+        502,
+        'INVALID_PROVIDER_RESPONSE'
+      );
+    }
+
+    const transaction = order.transactions?.payments?.[0] ?? null;
+
+    await prisma.billingPayment.update({
+      where: { id: payment.id },
+      data: {
+        providerOrderId: order.id,
+        providerPaymentId: transaction?.id ?? null,
+        paymentMethod: [
+          transaction?.payment_method?.type ?? card.paymentTypeId,
+          transaction?.payment_method?.id ?? card.paymentMethodId
+        ]
+          .filter(Boolean)
+          .join(':'),
+        providerStatus: order.status ?? transaction?.status ?? null,
+        providerStatusDetail:
+          order.status_detail ?? transaction?.status_detail ?? null
+      }
+    });
+
+    let status;
+    try {
+      status = await syncMercadoPagoOrder(order.id, organization.id);
+    } catch {
+      status = await getBillingStatus(token);
+    }
+
+    return {
+      orderId: order.id,
+      status
+    };
+  } catch (error) {
+    await prisma.billingPayment
+      .update({
+        where: { id: payment.id },
+        data: { status: BillingPaymentStatus.FAILED }
+      })
+      .catch(() => undefined);
+    throw error;
+  }
+}
+
+// LICITAGESTAO_BILLING_TRANSPARENTE_V8_SERVICE
 
 function addPlanMonths(date: Date, plan: SubscriptionPlan) {
   const next = new Date(date);

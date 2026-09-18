@@ -6261,3 +6261,196 @@ td small {
     justify-content: center;
   }
 }
+
+/* LICITAGESTAO_BILLING_TRANSPARENTE_V8_CSS */
+.payment-method-title {
+  display: grid;
+  gap: 3px;
+  color: #213954;
+}
+
+.payment-method-title > span {
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.payment-method-title > small {
+  color: #778398;
+}
+
+.payment-method-selector {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 13px;
+}
+
+.payment-method-selector > button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 76px;
+  padding: 16px 18px;
+  border: 1px solid #d9e3ef;
+  border-radius: 13px;
+  background: #fff;
+  color: #2563eb;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    border-color 0.16s ease,
+    box-shadow 0.16s ease,
+    background-color 0.16s ease;
+}
+
+.payment-method-selector > button.selected {
+  border-color: #2563eb;
+  background: #f6f9ff;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.09);
+}
+
+.payment-method-selector > button span {
+  display: grid;
+  gap: 4px;
+}
+
+.payment-method-selector > button strong {
+  color: #213954;
+  font-size: 15px;
+}
+
+.payment-method-selector > button small {
+  color: #738096;
+}
+
+.payment-method-empty {
+  padding: 18px;
+  border: 1px dashed #cfd9e6;
+  border-radius: 12px;
+  background: #fafcff;
+  color: #748197;
+  text-align: center;
+}
+
+.payment-method-panel {
+  display: grid;
+  gap: 18px;
+  padding: 20px;
+  border: 1px solid #d9e3ef;
+  border-radius: 15px;
+  background: #fbfcff;
+}
+
+.payment-method-panel-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.payment-method-panel-heading h3 {
+  margin: 3px 0 5px;
+  color: #1c3454;
+}
+
+.payment-method-panel-heading p {
+  margin: 0;
+  color: #6d7a8e;
+  font-size: 12px;
+}
+
+.payment-method-panel-heading > strong {
+  color: #0f4aa1;
+  font-size: 22px;
+  white-space: nowrap;
+}
+
+.payment-action-button {
+  justify-self: start;
+}
+
+.pix-payment-result {
+  display: grid;
+  grid-template-columns: 250px minmax(0, 1fr);
+  gap: 20px;
+  align-items: center;
+}
+
+.pix-qr-card {
+  display: grid;
+  min-height: 230px;
+  place-items: center;
+  padding: 14px;
+  border: 1px solid #d7e1ee;
+  border-radius: 14px;
+  background: #fff;
+  color: #2563eb;
+}
+
+.pix-qr-card img {
+  display: block;
+  width: min(210px, 100%);
+  height: auto;
+}
+
+.pix-copy-area {
+  display: grid;
+  gap: 9px;
+}
+
+.pix-copy-area > span {
+  color: #2e425f;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.pix-copy-area textarea {
+  width: 100%;
+  resize: none;
+  padding: 11px;
+  border: 1px solid #ccd8e7;
+  border-radius: 9px;
+  background: #fff;
+  color: #31445f;
+  font: 11px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.pix-copy-area .secondary-button {
+  justify-self: start;
+}
+
+.pix-copy-area small {
+  color: #728096;
+  line-height: 1.45;
+}
+
+.card-payment-brick {
+  padding: 18px;
+  border: 1px solid #dce4ef;
+  border-radius: 13px;
+  background: #fff;
+}
+
+.card-payment-brick iframe {
+  max-width: 100%;
+}
+
+@media (max-width: 760px) {
+  .payment-method-selector,
+  .pix-payment-result {
+    grid-template-columns: 1fr;
+  }
+
+  .payment-method-panel-heading {
+    flex-direction: column;
+  }
+
+  .pix-qr-card {
+    min-height: 0;
+  }
+
+  .payment-action-button,
+  .pix-copy-area .secondary-button {
+    width: 100%;
+    justify-content: center;
+  }
+}
