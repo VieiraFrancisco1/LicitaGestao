@@ -40,7 +40,7 @@ CREATE TABLE "tender_priorities" (
   "organization_id" UUID NOT NULL,
   "company_id" UUID NOT NULL,
   "tender_id" UUID NOT NULL,
-  "created_by_id" UUID NOT NULL,
+  "created_by_id" UUID,
   "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT "tender_priorities_pkey" PRIMARY KEY ("id")
 );
@@ -67,7 +67,7 @@ FOREIGN KEY ("tender_id") REFERENCES "tenders"("id") ON DELETE CASCADE ON UPDATE
 
 ALTER TABLE "tender_priorities"
 ADD CONSTRAINT "tender_priorities_created_by_id_fkey"
-FOREIGN KEY ("created_by_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+FOREIGN KEY ("created_by_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 CREATE TABLE "company_chat_messages" (
   "id" UUID NOT NULL,
