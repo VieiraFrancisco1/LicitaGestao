@@ -6081,12 +6081,18 @@ td small {
   gap: 18px;
 }
 
-.payment-brand img,
+.payment-brand img {
+  width: 220px;
+  max-height: 88px;
+  object-fit: contain;
+  flex: 0 0 auto;
+}
+
 .compact-payment-message > img {
   width: 155px;
   max-height: 60px;
   object-fit: contain;
-}
+} /* LICITAGESTAO_PAYMENT_LOGO_V20 */
 
 .payment-brand h2,
 .payment-approved h2,
@@ -6249,6 +6255,10 @@ td small {
 @media (max-width: 760px) {
   .payment-page { padding: 14px; }
   .payment-shell { padding: 20px; }
+  .payment-brand img {
+    width: 190px;
+    max-height: 76px;
+  }
   .billing-plans,
   .payment-methods-preview { grid-template-columns: 1fr; }
   .payment-brand,
