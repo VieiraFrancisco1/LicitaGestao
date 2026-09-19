@@ -300,7 +300,11 @@ export function DashboardPage() {
                         {item.tender.municipality}
                         {item.tender.noticeNumber ? ` · ${item.tender.noticeNumber}` : ''}
                       </strong>
-                      <small>{item.tender.object}</small>
+                      <small>
+                        {item.tender.emailMessages[0]?.subject
+                          ? `Aviso: ${item.tender.emailMessages[0].subject}`
+                          : item.tender.object}
+                      </small>
                     </span>
                     <span className={`priority-status status-${item.status.toLowerCase()}`}>
                       {priorityLabel[item.status]}
