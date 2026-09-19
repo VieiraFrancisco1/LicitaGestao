@@ -34,8 +34,9 @@ export function DashboardPage() {
     setError('');
     try {
       const response = await api.get<ApiResponse<DashboardData>>('/dashboard', {
-        params: companyId ? { companyId } : undefined
-      });
+        params: companyId ? { companyId } : undefined,
+        timeout: 20_000
+      }); // LICITAGESTAO_DASHBOARD_TIMEOUT_V21
       setData(response.data.data);
     } catch (err) {
       setError(errorMessage(err));

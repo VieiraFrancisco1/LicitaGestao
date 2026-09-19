@@ -95,10 +95,11 @@ export function AppLayout() { // LICITAGESTAO_SAAS_RENTAL_V1_LAYOUT
     'LicitaGestão';
 
   const activeAssignments = user?.assignedCompanies.filter((company) => company.active) ?? [];
-  const switcherCompanies = (user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') ? adminCompanies : activeAssignments;
+  const canViewAllCompanies = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
+  const switcherCompanies = canViewAllCompanies ? adminCompanies : activeAssignments;
 
   useEffect(() => {
-    if (user?.role !== 'ADMIN') return;
+    if (!canViewAllCompanies) return;
 
     let cancelled = false;
     void api
@@ -113,14 +114,14 @@ export function AppLayout() { // LICITAGESTAO_SAAS_RENTAL_V1_LAYOUT
     return () => {
       cancelled = true;
     };
-  }, [user?.role]);
+  }, [canViewAllCompanies]);
 
   useEffect(() => {
-    if (user?.role !== 'ADMIN' || !activeCompanyId || adminCompanies.length === 0) return;
+    if (!canViewAllCompanies || !activeCompanyId || adminCompanies.length === 0) return;
     if (!adminCompanies.some((company) => company.id === activeCompanyId)) {
       setActiveCompanyId(null);
     }
-  }, [user?.role, activeCompanyId, adminCompanies, setActiveCompanyId]);
+  }, [canViewAllCompanies, activeCompanyId, adminCompanies, setActiveCompanyId]); // LICITAGESTAO_SUPERADMIN_COMPANIES_V21
 
   return (
     <div className="app-shell">

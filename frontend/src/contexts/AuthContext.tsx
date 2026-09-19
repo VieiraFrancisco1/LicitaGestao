@@ -31,11 +31,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const allowed =
       nextUser.role === 'EMPRESA'
         ? nextUser.companyId
-        : nextUser.role === 'ADMIN'
+        : nextUser.role === 'ADMIN' || nextUser.role === 'SUPER_ADMIN'
           ? stored
           : activeAssignments.some((company) => company.id === stored)
             ? stored
-            : (activeAssignments[0]?.id ?? null);
+            : (activeAssignments[0]?.id ?? null); // LICITAGESTAO_SUPERADMIN_COMPANIES_V21
 
     setActiveCompanyId(allowed ?? null);
   }, []);

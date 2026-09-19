@@ -48,7 +48,7 @@ export default function App() { // LICITAGESTAO_SAAS_RENTAL_V1_APP LICITAGESTAO_
               <Route path="licitacoes/:id/editar" element={<BidFormPage />} />
               <Route path="participacoes/:id" element={<BidDetailsPage />} />
               <Route path="participacoes/:id/editar" element={<ParticipationFormPage />} />
-              <Route path="empresas" element={<ProtectedRoute roles={['ADMIN', 'FUNCIONARIO']} />}>
+              <Route path="empresas" element={<ProtectedRoute roles={['SUPER_ADMIN', 'ADMIN', 'FUNCIONARIO']} />}> {/* LICITAGESTAO_SUPERADMIN_COMPANIES_V21 */}
                 <Route index element={<CompaniesPage />} />
               </Route>
               <Route path="empresas/:id" element={<CompanyDetailsPage />} />
