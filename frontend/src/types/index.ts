@@ -69,7 +69,7 @@ export type BidSituation =
 export type GuaranteeType = 'NAO_EXIGIDA' | 'APOLICE' | 'PROPOSTA_INICIAL' | 'FIANCA' | 'CAUCAO' | 'OUTRO';
 
 // LICITAGESTAO_WORKFLOW_CITY_LAYOUT_V3_TYPES
-export type TenderWorkflowStatus = 'PENDENTE' | 'ANEXADA' | 'INICIADA' | 'SUSPENSA' | 'CONVOCADA';
+export type TenderWorkflowStatus = 'PENDENTE' | 'ANEXADA' | 'INICIADA' | 'SUSPENSA' | 'CONVOCADA' | 'RECURSO';
 
 export type TenderFilterOptions = {
   municipalities: string[];
@@ -429,6 +429,83 @@ export type DashboardData = {
     upcomingSessions: number;
     pendingConvocations: number;
   }>;
+};
+
+
+export type AgendaItem = {
+  id: string;
+  companyId: string;
+  tenderId: string | null;
+  title: string;
+  notes: string | null;
+  eventDate: string;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: { id: string; name: string };
+  tender: {
+    id: string;
+    municipality: string;
+    noticeNumber: string | null;
+    processNumber: string | null;
+    sessionDate: string;
+    sessionTime: string | null;
+  } | null;
+};
+
+export type TenderPriorityItem = {
+  id: string;
+  tenderId: string;
+  createdAt: string;
+  status: TenderWorkflowStatus;
+  tender: {
+    id: string;
+    municipality: string;
+    noticeNumber: string | null;
+    processNumber: string | null;
+    object: string;
+    sessionDate: string;
+    sessionTime: string | null;
+    bids: Array<{ id: string; situation: BidSituation; progress: BidProgress }>;
+    emailMessages: Array<{
+      subject: string | null;
+      snippet: string | null;
+      textContent: string | null;
+      convocationReason: string | null;
+      receivedAt: string;
+    }>;
+  };
+};
+
+export type CompanyChatMember = {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+};
+
+export type CompanyChatMessage = {
+  id: string;
+  companyId: string;
+  authorId: string;
+  content: string;
+  mentionUserIds: string[];
+  createdAt: string;
+  updatedAt: string;
+  author: { id: string; name: string; role: UserRole };
+};
+
+export type CompanyChatData = {
+  enabled: boolean;
+  members: CompanyChatMember[];
+  messages: CompanyChatMessage[];
+};
+
+export type GlobalSearchResult = {
+  id: string;
+  type: 'TENDER' | 'COMPANY' | 'PLATFORM' | 'USER' | 'EMAIL';
+  title: string;
+  subtitle: string;
+  link: string;
 };
 
 // LICITAGESTAO_SAAS_RENTAL_V1_TYPES
