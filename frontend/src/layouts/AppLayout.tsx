@@ -130,11 +130,7 @@ export function AppLayout() {
 
   useEffect(() => {
     const query = searchQuery.trim();
-    if (query.length < 2) {
-      setSearchResults([]);
-      setSearchLoading(false);
-      return;
-    }
+    if (query.length < 2) return;
     const timer = window.setTimeout(() => {
       setSearchLoading(true);
       void api
@@ -150,9 +146,12 @@ export function AppLayout() {
   }, [searchQuery]);
 
   useEffect(() => {
-    setMenuOpen(false);
-    setProfileOpen(false);
-    setSearchOpen(false);
+    const timer = window.setTimeout(() => {
+      setMenuOpen(false);
+      setProfileOpen(false);
+      setSearchOpen(false);
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [location.pathname]);
 
   return (
