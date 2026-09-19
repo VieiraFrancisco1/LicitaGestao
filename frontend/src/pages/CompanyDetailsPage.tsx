@@ -1,18 +1,18 @@
-import { ArrowLeft, Building2, Download, File, FolderOpen, Gavel, Percent, RadioTower } from 'lucide-react';
+import { ArrowLeft, Building2, Gavel, Percent, RadioTower } from 'lucide-react';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { BidsPage } from './BidsPage';
-import { MegaBrowser } from '../components/MegaBrowser';
+import { TendersPage } from './TendersPage';
 import { CompanyDiscountsPanel } from './CompanyDiscountsPanel';
 import { GmailIntegrationPanel } from '../components/GmailIntegrationPanel';
 import { OutlookIntegrationPanel } from '../components/OutlookIntegrationPanel';
 import { CompanyConvocationsPanel } from '../components/CompanyConvocationsPanel';
 import { api, errorMessage } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
-import type { ApiResponse, BidDocument, BidProgress, Company } from '../types';
-import { formatBytes, formatDate, optionLabel, progressOptions } from '../utils/bid';
+import type { ApiResponse, BidProgress, Company } from '../types';
+import { formatDate, optionLabel, progressOptions } from '../utils/bid';
 
-type Tab = 'overview' | 'bids' | 'documents' | 'platforms' | 'discounts' | 'integrations' | 'convocations';
+type Tab = 'overview' | 'bids' | 'platforms' | 'discounts' | 'integrations' | 'convocations';
+
 type PlatformGroup = {
   id: string;
   name: string;
@@ -37,10 +37,10 @@ export function CompanyDetailsPage() {
   const initialTab: Tab =
     requestedTab === 'integrations' || requestedTab === 'convocations' ? requestedTab : 'overview';
   const [tab, setTab] = useState<Tab>(initialTab);
-  const [documents, setDocuments] = useState<BidDocument[]>([]);
   const [platforms, setPlatforms] = useState<PlatformGroup[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+
   const load = useCallback(async () => {
     setLoading(true);
     setError('');
@@ -61,49 +61,37 @@ export function CompanyDetailsPage() {
     }, 0);
     return () => window.clearTimeout(timer);
   }, [searchParams]);
+
   useEffect(() => {
     const timer = window.setTimeout(() => void load(), 0);
     return () => window.clearTimeout(timer);
   }, [load]);
+
   useEffect(() => {
+    if (tab !== 'platforms') return;
     const timer = window.setTimeout(() => {
-      if (tab === 'documents')
-        void api
-          .get<ApiResponse<BidDocument[]>>(`/companies/${id}/documents`)
-          .then((response) => setDocuments(response.data.data))
-          .catch((err) => setError(errorMessage(err)));
-      if (tab === 'platforms')
-        void api
-          .get<ApiResponse<PlatformGroup[]>>(`/companies/${id}/platforms`)
-          .then((response) => setPlatforms(response.data.data))
-          .catch((err) => setError(errorMessage(err)));
+      void api
+        .get<ApiResponse<PlatformGroup[]>>(`/companies/${id}/platforms`)
+        .then((response) => setPlatforms(response.data.data))
+        .catch((err) => setError(errorMessage(err)));
     }, 0);
     return () => window.clearTimeout(timer);
   }, [tab, id]);
 
-  const download = async (document: BidDocument) => {
-    try {
-      const response = await api.get(`/documents/${document.id}/download`, { responseType: 'blob' });
-      const url = URL.createObjectURL(response.data as Blob);
-      const link = window.document.createElement('a');
-      link.href = url;
-      link.download = document.originalName;
-      link.click();
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      setError(errorMessage(err));
-    }
-  };
-  if (loading)
+  if (loading) {
     return (
       <div className="app-loader">
         <span className="spinner" />
         Carregando empresa...
       </div>
     );
+  }
+
   if (!company) return <div className="alert alert-error">{error || 'Empresa não encontrada'}</div>;
+
   const employeeCompanies =
     user?.role === 'FUNCIONARIO' ? user.assignedCompanies.filter((item) => item.active) : [];
+
   return (
     <div className="page-stack">
       {employeeCompanies.length > 1 && (
@@ -120,6 +108,7 @@ export function CompanyDetailsPage() {
           ))}
         </div>
       )}
+
       <div className="details-header company-header">
         <div>
           <Link className="back-link" to="/empresas">
@@ -128,21 +117,20 @@ export function CompanyDetailsPage() {
           </Link>
           <span className="eyebrow">Área da empresa</span>
           <h2>{company.tradeName || company.legalName}</h2>
-          <p>
-            {company.legalName} · {formatCnpj(company.cnpj)}
-          </p>
+          <p>{company.legalName} · {formatCnpj(company.cnpj)}</p>
         </div>
         <span className={`status-pill ${company.active ? 'active' : 'inactive'}`}>
           {company.active ? 'Ativa' : 'Inativa'}
         </span>
       </div>
+
       {error && <div className="alert alert-error">{error}</div>}
+
       <div className="tabs company-tabs">
         {(
           [
             ['overview', 'Visão geral'],
             ['bids', 'Licitações'],
-            ['documents', 'Documentos'],
             ['platforms', 'Plataformas'],
             ['discounts', 'Baixas'],
             ['integrations', 'Integrações'],
@@ -154,10 +142,10 @@ export function CompanyDetailsPage() {
           </button>
         ))}
       </div>
+
       {tab === 'overview' && (
         <div className="details-grid">
           <CompanyStat icon={<Gavel />} label="Licitações" value={company._count?.bids ?? 0} />
-          <CompanyStat icon={<File />} label="Documentos" value="Por licitação" />
           <CompanyStat icon={<Percent />} label="Baixas" value="Cálculo por licitação" />
           <CompanyStat icon={<Building2 />} label="Usuários da empresa" value={company._count?.users ?? 0} />
           <CompanyStat
@@ -187,56 +175,9 @@ export function CompanyDetailsPage() {
           </section>
         </div>
       )}
-      {tab === 'bids' && <BidsPage fixedCompanyId={company.id} />}
-      {tab === 'documents' && (
-        <div className="page-stack company-documents-stack">
-          <section className="detail-panel">
-            <div className="section-note">
-              Pasta principal da empresa no MEGA. O sistema tenta localizar a pasta existente pelo nome da
-              empresa e só cria uma nova se não encontrar.
-            </div>
-            <MegaBrowser companyId={company.id} compact />
-          </section>
-          <section className="detail-panel">
-            <div className="section-heading-inline">
-              <div>
-                <strong>Documentos vinculados às licitações</strong>
-                <small>Arquivos enviados dentro de cada participação e armazenados no MEGA.</small>
-              </div>
-            </div>
-            <div className="document-list">
-              {documents.length === 0 && (
-                <div className="table-message">
-                  <File size={28} />
-                  Nenhum documento de licitação nesta empresa.
-                </div>
-              )}
-              {documents.map((document) => (
-                <article key={document.id}>
-                  <span className="file-icon">
-                    <File size={20} />
-                  </span>
-                  <div>
-                    <strong>{document.originalName}</strong>
-                    <small>
-                      {document.bid?.tender.municipality} · {formatBytes(document.size)} ·{' '}
-                      {formatDate(document.createdAt)}
-                    </small>
-                  </div>
-                  <Link className="action-button" to={`/participacoes/${document.bidId}`}>
-                    <FolderOpen size={15} />
-                    Licitação
-                  </Link>
-                  <button className="action-button" onClick={() => void download(document)}>
-                    <Download size={15} />
-                    Baixar
-                  </button>
-                </article>
-              ))}
-            </div>
-          </section>
-        </div>
-      )}
+
+      {tab === 'bids' && <TendersPage fixedCompanyId={company.id} embedded />}
+
       {tab === 'platforms' && (
         <section className="platform-grid company-platforms">
           {platforms.length === 0 && (
@@ -264,13 +205,16 @@ export function CompanyDetailsPage() {
           ))}
         </section>
       )}
+
       {tab === 'discounts' && <CompanyDiscountsPanel companyId={company.id} />}
+
       {tab === 'integrations' && (
         <div className="page-stack">
           <GmailIntegrationPanel companyId={company.id} />
           <OutlookIntegrationPanel companyId={company.id} />
         </div>
       )}
+
       {tab === 'convocations' && <CompanyConvocationsPanel companyId={company.id} />}
     </div>
   );
