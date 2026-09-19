@@ -111,13 +111,15 @@ export function DeadlineNotifications() { // LICITAGESTAO_PRIORITY_FIRST_PLACE_V
     const onPointer = (event: MouseEvent) => {
       if (open && popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
         setOpen(false);
-        cancelSelection();
+        setSelectionMode(false);
+        setSelectedAlerts(new Set<SelectedAlertKey>());
       }
     };
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setOpen(false);
-        cancelSelection();
+        setSelectionMode(false);
+        setSelectedAlerts(new Set<SelectedAlertKey>());
       }
     };
     window.addEventListener('licitagestao:close-notifications', closeNotifications);
