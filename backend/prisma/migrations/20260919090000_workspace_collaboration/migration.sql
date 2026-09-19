@@ -8,7 +8,7 @@ CREATE TABLE "agenda_items" (
   "title" VARCHAR(180) NOT NULL,
   "notes" TEXT,
   "event_date" TIMESTAMP(3) NOT NULL,
-  "created_by_id" UUID NOT NULL,
+  "created_by_id" UUID,
   "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT "agenda_items_pkey" PRIMARY KEY ("id")
@@ -33,7 +33,7 @@ FOREIGN KEY ("tender_id") REFERENCES "tenders"("id") ON DELETE SET NULL ON UPDAT
 
 ALTER TABLE "agenda_items"
 ADD CONSTRAINT "agenda_items_created_by_id_fkey"
-FOREIGN KEY ("created_by_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+FOREIGN KEY ("created_by_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 CREATE TABLE "tender_priorities" (
   "id" UUID NOT NULL,
