@@ -6,7 +6,7 @@ import {
   Percent,
   Pencil,
 } from 'lucide-react';
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { CompanyConvocationsPanel } from '../components/CompanyConvocationsPanel';
