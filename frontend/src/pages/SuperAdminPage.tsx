@@ -1,5 +1,6 @@
-import { Building2, Check, Mail, RefreshCw, Shield, X } from 'lucide-react';
+import { Building2, Check, Mail, RefreshCw, Shield, Trash2, X } from 'lucide-react';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 import { api, errorMessage } from '../services/api';
 import type {
   ApiResponse,
@@ -16,6 +17,7 @@ const subscriptionLabel = (status: PlatformOverview['organizations'][number]['su
   status === 'ACTIVE' ? 'Ativa' : status === 'EXPIRED' ? 'Vencida' : status === 'SUSPENDED' ? 'Suspensa' : 'Aguardando pagamento'; // LICITAGESTAO_BILLING_ORDERS_API_V2_SUPERADMIN
 
 export function SuperAdminPage() {
+  const { user } = useAuth();
   const [overview, setOverview] = useState<PlatformOverview | null>(null);
   const [requests, setRequests] = useState<GmailAccessRequest[]>([]);
   const [filter, setFilter] = useState<GmailAccessRequestStatus | ''>('PENDING');
@@ -80,6 +82,34 @@ export function SuperAdminPage() {
     }
   };
 
+  const deleteOrganization = async (
+    organization: PlatformOverview['organizations'][number]
+  ) => {
+    if (organization.id === user?.organizationId) return;
+
+    const confirmation = window.prompt(
+      `Esta ação apaga definitivamente a organização "${organization.name}" e todos os dados dela.\n\nPara confirmar, digite o e-mail principal:\n${organization.loginEmail}`
+    );
+
+    if (!confirmation) return;
+
+    setWorking(`delete:${organization.id}`);
+    setError('');
+    setSuccess('');
+
+    try {
+      await api.delete(`/platform-admin/organizations/${organization.id}`, {
+        data: { confirmation: confirmation.trim() }
+      });
+      setSuccess(`Organização "${organization.name}" apagada definitivamente.`);
+      await load();
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setWorking('');
+    }
+  };
+
   const saveSupport = async (event: FormEvent) => {
     event.preventDefault();
     setWorking('support');
@@ -119,13 +149,30 @@ export function SuperAdminPage() {
         <article><Mail /><small>Gmail pendentes</small><strong>{overview?.totals.pendingGmailRequests ?? 0}</strong></article>
       </div>
 
-      <section className="table-card">
-        <div className="panel-heading">
-          <div><span className="eyebrow">Clientes</span><h3>Organizações cadastradas</h3></div>
+      <section className="table-card super-admin-organizations-card">
+        <div className="panel-heading super-admin-section-heading">
+          <div>
+            <span className="eyebrow">Clientes</span>
+            <h3>Organizações cadastradas</h3>
+            <p>
+              Esta área gerencia as contas do SaaS. A aba Empresas continua mostrando somente
+              as empresas vinculadas à organização da sua própria conta.
+            </p>
+          </div>
         </div>
-        <div className="table-wrap">
-          <table>
-            <thead><tr><th>Organização</th><th>Usuários</th><th>Empresas</th><th>Licitações</th><th>Assinatura</th><th>Status</th><th>Ação</th></tr></thead>
+        <div className="table-wrap super-admin-table-wrap">
+          <table className="super-admin-organizations-table">
+            <thead>
+              <tr>
+                <th>Organização</th>
+                <th>Usuários</th>
+                <th>Empresas</th>
+                <th>Licitações</th>
+                <th>Assinatura</th>
+                <th>Status</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
             <tbody>
               {overview?.organizations.map((organization) => (
                 <tr key={organization.id}>
@@ -140,13 +187,31 @@ export function SuperAdminPage() {
                   </td>
                   <td><span className={`status-pill ${organization.active ? 'active' : 'inactive'}`}>{organization.active ? 'Ativa' : 'Suspensa'}</span></td>
                   <td>
-                    <button
-                      className={organization.active ? 'danger-button' : 'secondary-button'}
-                      disabled={working === organization.id}
-                      onClick={() => void toggleOrganization(organization.id, !organization.active)}
-                    >
-                      {organization.active ? 'Suspender' : 'Ativar'}
-                    </button>
+                    <div className="super-admin-organization-actions">
+                      <button
+                        className={organization.active ? 'danger-button compact' : 'secondary-button compact'}
+                        disabled={working === organization.id}
+                        onClick={() => void toggleOrganization(organization.id, !organization.active)}
+                      >
+                        {organization.active ? 'Suspender' : 'Ativar'}
+                      </button>
+                      <button
+                        className="danger-button compact super-admin-delete-button"
+                        disabled={
+                          organization.id === user?.organizationId ||
+                          working === `delete:${organization.id}`
+                        }
+                        title={
+                          organization.id === user?.organizationId
+                            ? 'A organização do SUPER_ADMIN não pode ser apagada'
+                            : 'Apagar organização e todos os dados'
+                        }
+                        onClick={() => void deleteOrganization(organization)}
+                      >
+                        <Trash2 size={14} />
+                        Apagar
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -155,7 +220,7 @@ export function SuperAdminPage() {
         </div>
       </section>
 
-      <section className="table-card">
+      <section className="table-card super-admin-gmail-card">
         <div className="panel-heading super-admin-request-heading">
           <div>
             <span className="eyebrow">Google OAuth em teste</span>
@@ -196,8 +261,8 @@ export function SuperAdminPage() {
         </div>
       </section>
 
-      <section className="detail-panel">
-        <div className="panel-heading">
+      <section className="detail-panel super-admin-support-card">
+        <div className="panel-heading super-admin-section-heading">
           <div><span className="eyebrow">Ajuda</span><h3>Contato de suporte</h3><p>Este contato aparece na aba Ajuda de todos os clientes.</p></div>
         </div>
         <form className="support-settings-form" onSubmit={saveSupport}>

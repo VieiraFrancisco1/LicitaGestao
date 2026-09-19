@@ -6464,3 +6464,149 @@ td small {
     justify-content: center;
   }
 }
+
+
+/* LICITAGESTAO_SUPERADMIN_LAYOUT_V22 */
+.super-admin-organizations-card,
+.super-admin-gmail-card,
+.super-admin-support-card {
+  overflow: hidden;
+}
+
+.super-admin-section-heading,
+.super-admin-request-heading {
+  padding: 18px 20px;
+  border-bottom: 1px solid #e2e8f0;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+}
+
+.super-admin-section-heading h3,
+.super-admin-request-heading h3 {
+  margin: 4px 0 5px;
+}
+
+.super-admin-section-heading p,
+.super-admin-request-heading p {
+  max-width: 760px;
+  margin: 0;
+  color: #6b778c;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.super-admin-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.super-admin-organizations-table {
+  min-width: 980px;
+}
+
+.super-admin-organizations-table th {
+  padding: 12px 16px;
+  color: #64748b;
+  background: #f8fafc;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.super-admin-organizations-table td {
+  padding: 16px;
+  vertical-align: middle;
+}
+
+.super-admin-organizations-table td:first-child {
+  min-width: 240px;
+}
+
+.super-admin-organizations-table td:first-child strong,
+.super-admin-organizations-table td:first-child small {
+  display: block;
+}
+
+.super-admin-organizations-table td:first-child small {
+  margin-top: 4px;
+  color: #7a8699;
+}
+
+.super-admin-organizations-table td:nth-child(5) {
+  min-width: 150px;
+}
+
+.super-admin-organizations-table td:nth-child(5) small {
+  display: block;
+  margin-top: 5px;
+  color: #718096;
+}
+
+.super-admin-organization-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 190px;
+}
+
+.super-admin-delete-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #fff1f2;
+  color: #b42318;
+  border-color: #fecdd3;
+}
+
+.super-admin-delete-button:hover:not(:disabled) {
+  background: #ffe4e6;
+}
+
+.super-admin-delete-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.super-admin-gmail-card .table-wrap table th,
+.super-admin-gmail-card .table-wrap table td {
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+.super-admin-support-card {
+  padding: 0;
+}
+
+.super-admin-support-card .support-settings-form {
+  padding: 18px 20px 10px;
+}
+
+.super-admin-support-card > small {
+  display: block;
+  padding: 0 20px 18px;
+  color: #6b778c;
+}
+
+.subscription-renewal-alert {
+  display: grid;
+  gap: 4px;
+}
+
+.subscription-renewal-alert strong {
+  color: inherit;
+}
+
+@media (max-width: 800px) {
+  .super-admin-section-heading,
+  .super-admin-request-heading {
+    padding: 16px;
+  }
+
+  .super-admin-support-card .support-settings-form {
+    padding: 16px;
+  }
+
+  .super-admin-support-card > small {
+    padding: 0 16px 16px;
+  }
+}

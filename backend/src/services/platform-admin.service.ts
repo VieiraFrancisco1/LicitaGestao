@@ -41,6 +41,56 @@ export async function setOrganizationActive(id: string, active: boolean, auth: A
   return prisma.organization.update({ where: { id }, data: { active } });
 }
 
+export async function deleteOrganizationPermanently(
+  id: string,
+  confirmation: string,
+  auth: AuthScope
+) {
+  if (id === auth.organizationId) {
+    throw new AppError(
+      'A organização do SUPER_ADMIN não pode ser apagada por esta tela',
+      422
+    );
+  }
+
+  const organization = await prisma.organization.findUnique({
+    where: { id },
+    select: { id: true, name: true, loginEmail: true }
+  });
+
+  if (!organization) throw new AppError('Organização não encontrada', 404);
+
+  if (confirmation.trim().toLowerCase() !== organization.loginEmail.toLowerCase()) {
+    throw new AppError(
+      'Confirmação inválida. Digite exatamente o e-mail principal da organização.',
+      422
+    );
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.auditLog.deleteMany({ where: { organizationId: id } });
+    await tx.proposalLetterTemplate.deleteMany({ where: { organizationId: id } });
+
+    // Tender remove em cascata participacoes, documentos e calculos dependentes.
+    await tx.tender.deleteMany({ where: { organizationId: id } });
+    await tx.platform.deleteMany({ where: { organizationId: id } });
+
+    // Remove usuarios antes das empresas para liberar FKs de companyId.
+    await tx.user.deleteMany({ where: { organizationId: id } });
+    await tx.company.deleteMany({ where: { organizationId: id } });
+
+    // Billing, reset de senha e solicitacoes Gmail ligadas diretamente
+    // a Organization possuem onDelete Cascade.
+    await tx.organization.delete({ where: { id } });
+  });
+
+  return {
+    id: organization.id,
+    name: organization.name,
+    loginEmail: organization.loginEmail
+  };
+} // LICITAGESTAO_SUPERADMIN_DELETE_V22
+
 export async function listGmailAccessRequests(status?: GmailAccessRequestStatus) {
   return prisma.gmailAccessRequest.findMany({
     where: status ? { status } : {},

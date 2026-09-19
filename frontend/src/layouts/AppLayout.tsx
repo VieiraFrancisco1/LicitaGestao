@@ -189,7 +189,11 @@ export function AppLayout() { // LICITAGESTAO_SAAS_RENTAL_V1_LAYOUT
                   }
                   aria-label="Trocar empresa ativa"
                 >
-                  {(user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && <option value="">Todas as empresas</option>}
+                  {(user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && (
+                    <option value="">
+                      {user?.role === 'SUPER_ADMIN' ? 'Todas as empresas desta conta' : 'Todas as empresas'}
+                    </option>
+                  )} // LICITAGESTAO_COMPANY_SCOPE_V22
                   {switcherCompanies.map((company) => (
                     <option key={company.id} value={company.id}>
                       {company.tradeName || company.legalName}

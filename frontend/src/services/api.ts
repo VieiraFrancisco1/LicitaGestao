@@ -26,6 +26,19 @@ api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
     const original = error.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined;
+    const responseData = error.response?.data as { code?: string } | undefined;
+
+    if (
+      error.response?.status === 402 &&
+      responseData?.code === 'SUBSCRIPTION_REQUIRED'
+    ) {
+      setAccessToken(null);
+      if (!window.location.pathname.startsWith('/login')) {
+        window.location.assign('/login?assinatura=vencida');
+      }
+      return Promise.reject(error);
+    } // LICITAGESTAO_RENEWAL_V22
+
     if (error.response?.status !== 401 || !original || original._retry || !refreshSession) {
       return Promise.reject(error);
     }

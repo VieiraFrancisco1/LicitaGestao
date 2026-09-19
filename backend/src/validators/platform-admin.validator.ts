@@ -30,3 +30,12 @@ export const supportSettingsSchema = z.object({
   }),
   query: z.object({})
 });
+
+
+export const organizationDeleteSchema = z.object({
+  params: z.object({ id: z.string().uuid() }),
+  body: z.object({
+    confirmation: z.string().trim().email().max(180)
+  }),
+  query: z.object({})
+}); // LICITAGESTAO_SUPERADMIN_DELETE_V22

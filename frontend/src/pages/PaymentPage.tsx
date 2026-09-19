@@ -221,12 +221,20 @@ export function PaymentPage() {
         <div className="payment-brand">
           <img src={licitaGestaoLogo} alt="LicitaGestão" />
           <div>
-            <span className="eyebrow">Assinatura</span>
-            <h2>Escolha seu plano</h2>
+            <span className="eyebrow">
+              {status?.subscriptionStatus === 'EXPIRED' ? 'Renovação' : 'Assinatura'}
+            </span>
+            <h2>
+              {status?.subscriptionStatus === 'EXPIRED'
+                ? 'Reative sua assinatura'
+                : 'Escolha seu plano'}
+            </h2>
             <p>
-              {status?.organization.name
-                ? `Finalize o pagamento para liberar o acesso de ${status.organization.name}.`
-                : 'Finalize o pagamento para liberar o acesso.'}
+              {status?.subscriptionStatus === 'EXPIRED'
+                ? `A assinatura de ${status.organization.name} venceu. Escolha um plano e faça o pagamento para liberar o acesso novamente.`
+                : status?.organization.name
+                  ? `Finalize o pagamento para liberar o acesso de ${status.organization.name}.`
+                  : 'Finalize o pagamento para liberar o acesso.'}
             </p>
           </div>
         </div>

@@ -37,6 +37,7 @@ export function LoginPage() {
   const passwordChanged = searchParams.get('senha') === 'alterada';
   const accountCreated = searchParams.get('cadastro') === 'sucesso';
   const paymentApproved = searchParams.get('pagamento') === 'aprovado';
+  const subscriptionExpired = searchParams.get('assinatura') === 'vencida';
   const sortedMembers = useMemo(() => organizationAccess?.members ?? [], [organizationAccess]);
 
   if (user) return <Navigate to="/" replace />;
@@ -124,6 +125,14 @@ export function LoginPage() {
             )}
             {paymentApproved && (
               <div className="alert alert-success">Pagamento confirmado. Seu acesso ao LicitaGestão está liberado.</div>
+            )}
+            {subscriptionExpired && (
+              <div className="alert alert-warning subscription-renewal-alert">
+                <strong>Assinatura vencida.</strong>
+                <span>
+                  Entre com a conta principal para reativar sua assinatura e continuar usando o LicitaGestão.
+                </span>
+              </div>
             )}
             {error && <div className="alert alert-error">{error}</div>}
 
