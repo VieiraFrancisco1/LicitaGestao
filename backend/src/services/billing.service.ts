@@ -54,27 +54,27 @@ export const BILLING_PLANS = {
     code: SubscriptionPlan.MONTHLY,
     name: 'Mensal',
     months: 1,
-    amount: 79.9,
-    amountText: '79.90',
-    displayPrice: 'R$ 79,90'
+    amount: 49.9,
+    amountText: '49.90',
+    displayPrice: 'R$ 49,90'
   },
   QUARTERLY: {
     code: SubscriptionPlan.QUARTERLY,
     name: 'Trimestral',
     months: 3,
-    amount: 220,
-    amountText: '220.00',
-    displayPrice: 'R$ 220,00'
+    amount: 129.7,
+    amountText: '129.70',
+    displayPrice: 'R$ 129,70'
   },
   SEMIANNUAL: {
     code: SubscriptionPlan.SEMIANNUAL,
     name: '6 meses',
     months: 6,
-    amount: 400,
-    amountText: '400.00',
-    displayPrice: 'R$ 400,00'
+    amount: 259.4,
+    amountText: '259.40',
+    displayPrice: 'R$ 259,40'
   }
-} as const;
+} as const; // LICITAGESTAO_PLANOS_V19
 
 const planByCode = (plan: SubscriptionPlan) => BILLING_PLANS[plan];
 
