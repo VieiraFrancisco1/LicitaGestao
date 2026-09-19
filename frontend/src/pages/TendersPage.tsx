@@ -106,7 +106,7 @@ export function TendersPage({
   const [viewingCompanies, setViewingCompanies] = useState<Tender | null>(null);
   const [linksTender, setLinksTender] = useState<Tender | null>(null);
 
-  const selectedCompanyId = fixedCompanyId ?? companyScopeId || undefined;
+  const selectedCompanyId = fixedCompanyId ?? (companyScopeId || undefined);
   const selectedCompany = companies.find((company) => company.id === selectedCompanyId) ?? null;
   const companyMode = Boolean(selectedCompanyId);
 
@@ -794,7 +794,7 @@ function AssociationModal({
   };
 
   return (
-    <Modal title="Associar licitação à empresa" onClose={saving ? undefined : onClose}>
+    <Modal title="Associar licitação à empresa" onClose={onClose}>
       <form className="entity-form association-form-clean" onSubmit={(event) => void submit(event)}>
         <div className="section-note">
           {tender.municipality} · {formatDate(tender.sessionDate)}. Escolha a empresa e o estado inicial da participação.
