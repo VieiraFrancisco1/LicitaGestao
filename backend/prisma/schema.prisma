@@ -514,8 +514,8 @@ model AgendaItem {
   title          String       @db.VarChar(180)
   notes          String?      @db.Text
   eventDate      DateTime     @map("event_date")
-  createdById    String       @map("created_by_id") @db.Uuid
-  createdBy      User         @relation("AgendaCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  createdById    String?      @map("created_by_id") @db.Uuid
+  createdBy      User?        @relation("AgendaCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   createdAt      DateTime     @default(now()) @map("created_at")
   updatedAt      DateTime     @updatedAt @map("updated_at")
 
@@ -532,8 +532,8 @@ model TenderPriority {
   company        Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
   tenderId       String       @map("tender_id") @db.Uuid
   tender         Tender       @relation(fields: [tenderId], references: [id], onDelete: Cascade)
-  createdById    String       @map("created_by_id") @db.Uuid
-  createdBy      User         @relation("PriorityCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  createdById    String?      @map("created_by_id") @db.Uuid
+  createdBy      User?        @relation("PriorityCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   createdAt      DateTime     @default(now()) @map("created_at")
 
   @@unique([companyId, tenderId])
