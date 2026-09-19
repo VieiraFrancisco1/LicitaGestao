@@ -275,8 +275,8 @@ export function TenderDetailsPage() {
           </div>
         </div>
         <p className="section-note">
-          Cada perfil vê aqui somente as participações das empresas às quais tem acesso. Dados e documentos
-          das demais empresas não são exibidos.
+          Cada perfil vê aqui somente as participações das empresas às quais tem acesso. Os dados das demais
+          empresas não são exibidos.
         </p>
         <div className="participation-cards">
           {tender.bids.length === 0 && (
