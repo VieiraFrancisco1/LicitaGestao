@@ -1,0 +1,43 @@
+name: Empacotar V24
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  pacote:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Baixar branch da V24
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Montar pacote somente com arquivos alterados
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --depth=1
+          rm -rf .v24-package
+          mkdir -p .v24-package
+          git diff --name-only --diff-filter=ACMRT origin/main...HEAD | while IFS= read -r file; do
+            [ -z "$file" ] && continue
+            [ "$file" = ".github/workflows/v24-package.yml" ] && continue
+            [ -f "$file" ] || continue
+            mkdir -p ".v24-package/$(dirname "$file")"
+            cp "$file" ".v24-package/$file"
+          done
+          cd .v24-package
+          zip -r ../LicitaGestao-v24.zip .
+
+      - name: Enviar ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: LicitaGestao-v24
+          path: LicitaGestao-v24.zip
+          if-no-files-found: error
+          retention-days: 2
