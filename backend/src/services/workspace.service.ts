@@ -152,50 +152,92 @@ function priorityStatus(item: {
     }>;
   };
 }) {
-  const latest = item.tender.emailMessages[0];
-  const text = normalize(
-    latest
-      ? [latest.subject, latest.snippet, latest.textContent, latest.convocationReason]
-          .filter(Boolean)
-          .join(' ')
-      : ''
-  );
+  const fallbackStatus = () => {
+    const today = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Fortaleza',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).format(new Date());
+    if (item.tender.sessionDate.toISOString().slice(0, 10) <= today) return 'INICIADA' as const;
+    if (item.tender.bids.some((bid) => bid.situation === BidSituation.ANEXADA)) return 'ANEXADA' as const;
+    return 'PENDENTE' as const;
+  };
 
-  if (
-    ['suspensao do certame', 'suspensao da sessao', 'certame suspenso', 'sessao suspensa', 'licitacao suspensa'].some(
-      (term) => text.includes(term)
-    )
-  )
-    return 'SUSPENSA' as const;
+  for (const message of item.tender.emailMessages) {
+    const text = normalize(
+      [message.subject, message.snippet, message.textContent, message.convocationReason]
+        .filter(Boolean)
+        .join(' ')
+    );
 
-  if (
-    [
-      'manifestar intencao de recurso',
-      'manifestacao de intencao de recurso',
-      'intencao de recorrer',
-      'prazo recursal',
-      'recurso administrativo',
-      'impugnacao ao edital'
-    ].some((term) => text.includes(term))
-  )
-    return 'RECURSO' as const;
+    if (
+      [
+        'retorno da suspensao',
+        'retorno de suspensao',
+        'fim da suspensao',
+        'retomada do certame',
+        'retomada da sessao',
+        'sessao retomada',
+        'reabertura da sessao',
+        'sessao reaberta',
+        'prosseguimento do certame',
+        'prosseguimento da sessao'
+      ].some((term) => text.includes(term))
+    ) {
+      return fallbackStatus();
+    }
 
-  if (
-    ['convocacao', 'convocado', 'convocada', 'proposta readequada', 'readequacao da proposta'].some((term) =>
-      text.includes(term)
-    )
-  )
-    return 'CONVOCADA' as const;
+    if (
+      [
+        'aviso de suspensao',
+        'suspensao do certame',
+        'suspensao da sessao',
+        'certame suspenso',
+        'sessao suspensa',
+        'licitacao suspensa',
+        'processo suspenso'
+      ].some((term) => text.includes(term))
+    ) {
+      return 'SUSPENSA' as const;
+    }
 
-  const today = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'America/Fortaleza',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  }).format(new Date());
-  if (item.tender.sessionDate.toISOString().slice(0, 10) <= today) return 'INICIADA' as const;
-  if (item.tender.bids.some((bid) => bid.situation === BidSituation.ANEXADA)) return 'ANEXADA' as const;
-  return 'PENDENTE' as const;
+    if (
+      [
+        'manifestar intencao de recurso',
+        'manifestacao de intencao de recurso',
+        'intencao de recorrer',
+        'intencao de interpor recurso',
+        'prazo para recurso',
+        'prazo recursal',
+        'recurso administrativo',
+        'apresentacao de recurso',
+        'interposicao de recurso',
+        'impugnacao ao edital',
+        'pedido de impugnacao',
+        'prazo para contrarrazoes'
+      ].some((term) => text.includes(term))
+    ) {
+      return 'RECURSO' as const;
+    }
+
+    if (
+      [
+        'convocacao',
+        'convocado',
+        'convocada',
+        'convocamos',
+        'proposta readequada',
+        'readequacao da proposta',
+        'enviar proposta readequada',
+        'apresentar proposta readequada'
+      ].some((term) => text.includes(term))
+    ) {
+      return 'CONVOCADA' as const;
+    }
+  }
+
+  return fallbackStatus();
 }
 
 export async function listPriorities(companyId: string, auth: AuthScope) {
