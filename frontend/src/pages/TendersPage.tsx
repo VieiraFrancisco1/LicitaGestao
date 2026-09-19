@@ -125,10 +125,7 @@ export function TendersPage({
   }, [fixedCompanyId]);
 
   useEffect(() => {
-    if (!selectedCompanyId) {
-      setCompanyStaffCount(null);
-      return;
-    }
+    if (!selectedCompanyId) return;
     void api
       .get<ApiResponse<CompanyChatData>>(`/workspace/${selectedCompanyId}/chat`)
       .then((response) => {
