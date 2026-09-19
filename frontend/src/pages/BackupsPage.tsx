@@ -3,7 +3,6 @@ import {
   Building2,
   DatabaseBackup,
   Download,
-  FileText,
   Gavel,
   Mail,
   ShieldCheck,
@@ -86,7 +85,7 @@ export function BackupsPage() {
       form.append('confirmation', confirmation);
       const response = await api.post<ApiResponse<BackupRestoreResult>>('/backups/restore', form);
       setMessage(
-        `Recuperação concluída: ${response.data.data.tenders} licitação(ões), ${response.data.data.bids} participação(ões) e ${response.data.data.documents} documento(s) conferidos.`
+        `Recuperação concluída: ${response.data.data.tenders} licitação(ões) e ${response.data.data.bids} participação(ões) conferidas.`
       );
       setFile(null);
       setConfirmation('');
@@ -104,7 +103,6 @@ export function BackupsPage() {
     { label: 'Usuários', value: summary?.users ?? 0, icon: Users },
     { label: 'Licitações', value: summary?.tenders ?? 0, icon: Gavel },
     { label: 'Participações', value: summary?.bids ?? 0, icon: ShieldCheck },
-    { label: 'Documentos', value: summary?.documents ?? 0, icon: FileText },
     { label: 'Avisos importados', value: summary?.emailMessages ?? 0, icon: Mail }
   ];
 
@@ -203,8 +201,8 @@ export function BackupsPage() {
         <div>
           <strong>O arquivo não contém senhas nem tokens de acesso</strong>
           <p>
-            Contas de e-mail continuam conectadas no servidor e os arquivos físicos permanecem protegidos no
-            MEGA.
+            Contas de e-mail continuam conectadas no servidor. O backup operacional não inclui senhas nem
+            tokens das integrações.
           </p>
         </div>
       </section>

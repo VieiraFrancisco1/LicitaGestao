@@ -1,6 +1,5 @@
 import {
   CheckCircle2,
-  Cloud,
   Database,
   DatabaseBackup,
   Mail,
@@ -39,18 +38,6 @@ function formatUptime(seconds: number) {
   if (days) return `${days}d ${hours}h`;
   if (hours) return `${hours}h ${minutes}min`;
   return `${minutes}min`;
-}
-
-function formatStorage(bytes: number) {
-  const gigabytes = bytes / 1024 / 1024 / 1024;
-  if (gigabytes >= 1) return `${gigabytes.toFixed(gigabytes >= 100 ? 0 : 1)} GB`;
-  const megabytes = bytes / 1024 / 1024;
-  return `${megabytes.toFixed(megabytes >= 100 ? 0 : 1)} MB`;
-}
-
-function storagePercentage(used: number | null, total: number | null) {
-  if (used === null || total === null || total <= 0) return null;
-  return Math.min(100, Math.max(0, (used / total) * 100));
 }
 
 type HealthFact = { label: string; value: string | number };
@@ -160,7 +147,7 @@ export function SystemHealthPage() {
   }
 
   const statuses = data
-    ? [data.api.status, data.database.status, data.mega.status, data.gmail.status, data.outlook.status]
+    ? [data.api.status, data.database.status, data.gmail.status, data.outlook.status]
     : [];
   const operationalCount = statuses.filter((status) => status === 'OPERATIONAL').length;
   const hasUnavailable = statuses.some((status) => status === 'UNAVAILABLE');
@@ -174,11 +161,7 @@ export function SystemHealthPage() {
         ? 'Há serviço indisponível'
         : 'Alguns serviços precisam de atenção';
 
-  const megaUsage = data ? storagePercentage(data.mega.spaceUsed, data.mega.spaceTotal) : null;
-  const megaFree =
-    data && data.mega.spaceUsed !== null && data.mega.spaceTotal !== null
-      ? Math.max(0, data.mega.spaceTotal - data.mega.spaceUsed)
-      : null;
+
 
   return (
     <div className="page-stack health-center-page">
@@ -211,7 +194,7 @@ export function SystemHealthPage() {
 
             <div className="health-center-overview-stats">
               <div>
-                <strong>{operationalCount}/5</strong>
+                <strong>{operationalCount}/4</strong>
                 <span>serviços operacionais</span>
               </div>
               <div>
@@ -244,55 +227,6 @@ export function SystemHealthPage() {
                 }
               ]}
             />
-
-            <article className={`health-service-card status-${data.mega.status.toLowerCase().replace('_', '-')}`}>
-              <header className="health-service-card-header">
-                <span className="health-service-icon"><Cloud size={19} /></span>
-                <strong>MEGA</strong>
-                <span className="health-service-status">{statusLabels[data.mega.status]}</span>
-              </header>
-
-              <p className="health-service-message">{data.mega.message}</p>
-
-              <dl className="health-service-facts">
-                <div>
-                  <dt>Armazenamento usado</dt>
-                  <dd>{megaUsage === null ? 'Não informado' : `${megaUsage.toFixed(1)}%`}</dd>
-                </div>
-                <div>
-                  <dt>Espaço livre</dt>
-                  <dd>{megaFree === null ? 'Não informado' : formatStorage(megaFree)}</dd>
-                </div>
-              </dl>
-
-              {megaUsage !== null && (
-                <div className="health-storage-bar" aria-label={`${megaUsage.toFixed(1)}% do armazenamento utilizado`}>
-                  <span style={{ width: `${megaUsage}%` }} />
-                </div>
-              )}
-
-              <details className="health-service-details">
-                <summary>Ver detalhes</summary>
-                <dl>
-                  <div>
-                    <dt>Pasta principal</dt>
-                    <dd>{data.mega.rootFolder}</dd>
-                  </div>
-                  <div>
-                    <dt>Utilizado</dt>
-                    <dd>{data.mega.spaceUsed === null ? 'Não informado' : formatStorage(data.mega.spaceUsed)}</dd>
-                  </div>
-                  <div>
-                    <dt>Capacidade</dt>
-                    <dd>{data.mega.spaceTotal === null ? 'Não informado' : formatStorage(data.mega.spaceTotal)}</dd>
-                  </div>
-                  <div>
-                    <dt>Conexão</dt>
-                    <dd>{data.mega.connected ? 'Conectado' : 'Desconectado'}</dd>
-                  </div>
-                </dl>
-              </details>
-            </article>
 
             <ServiceCard
               icon={Mail}

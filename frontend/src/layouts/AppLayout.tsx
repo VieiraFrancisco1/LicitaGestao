@@ -6,7 +6,6 @@ import {
   ChevronDown,
   DatabaseBackup,
   FileBarChart,
-  FileText,
   Gavel,
   LayoutDashboard,
   History,
@@ -18,22 +17,21 @@ import {
   Users,
   X
 } from 'lucide-react';
-import { useEffect, useState, type ChangeEvent } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { DeadlineNotifications } from '../components/DeadlineNotifications';
 import { ChangePasswordModal } from '../components/ChangePasswordModal';
 import { api } from '../services/api';
-import type { ApiResponse, CompanySummary } from '../types';
+import type { ApiResponse, GlobalSearchResult } from '../types';
 import licitaGestaoLogo from '../assets/licitagestao-logo.png';
 
 const titles: Record<string, string> = {
   '/': 'Dashboard',
   '/licitacoes': 'Licitações',
   '/empresas': 'Empresas',
-  '/convocacoes': 'E-mails', // LICITAGESTAO_PREQUAL_ALL_EMAILS_V1_LAYOUT
+  '/convocacoes': 'E-mails',
   '/prazos': 'Prazos',
-  '/documentos': 'Documentos',
   '/plataformas': 'Plataformas',
   '/usuarios': 'Usuários',
   '/auditoria': 'Auditoria',
@@ -45,13 +43,27 @@ const titles: Record<string, string> = {
   '/super-admin': 'Super Admin'
 };
 
-export function AppLayout() { // LICITAGESTAO_SAAS_RENTAL_V1_LAYOUT
-  const { user, logout, activeCompanyId, setActiveCompanyId } = useAuth();
+const resultTypeLabel: Record<GlobalSearchResult['type'], string> = {
+  TENDER: 'Licitação',
+  COMPANY: 'Empresa',
+  PLATFORM: 'Plataforma',
+  USER: 'Usuário',
+  EMAIL: 'E-mail'
+};
+
+export function AppLayout() {
+  const { user, logout } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
-  const [adminCompanies, setAdminCompanies] = useState<CompanySummary[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<GlobalSearchResult[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const profileRef = useRef<HTMLDivElement | null>(null);
+  const searchRef = useRef<HTMLDivElement | null>(null);
 
   const companyPath =
     user?.role === 'EMPRESA' && user.companyId ? `/empresas/${user.companyId}` : '/empresas';
@@ -68,8 +80,7 @@ export function AppLayout() { // LICITAGESTAO_SAAS_RENTAL_V1_LAYOUT
           icon: Building2
         },
         { to: '/convocacoes', label: 'E-mails', icon: Bell },
-        { to: '/prazos', label: 'Prazos', icon: CalendarClock },
-        { to: '/documentos', label: 'Documentos', icon: FileText }
+        { to: '/prazos', label: 'Prazos', icon: CalendarClock }
       ]
     },
     {
@@ -94,34 +105,54 @@ export function AppLayout() { // LICITAGESTAO_SAAS_RENTAL_V1_LAYOUT
     (location.pathname.startsWith('/empresas/') ? 'Empresa' : undefined) ??
     'LicitaGestão';
 
-  const activeAssignments = user?.assignedCompanies.filter((company) => company.active) ?? [];
-  const canViewAllCompanies = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
-  const switcherCompanies = canViewAllCompanies ? adminCompanies : activeAssignments;
-
   useEffect(() => {
-    if (!canViewAllCompanies) return;
-
-    let cancelled = false;
-    void api
-      .get<ApiResponse<CompanySummary[]>>('/companies/options')
-      .then((response) => {
-        if (!cancelled) setAdminCompanies(response.data.data);
-      })
-      .catch(() => {
-        if (!cancelled) setAdminCompanies([]);
-      });
-
-    return () => {
-      cancelled = true;
+    const closeProfile = () => setProfileOpen(false);
+    const onPointer = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (profileOpen && profileRef.current && !profileRef.current.contains(target)) setProfileOpen(false);
+      if (searchOpen && searchRef.current && !searchRef.current.contains(target)) setSearchOpen(false);
     };
-  }, [canViewAllCompanies]);
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setProfileOpen(false);
+        setSearchOpen(false);
+      }
+    };
+    window.addEventListener('licitagestao:close-profile', closeProfile);
+    document.addEventListener('mousedown', onPointer);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('licitagestao:close-profile', closeProfile);
+      document.removeEventListener('mousedown', onPointer);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [profileOpen, searchOpen]);
 
   useEffect(() => {
-    if (!canViewAllCompanies || !activeCompanyId || adminCompanies.length === 0) return;
-    if (!adminCompanies.some((company) => company.id === activeCompanyId)) {
-      setActiveCompanyId(null);
-    }
-  }, [canViewAllCompanies, activeCompanyId, adminCompanies, setActiveCompanyId]); // LICITAGESTAO_SUPERADMIN_COMPANIES_V21
+    const query = searchQuery.trim();
+    if (query.length < 2) return;
+    const timer = window.setTimeout(() => {
+      setSearchLoading(true);
+      void api
+        .get<ApiResponse<GlobalSearchResult[]>>('/search', { params: { q: query } })
+        .then((response) => {
+          setSearchResults(response.data.data);
+          setSearchOpen(true);
+        })
+        .catch(() => setSearchResults([]))
+        .finally(() => setSearchLoading(false));
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setMenuOpen(false);
+      setProfileOpen(false);
+      setSearchOpen(false);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [location.pathname]);
 
   return (
     <div className="app-shell">
@@ -145,8 +176,15 @@ export function AppLayout() { // LICITAGESTAO_SAAS_RENTAL_V1_LAYOUT
               <span className="nav-label">{section.label}</span>
               {section.items
                 .filter((item) => {
-                  const adminAllowed = !('adminOnly' in item) || !item.adminOnly || (user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN');
-                  const superAllowed = !('superAdminOnly' in item) || !item.superAdminOnly || user?.role === 'SUPER_ADMIN';
+                  const adminAllowed =
+                    !('adminOnly' in item) ||
+                    !item.adminOnly ||
+                    user?.role === 'ADMIN' ||
+                    user?.role === 'SUPER_ADMIN';
+                  const superAllowed =
+                    !('superAdminOnly' in item) ||
+                    !item.superAdminOnly ||
+                    user?.role === 'SUPER_ADMIN';
                   return adminAllowed && superAllowed;
                 })
                 .map((item) => (
@@ -178,40 +216,56 @@ export function AppLayout() { // LICITAGESTAO_SAAS_RENTAL_V1_LAYOUT
           </div>
 
           <div className="topbar-actions">
-            {user?.role !== 'EMPRESA' && switcherCompanies.length > 0 && (
-              <label className="company-switcher">
-                <Building2 size={17} />
-                <span>Empresa ativa</span>
-                <select
-                  value={activeCompanyId ?? ''}
-                  onChange={(event: ChangeEvent<HTMLSelectElement>) =>
-                    setActiveCompanyId(event.target.value || null)
-                  }
-                  aria-label="Trocar empresa ativa"
-                >
-                  {(user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && (
-                    <option value="">
-                      {user?.role === 'SUPER_ADMIN' ? 'Todas as empresas desta conta' : 'Todas as empresas'}
-                    </option>
-                  )} // LICITAGESTAO_COMPANY_SCOPE_V22
-                  {switcherCompanies.map((company) => (
-                    <option key={company.id} value={company.id}>
-                      {company.tradeName || company.legalName}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
-
-            <label className="global-search">
+            <div className="global-search global-search-live" ref={searchRef}>
               <Search size={18} />
-              <input aria-label="Busca" placeholder="Buscar no sistema" disabled />
-            </label>
+              <input
+                aria-label="Busca"
+                placeholder="Buscar no sistema"
+                value={searchQuery}
+                onChange={(event) => {
+                  setSearchQuery(event.target.value);
+                  setSearchOpen(true);
+                }}
+                onFocus={() => searchQuery.trim().length >= 2 && setSearchOpen(true)}
+              />
+              {searchLoading && <span className="global-search-spinner" aria-label="Buscando" />}
+              {searchOpen && searchQuery.trim().length >= 2 && (
+                <div className="global-search-results">
+                  {searchLoading ? (
+                    <div className="global-search-empty">Buscando...</div>
+                  ) : searchResults.length === 0 ? (
+                    <div className="global-search-empty">Nenhum resultado encontrado.</div>
+                  ) : (
+                    searchResults.map((result) => (
+                      <button
+                        type="button"
+                        key={`${result.type}:${result.id}`}
+                        onClick={() => {
+                          setSearchOpen(false);
+                          setSearchQuery('');
+                          navigate(result.link);
+                        }}
+                      >
+                        <span className="global-search-type">{resultTypeLabel[result.type]}</span>
+                        <strong>{result.title}</strong>
+                        <small>{result.subtitle}</small>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
 
             <DeadlineNotifications />
 
-            <div className="profile-area">
-              <button className="profile-button" onClick={() => setProfileOpen((value) => !value)}>
+            <div className="profile-area" ref={profileRef}>
+              <button
+                className="profile-button"
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('licitagestao:close-notifications'));
+                  setProfileOpen((value) => !value);
+                }}
+              >
                 <span className="avatar">{user?.name.charAt(0).toUpperCase()}</span>
                 <span className="profile-copy">
                   <strong>{user?.name}</strong>

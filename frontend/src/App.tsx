@@ -17,7 +17,6 @@ import { TenderDetailsPage } from './pages/TenderDetailsPage';
 import { ParticipationFormPage } from './pages/ParticipationFormPage';
 import { DeadlinesPage } from './pages/DeadlinesPage';
 import { AuditPage } from './pages/AuditPage';
-import { DocumentsPage } from './pages/DocumentsPage';
 import { ConvocationsPage } from './pages/ConvocationsPage';
 import { BackupsPage } from './pages/BackupsPage';
 import { SystemHealthPage } from './pages/SystemHealthPage';
@@ -54,7 +53,6 @@ export default function App() { // LICITAGESTAO_SAAS_RENTAL_V1_APP LICITAGESTAO_
               <Route path="empresas/:id" element={<CompanyDetailsPage />} />
               <Route path="convocacoes" element={<ConvocationsPage />} />
               <Route path="prazos" element={<DeadlinesPage />} />
-              <Route path="documentos" element={<DocumentsPage />} />
               <Route path="plataformas" element={<PlatformsPage />} />
               <Route path="usuarios" element={<ProtectedRoute roles={['SUPER_ADMIN', 'ADMIN']} />}>
                 <Route index element={<UsersPage />} />

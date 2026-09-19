@@ -24,7 +24,7 @@ import {
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { api, errorMessage } from '../services/api';
-import type { ApiResponse } from '../types';
+import type { ApiResponse, CompanySummary } from '../types';
 import './reports.css';
 
 type ReportRow = {
@@ -137,19 +137,47 @@ function downloadCsv(data: ReportData, rows: ReportRow[], title: string) {
 }
 
 export function ReportsPage() {
-  const { user, activeCompanyId } = useAuth();
+  const { user, activeCompanyId, setActiveCompanyId } = useAuth();
   const initialFilters = useMemo(() => defaultFilters(), []);
   const [draftFilters, setDraftFilters] = useState<DateFilters>(initialFilters);
   const [filters, setFilters] = useState<DateFilters>(initialFilters);
   const [data, setData] = useState<ReportData | null>(null);
+  const [companies, setCompanies] = useState<CompanySummary[]>([]);
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(
+    user?.role === 'EMPRESA'
+      ? user.companyId
+      : activeCompanyId ||
+        (user?.role === 'FUNCIONARIO'
+          ? user.assignedCompanies.find((company) => company.active)?.id ?? null
+          : null)
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [detailView, setDetailView] = useState<DetailView | null>(null);
   const [detailSearch, setDetailSearch] = useState('');
   const [detailPage, setDetailPage] = useState(1);
 
-  const scopedCompanyId = user?.role === 'EMPRESA' ? user.companyId : activeCompanyId;
-  const needsCompanySelection = (user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && !scopedCompanyId;
+  const scopedCompanyId = user?.role === 'EMPRESA' ? user.companyId : selectedCompanyId;
+  const needsCompanySelection = !scopedCompanyId;
+
+  useEffect(() => {
+    if (user?.role === 'EMPRESA') return;
+    void api
+      .get<ApiResponse<CompanySummary[]>>('/companies/options')
+      .then((response) => {
+        setCompanies(response.data.data);
+        if (
+          user?.role === 'FUNCIONARIO' &&
+          !selectedCompanyId &&
+          response.data.data.length > 0
+        ) {
+          const first = response.data.data[0]!.id;
+          setSelectedCompanyId(first);
+          setActiveCompanyId(first);
+        }
+      })
+      .catch((err) => setError(errorMessage(err)));
+  }, [user?.role, selectedCompanyId, setActiveCompanyId]);
 
   const load = useCallback(async () => {
     if (!filters.dateFrom || !filters.dateTo) return;
@@ -280,17 +308,34 @@ export function ReportsPage() {
           <span className="reports-context-icon">
             <Building2 size={20} />
           </span>
-          <div>
+          <div className="reports-company-selector-copy">
             <small>Empresa selecionada</small>
-            <strong>
-              {data?.scope.companyName ||
-                (needsCompanySelection ? 'Nenhuma empresa selecionada' : 'Empresa atual')}
-            </strong>
-            <span>
-              {user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN'
-                ? 'Troque a empresa pelo seletor fixo no topo.'
-                : 'O relatório acompanha a empresa ativa no sistema.'}
-            </span>
+            {user?.role === 'EMPRESA' ? (
+              <>
+                <strong>{user.company?.tradeName || user.company?.legalName || 'Minha empresa'}</strong>
+                <span>O relatório mostra somente os dados desta empresa.</span>
+              </>
+            ) : (
+              <>
+                <select
+                  className="reports-company-select"
+                  value={selectedCompanyId ?? ''}
+                  onChange={(event) => {
+                    const next = event.target.value || null;
+                    setSelectedCompanyId(next);
+                    setActiveCompanyId(next);
+                  }}
+                >
+                  <option value="">Selecione uma empresa</option>
+                  {companies.map((company) => (
+                    <option key={company.id} value={company.id}>
+                      {company.tradeName || company.legalName}
+                    </option>
+                  ))}
+                </select>
+                <span>Troque a empresa diretamente nesta página.</span>
+              </>
+            )}
           </div>
         </div>
 
@@ -331,8 +376,8 @@ export function ReportsPage() {
           <div>
             <h3>Selecione uma empresa para gerar o relatório</h3>
             <p>
-              O relatório foi pensado para a visão individual de cada empresa. Use o seletor “Empresa ativa”
-              no topo da tela.
+              O relatório foi pensado para a visão individual de cada empresa. Escolha uma empresa no seletor
+              acima para carregar os dados.
             </p>
           </div>
         </section>

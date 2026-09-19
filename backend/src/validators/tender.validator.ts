@@ -53,7 +53,8 @@ export const listTendersSchema = z.object({
     municipality: z.string().trim().max(120).optional(),
     platformId: z.string().uuid().optional(),
     listStatus: z.nativeEnum(TenderListStatus).optional(),
-    workflowStatus: z.enum(['PENDENTE', 'ANEXADA', 'INICIADA', 'SUSPENSA', 'CONVOCADA']).optional(), // LICITAGESTAO_WORKFLOW_CITY_LAYOUT_V3_VALIDATOR
+    companyId: z.string().uuid().optional(),
+    workflowStatus: z.enum(['PENDENTE', 'ANEXADA', 'INICIADA', 'SUSPENSA', 'CONVOCADA', 'RECURSO']).optional(), // LICITAGESTAO_WORKFLOW_CITY_LAYOUT_V3_VALIDATOR
     dateFrom: date.optional(),
     dateTo: date.optional(),
     page: z.coerce.number().int().positive().default(1),

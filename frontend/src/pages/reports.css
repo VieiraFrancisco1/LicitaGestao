@@ -837,3 +837,41 @@
     flex-direction: column;
   }
 }
+
+
+/* V24 - seletor local de empresa */
+.reports-company-selector-copy {
+  display: grid;
+  min-width: min(360px, 100%);
+  gap: 5px;
+}
+
+.reports-company-selector-copy > small,
+.reports-company-selector-copy > strong,
+.reports-company-selector-copy > span {
+  display: block;
+}
+
+.reports-company-select {
+  width: 100%;
+  min-height: 39px;
+  padding: 0 36px 0 11px;
+  border: 1px solid #d8e2ef;
+  border-radius: 9px;
+  color: #203b60;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.reports-company-select:focus {
+  border-color: #98baf3;
+  outline: 3px solid rgba(37, 99, 235, 0.08);
+}
+
+@media (max-width: 760px) {
+  .reports-company-selector-copy {
+    min-width: 0;
+    width: 100%;
+  }
+}

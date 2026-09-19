@@ -1,19 +1,25 @@
 import {
   ArrowLeft,
   Building2,
+  ChevronLeft,
   ChevronRight,
   LockKeyhole,
   Mail,
   ShieldCheck,
   UserRound
 } from 'lucide-react';
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { errorMessage } from '../services/api';
 import type { OrganizationAccess, OrganizationMember, UserRole } from '../types';
 import licitaGestaoLogo from '../assets/licitagestao-logo.png';
 import './access-flow.css';
+
+const loginSlides = [
+  { src: '/login-slide-1.png', alt: 'Nunca mais perca uma convocação' },
+  { src: '/login-slide-2.png', alt: 'Mantenha o controle geral das suas licitações' }
+];
 
 const roleLabels: Record<UserRole, string> = {
   SUPER_ADMIN: 'Super Admin',
@@ -33,6 +39,15 @@ export function LoginPage() {
   const [memberPassword, setMemberPassword] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [slideIndex, setSlideIndex] = useState(0);
+
+  useEffect(() => {
+    const timer = window.setInterval(
+      () => setSlideIndex((current) => (current + 1) % loginSlides.length),
+      10_000
+    );
+    return () => window.clearInterval(timer);
+  }, []);
 
   const passwordChanged = searchParams.get('senha') === 'alterada';
   const accountCreated = searchParams.get('cadastro') === 'sucesso';
@@ -88,20 +103,47 @@ export function LoginPage() {
 
   return (
     <div className="login-page organization-login-page">
-      <section className="login-hero">
-        <div className="hero-copy">
-          <div className="login-brand-logo login-brand-hero">
-            <img src={licitaGestaoLogo} alt="LicitaGestão" />
-          </div>
-          <span className="hero-kicker">Gestão de licitações</span>
-          <h1>
-            Controle simples.
-            <br />
-            Decisões seguras.
-          </h1>
-          <p>Centralize licitações, empresas, documentos, prazos e avisos em um único ambiente.</p>
+      <section className="login-hero login-promo-carousel" aria-label="Apresentação do LicitaGestão">
+        <div className="login-promo-viewport">
+          {loginSlides.map((slide, index) => (
+            <img
+              key={slide.src}
+              src={slide.src}
+              alt={slide.alt}
+              className={index === slideIndex ? 'active' : ''}
+              aria-hidden={index !== slideIndex}
+            />
+          ))}
         </div>
-        <small>Acesso organizacional protegido</small>
+        <button
+          type="button"
+          className="login-carousel-arrow previous"
+          aria-label="Imagem anterior"
+          onClick={() =>
+            setSlideIndex((current) => (current - 1 + loginSlides.length) % loginSlides.length)
+          }
+        >
+          <ChevronLeft size={22} />
+        </button>
+        <button
+          type="button"
+          className="login-carousel-arrow next"
+          aria-label="Próxima imagem"
+          onClick={() => setSlideIndex((current) => (current + 1) % loginSlides.length)}
+        >
+          <ChevronRight size={22} />
+        </button>
+        <div className="login-carousel-dots" aria-label="Selecionar imagem">
+          {loginSlides.map((slide, index) => (
+            <button
+              type="button"
+              key={slide.src}
+              className={index === slideIndex ? 'active' : ''}
+              aria-label={`Mostrar imagem ${index + 1}`}
+              onClick={() => setSlideIndex(index)}
+            />
+          ))}
+        </div>
       </section>
 
       <section className="login-panel">

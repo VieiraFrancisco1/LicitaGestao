@@ -1,13 +1,14 @@
 import { BidSituation, GuaranteeType, Prisma, TenderListStatus, UserRole } from '@prisma/client';
 import { prisma } from '../config/database.js';
 import { AppError } from '../utils/app-error.js';
-import { requireOrganizationId, type AuthScope } from './access.service.js';
+import { assertCompanyPortalAccess, requireOrganizationId, type AuthScope } from './access.service.js';
 
 // LICITAGESTAO_WORKFLOW_CITY_LAYOUT_V3_SERVICE
-export type TenderWorkflowStatus = 'PENDENTE' | 'ANEXADA' | 'INICIADA' | 'SUSPENSA' | 'CONVOCADA';
+export type TenderWorkflowStatus = 'PENDENTE' | 'ANEXADA' | 'INICIADA' | 'SUSPENSA' | 'CONVOCADA' | 'RECURSO';
 
 export type TenderFilterOptionsQuery = {
   workflowStatus?: TenderWorkflowStatus;
+  companyId?: string;
   dateFrom?: Date;
   dateTo?: Date;
 };
@@ -41,6 +42,7 @@ export type TenderQuery = {
   platformId?: string;
   listStatus?: TenderListStatus;
   workflowStatus?: TenderWorkflowStatus;
+  companyId?: string;
   dateFrom?: Date;
   dateTo?: Date;
   page: number;
@@ -168,7 +170,7 @@ const normalizeWorkflowText = (value: string | null | undefined) =>
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase();
 
-type WorkflowEventType = 'SUSPENDED' | 'RESUMED' | 'CONVOCATED';
+type WorkflowEventType = 'SUSPENDED' | 'RESUMED' | 'CONVOCATED' | 'RESOURCE';
 
 const classifyWorkflowMessage = (message: {
   subject: string | null;
@@ -219,6 +221,25 @@ const classifyWorkflowMessage = (message: {
 
   const suspended = suspendedTerms.find((term) => combined.includes(term));
   if (suspended) return { type: 'SUSPENDED', reason: suspended };
+
+  const resourceTerms = [
+    'manifestar intencao de recurso',
+    'manifestacao de intencao de recurso',
+    'intencao de recorrer',
+    'intencao de interpor recurso',
+    'prazo para recurso',
+    'prazo recursal',
+    'recurso administrativo',
+    'apresentacao de recurso',
+    'interposicao de recurso',
+    'impugnacao ao edital',
+    'pedido de impugnacao',
+    'apresentar contrarrazoes',
+    'prazo para contrarrazoes'
+  ];
+
+  const resource = resourceTerms.find((term) => combined.includes(term));
+  if (resource) return { type: 'RESOURCE', reason: resource };
 
   const convocationTerms = [
     'termo de convocacao identificado',
@@ -276,12 +297,16 @@ const todayInFortaleza = () =>
 const addWorkflowMetadata = async <
   T extends { id: string; sessionDate: Date; listStatus: TenderListStatus }
 >(
-  items: T[]
+  items: T[],
+  companyId?: string
 ) => {
   if (items.length === 0) return [];
 
   const messages = await prisma.emailMessage.findMany({
-    where: { tenderId: { in: items.map((item) => item.id) } },
+    where: {
+      tenderId: { in: items.map((item) => item.id) },
+      ...(companyId ? { companyId } : {})
+    },
     select: {
       tenderId: true,
       companyId: true,
@@ -341,6 +366,8 @@ const addWorkflowMetadata = async <
       workflowStatus = 'SUSPENSA';
     } else if (latestEventType === 'CONVOCATED') {
       workflowStatus = 'CONVOCADA';
+    } else if (latestEventType === 'RESOURCE') {
+      workflowStatus = 'RECURSO';
     } else if (latestEventType === 'RESUMED') {
       workflowStatus = 'INICIADA';
     } else if (item.sessionDate.toISOString().slice(0, 10) <= today) {
@@ -365,8 +392,10 @@ const tenderDateWhere = (dateFrom?: Date, dateTo?: Date): Prisma.TenderWhereInpu
     : {};
 
 export const listTenders = async (query: TenderQuery, auth: AuthScope) => {
+  if (query.companyId) await assertCompanyPortalAccess(query.companyId, auth);
   const where: Prisma.TenderWhereInput = {
     organizationId: requireOrganizationId(auth),
+    ...(query.companyId ? { bids: { some: { companyId: query.companyId } } } : {}),
     ...(query.municipality ? { municipality: { equals: query.municipality, mode: 'insensitive' } } : {}),
     ...(query.platformId ? { platformId: query.platformId } : {}),
     ...(query.listStatus && !query.workflowStatus ? { listStatus: query.listStatus } : {}),
@@ -393,7 +422,7 @@ export const listTenders = async (query: TenderQuery, auth: AuthScope) => {
   });
 
   const withAttachments = await addAttachmentProgress(rawItems);
-  const withWorkflow = await addWorkflowMetadata(withAttachments);
+  const withWorkflow = await addWorkflowMetadata(withAttachments, query.companyId);
   const filtered = query.workflowStatus
     ? withWorkflow.filter((item) => item.workflowStatus === query.workflowStatus)
     : withWorkflow;
@@ -412,9 +441,11 @@ export const listTenders = async (query: TenderQuery, auth: AuthScope) => {
 };
 
 export const listTenderFilterOptions = async (query: TenderFilterOptionsQuery, auth: AuthScope) => {
+  if (query.companyId) await assertCompanyPortalAccess(query.companyId, auth);
   const baseItems = await prisma.tender.findMany({
     where: {
       organizationId: requireOrganizationId(auth),
+      ...(query.companyId ? { bids: { some: { companyId: query.companyId } } } : {}),
       ...tenderDateWhere(query.dateFrom, query.dateTo)
     },
     select: {
@@ -426,7 +457,7 @@ export const listTenderFilterOptions = async (query: TenderFilterOptionsQuery, a
     orderBy: { municipality: 'asc' }
   });
 
-  const withWorkflow = await addWorkflowMetadata(baseItems);
+  const withWorkflow = await addWorkflowMetadata(baseItems, query.companyId);
   const filtered = query.workflowStatus
     ? withWorkflow.filter((item) => item.workflowStatus === query.workflowStatus)
     : withWorkflow;

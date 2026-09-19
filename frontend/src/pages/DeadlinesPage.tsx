@@ -1,8 +1,9 @@
-import { AlertTriangle, CalendarClock, CalendarDays, Clock3, Trash2 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { AlertTriangle, Building2, CalendarClock, CalendarDays, Clock3, Trash2 } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import { api, errorMessage } from '../services/api';
-import type { ApiResponse, DeadlineAlert, DeadlineData } from '../types';
+import type { ApiResponse, CompanySummary, DeadlineAlert, DeadlineData } from '../types';
 
 const dateFormat = (date: string) => {
   const [year, month, day] = date.split('-');
@@ -17,6 +18,17 @@ const relativeLabel = (days: number) => {
 };
 
 export function DeadlinesPage() {
+  const { user, activeCompanyId, setActiveCompanyId } = useAuth();
+  const initialCompanyId =
+    user?.role === 'EMPRESA'
+      ? user.companyId
+      : activeCompanyId ||
+        (user?.role === 'FUNCIONARIO'
+          ? user.assignedCompanies.find((company) => company.active)?.id ?? null
+          : null);
+
+  const [companies, setCompanies] = useState<CompanySummary[]>([]);
+  const [companyId, setCompanyId] = useState<string | null>(initialCompanyId ?? null);
   const [data, setData] = useState<DeadlineData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -24,49 +36,66 @@ export function DeadlinesPage() {
   const [removingKey, setRemovingKey] = useState('');
 
   useEffect(() => {
-    void (async () => {
-      try {
-        const response = await api.get<ApiResponse<DeadlineData>>('/deadlines/alerts?horizon=30&pastDays=30');
-        setData(response.data.data);
-      } catch (err) {
-        setError(errorMessage(err));
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
+    if (user?.role === 'EMPRESA') return;
+    void api
+      .get<ApiResponse<CompanySummary[]>>('/companies/options')
+      .then((response) => {
+        setCompanies(response.data.data);
+        if (
+          user?.role === 'FUNCIONARIO' &&
+          !companyId &&
+          response.data.data.length > 0
+        ) {
+          const first = response.data.data[0]!.id;
+          setCompanyId(first);
+          setActiveCompanyId(first);
+        }
+      })
+      .catch((err) => setError(errorMessage(err)));
+  }, [user?.role, companyId, setActiveCompanyId]);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const response = await api.get<ApiResponse<DeadlineData>>('/deadlines/alerts', {
+        params: {
+          horizon: 30,
+          pastDays: 30,
+          ...(companyId ? { companyId } : {})
+        }
+      });
+      setData(response.data.data);
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  }, [companyId]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => void load(), 0);
+    return () => window.clearTimeout(timer);
+  }, [load]);
 
   const items = useMemo(
     () => data?.items.filter((item) => type === 'ALL' || item.type === type) ?? [],
     [data, type]
   );
 
+  const selectedCompany = companies.find((company) => company.id === companyId);
+  const selectedCompanyName =
+    user?.role === 'EMPRESA'
+      ? user.company?.tradeName || user.company?.legalName || 'Minha empresa'
+      : selectedCompany?.tradeName || selectedCompany?.legalName;
+
   const dismiss = async (item: DeadlineAlert) => {
-    if (
-      !window.confirm('Apagar este alerta de prazo da sua lista? A data da licitação continuará preservada.')
-    )
-      return;
+    if (!window.confirm('Apagar este alerta de prazo da sua lista? A data da licitação continuará preservada.')) return;
     setRemovingKey(item.key);
     setError('');
     try {
       await api.post('/deadlines/dismiss', { alertKey: item.key });
-      setData((current) => {
-        if (!current) return current;
-        const remaining = current.items.filter((currentItem) => currentItem.key !== item.key);
-        return {
-          ...current,
-          items: remaining,
-          unread: Math.max(0, current.unread - (item.read ? 0 : 1)),
-          summary: {
-            overdue: remaining.filter((currentItem) => currentItem.days < 0).length,
-            today: remaining.filter((currentItem) => currentItem.days === 0).length,
-            next7Days: remaining.filter((currentItem) => currentItem.days > 0 && currentItem.days <= 7)
-              .length,
-            next30Days: remaining.filter((currentItem) => currentItem.days > 0 && currentItem.days <= 30)
-              .length
-          }
-        };
-      });
+      await load();
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -75,10 +104,44 @@ export function DeadlinesPage() {
   };
 
   return (
-    <div className="page-stack">
+    <div className="page-stack deadlines-page">
+      <section className="deadline-company-scope">
+        <div>
+          <span className="eyebrow">Empresa</span>
+          {user?.role === 'EMPRESA' ? (
+            <strong>{selectedCompanyName}</strong>
+          ) : (
+            <label>
+              <Building2 size={17} />
+              <select
+                value={companyId ?? ''}
+                onChange={(event) => {
+                  const next = event.target.value || null;
+                  setCompanyId(next);
+                  setActiveCompanyId(next);
+                }}
+              >
+                {(user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && (
+                  <option value="">Todas as empresas</option>
+                )}
+                {companies.map((company) => (
+                  <option key={company.id} value={company.id}>
+                    {company.tradeName || company.legalName}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+        </div>
+        <small>
+          {companyId
+            ? 'Todos os cartões e a agenda abaixo mostram somente os prazos desta empresa.'
+            : 'Visão consolidada das empresas às quais você tem acesso.'}
+        </small>
+      </section>
+
       <div className="page-heading deadlines-heading">
         <div>
-          <p>Fase 3</p>
           <h2>Prazos e alertas</h2>
           <span>
             Acompanhe sessões e vencimentos de propostas calculados automaticamente pelas datas cadastradas.
@@ -89,31 +152,19 @@ export function DeadlinesPage() {
       <section className="deadline-summary-grid">
         <article className="deadline-summary overdue">
           <AlertTriangle size={20} />
-          <div>
-            <small>Vencidos</small>
-            <strong>{data?.summary.overdue ?? 0}</strong>
-          </div>
+          <div><small>Vencidos</small><strong>{data?.summary.overdue ?? 0}</strong></div>
         </article>
         <article className="deadline-summary today">
           <Clock3 size={20} />
-          <div>
-            <small>Hoje</small>
-            <strong>{data?.summary.today ?? 0}</strong>
-          </div>
+          <div><small>Hoje</small><strong>{data?.summary.today ?? 0}</strong></div>
         </article>
         <article className="deadline-summary upcoming">
           <CalendarClock size={20} />
-          <div>
-            <small>Próximos 7 dias</small>
-            <strong>{data?.summary.next7Days ?? 0}</strong>
-          </div>
+          <div><small>Próximos 7 dias</small><strong>{data?.summary.next7Days ?? 0}</strong></div>
         </article>
         <article className="deadline-summary future">
           <CalendarDays size={20} />
-          <div>
-            <small>Próximos 30 dias</small>
-            <strong>{data?.summary.next30Days ?? 0}</strong>
-          </div>
+          <div><small>Próximos 30 dias</small><strong>{data?.summary.next30Days ?? 0}</strong></div>
         </article>
       </section>
 
@@ -121,7 +172,7 @@ export function DeadlinesPage() {
         <div className="table-toolbar deadline-toolbar">
           <div>
             <strong>Agenda de prazos</strong>
-            <small>{items.length} alerta(s) no período</small>
+            <small>{items.length} alerta(s) no período{selectedCompanyName ? ` · ${selectedCompanyName}` : ''}</small>
           </div>
           <select value={type} onChange={(event) => setType(event.target.value as typeof type)}>
             <option value="ALL">Todos os tipos</option>
@@ -139,10 +190,7 @@ export function DeadlinesPage() {
         ) : (
           <div className="deadline-list">
             {items.map((item) => (
-              <article
-                key={item.key}
-                className={`deadline-row deadline-row-dismissible ${item.severity.toLowerCase()}`}
-              >
+              <article key={item.key} className={`deadline-row deadline-row-dismissible ${item.severity.toLowerCase()}`}>
                 <Link to={`/licitacoes/${item.tenderId}`} className="deadline-row-link">
                   <span className={`deadline-date-box ${item.severity.toLowerCase()}`}>
                     <strong>{item.date.slice(8, 10)}</strong>
@@ -158,8 +206,7 @@ export function DeadlinesPage() {
                       <em>{relativeLabel(item.days)}</em>
                     </span>
                     <span>
-                      {item.noticeNumber || item.processNumber || 'Licitação sem número'} ·{' '}
-                      {item.municipality}
+                      {item.noticeNumber || item.processNumber || 'Licitação sem número'} · {item.municipality}
                       {item.state ? `/${item.state}` : ''}
                     </span>
                     <small>{item.object}</small>

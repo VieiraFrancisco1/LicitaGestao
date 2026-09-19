@@ -1,7 +1,7 @@
 import { Prisma, UserRole } from '@prisma/client';
 import { prisma } from '../config/database.js';
 import { AppError } from '../utils/app-error.js';
-import { requireOrganizationId, type AuthScope } from './access.service.js';
+import { assertCompanyPortalAccess, requireOrganizationId, type AuthScope } from './access.service.js';
 
 export type DeadlineType = 'SESSION';
 export type DeadlineSeverity = 'OVERDUE' | 'TODAY' | 'URGENT' | 'UPCOMING' | 'FUTURE';
@@ -24,8 +24,11 @@ function severity(days: number): DeadlineSeverity {
   return 'FUTURE';
 }
 
-function tenderScope(auth: AuthScope): Prisma.TenderWhereInput {
+function tenderScope(auth: AuthScope, requestedCompanyId?: string): Prisma.TenderWhereInput {
   const organizationId = requireOrganizationId(auth);
+  if (requestedCompanyId) {
+    return { organizationId, bids: { some: { companyId: requestedCompanyId } } };
+  }
   if ((auth.role === UserRole.ADMIN || auth.role === UserRole.SUPER_ADMIN)) return { organizationId };
   if (auth.role === UserRole.EMPRESA) {
     return {
@@ -39,12 +42,13 @@ function tenderScope(auth: AuthScope): Prisma.TenderWhereInput {
   };
 }
 
-export async function listDeadlineAlerts(auth: AuthScope, query: { horizon: number; pastDays: number }) {
+export async function listDeadlineAlerts(auth: AuthScope, query: { horizon: number; pastDays: number; companyId?: string }) {
+  if (query.companyId) await assertCompanyPortalAccess(query.companyId, auth);
   const today = localTodayAsUtcDate();
   const min = new Date(today.getTime() - query.pastDays * DAY_MS);
   const max = new Date(today.getTime() + query.horizon * DAY_MS);
   const tenders = await prisma.tender.findMany({
-    where: { ...tenderScope(auth), sessionDate: { gte: min, lte: max } },
+    where: { ...tenderScope(auth, query.companyId), sessionDate: { gte: min, lte: max } },
     include: { platform: { select: { id: true, name: true } } },
     orderBy: { sessionDate: 'asc' }
   });

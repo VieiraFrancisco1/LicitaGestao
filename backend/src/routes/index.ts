@@ -20,6 +20,8 @@ import { platformAdminRouter } from './platform-admin.routes.js';
 import { notificationRouter } from './notification.routes.js';
 import { supportRouter } from './support.routes.js';
 import { billingRouter } from './billing.routes.js';
+import { workspaceRouter } from './workspace.routes.js';
+import { searchRouter } from './search.routes.js';
 
 export const apiRouter = Router();
 
@@ -50,6 +52,8 @@ apiRouter.use('/dashboard', dashboardRouter);
 apiRouter.use('/backups', backupRouter);
 apiRouter.use('/system', systemRouter);
 apiRouter.use('/reports', reportRouter);
+apiRouter.use('/workspace', workspaceRouter);
+apiRouter.use('/search', searchRouter);
 
 // LICITAGESTAO_SAAS_RENTAL_V1_ROUTES
 apiRouter.use('/platform-admin', platformAdminRouter);
