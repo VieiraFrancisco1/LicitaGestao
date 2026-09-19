@@ -9,6 +9,7 @@ import {
   listUsersSchema,
   resetUserPasswordSchema,
   updateUserSchema,
+  userCompanyLinkSchema,
   userIdSchema
 } from '../validators/user.validator.js';
 
@@ -18,5 +19,14 @@ userRouter.use(authenticate, authorize(UserRole.ADMIN, UserRole.SUPER_ADMIN));
 userRouter.get('/', validate(listUsersSchema), asyncHandler(controller.index));
 userRouter.get('/:id', validate(userIdSchema), asyncHandler(controller.show));
 userRouter.post('/', validate(createUserSchema), asyncHandler(controller.create));
-userRouter.post('/:id/reset-password', validate(resetUserPasswordSchema), asyncHandler(controller.resetPassword));
+userRouter.post(
+  '/:id/reset-password',
+  validate(resetUserPasswordSchema),
+  asyncHandler(controller.resetPassword)
+);
 userRouter.put('/:id', validate(updateUserSchema), asyncHandler(controller.update));
+userRouter.delete(
+  '/:id/companies/:companyId',
+  validate(userCompanyLinkSchema),
+  asyncHandler(controller.unlinkCompany)
+);

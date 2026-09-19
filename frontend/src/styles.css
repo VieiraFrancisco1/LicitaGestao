@@ -1280,8 +1280,8 @@ td small {
   color: #b33d35;
 }
 .company-bid-actions {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 6px;
 }
 .company-bid-actions .action-button {
@@ -1289,6 +1289,85 @@ td small {
   padding: 7px 8px;
   border: 1px solid #d9e3f1;
   white-space: nowrap;
+}
+.company-situation-actions {
+  display: grid;
+  justify-items: start;
+  gap: 6px;
+}
+.company-situation-actions .inline-link-button {
+  border: 0;
+  background: transparent;
+  color: #315a9e;
+  padding: 0;
+  cursor: pointer;
+}
+
+.employee-company-switcher {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 2px 0 4px;
+}
+.employee-company-switcher a {
+  flex: 0 0 auto;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 15px;
+  border: 1px solid #dbe2ec;
+  border-radius: 10px;
+  background: #fff;
+  color: #536179;
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+}
+.employee-company-switcher a:hover {
+  border-color: #b8c8e2;
+  background: #f8fbff;
+}
+.employee-company-switcher a.active {
+  border-color: #8eb1ed;
+  background: #edf4ff;
+  color: #1e55ad;
+  box-shadow: inset 0 -2px 0 #2f6fed;
+}
+
+.bid-links-modal {
+  display: grid;
+  gap: 16px;
+}
+.bid-links-modal > p {
+  margin: 0;
+  color: #667085;
+  font-size: 13px;
+}
+.bid-links-list {
+  display: grid;
+  gap: 10px;
+}
+.bid-links-list > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 58px;
+  padding: 10px 12px;
+  border: 1px solid #e0e6ef;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+.bid-links-list span {
+  color: #233a5e;
+  font-weight: 800;
+}
+.bid-links-list small {
+  color: #8a94a6;
+}
+.user-row-actions {
+  flex-wrap: wrap;
 }
 
 .form-section,
@@ -5829,7 +5908,6 @@ td small {
   }
 }
 
-
 /* LICITAGESTAO_WORKFLOW_CITY_LAYOUT_V3_CSS */
 .tender-status-tabs {
   flex-wrap: wrap;
@@ -6059,9 +6137,7 @@ td small {
   display: grid;
   place-items: center;
   padding: 28px;
-  background:
-    radial-gradient(circle at top left, rgba(37, 99, 235, 0.12), transparent 34%),
-    #f4f7fb;
+  background: radial-gradient(circle at top left, rgba(37, 99, 235, 0.12), transparent 34%), #f4f7fb;
 }
 
 .payment-shell {
@@ -6124,7 +6200,10 @@ td small {
   background: #fff;
   color: #233955;
   cursor: pointer;
-  transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+  transition:
+    transform 140ms ease,
+    border-color 140ms ease,
+    box-shadow 140ms ease;
 }
 
 .billing-plan-card:hover {
@@ -6205,8 +6284,12 @@ td small {
   gap: 2px;
 }
 
-.payment-checkout-box small { color: #738096; }
-.payment-checkout-box strong { color: #213954; }
+.payment-checkout-box small {
+  color: #738096;
+}
+.payment-checkout-box strong {
+  color: #213954;
+}
 .payment-checkout-box span {
   color: #0f4aa1;
   font-size: 20px;
@@ -6253,14 +6336,20 @@ td small {
 }
 
 @media (max-width: 760px) {
-  .payment-page { padding: 14px; }
-  .payment-shell { padding: 20px; }
+  .payment-page {
+    padding: 14px;
+  }
+  .payment-shell {
+    padding: 20px;
+  }
   .payment-brand img {
     width: 190px;
     max-height: 76px;
   }
   .billing-plans,
-  .payment-methods-preview { grid-template-columns: 1fr; }
+  .payment-methods-preview {
+    grid-template-columns: 1fr;
+  }
   .payment-brand,
   .payment-checkout-box {
     align-items: stretch;
@@ -6421,7 +6510,11 @@ td small {
   border-radius: 9px;
   background: #fff;
   color: #31445f;
-  font: 11px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font:
+    11px/1.45 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
 }
 
 .pix-copy-area .secondary-button {
@@ -6464,7 +6557,6 @@ td small {
     justify-content: center;
   }
 }
-
 
 /* LICITAGESTAO_SUPERADMIN_LAYOUT_V22 */
 .super-admin-organizations-card,

@@ -56,6 +56,12 @@ companyRouter.get(
   validate(listDiscountsSchema),
   asyncHandler(discountController.index)
 );
+companyRouter.get(
+  '/:id/discounts-eligible',
+  authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.FUNCIONARIO, UserRole.EMPRESA),
+  validate(listDiscountsSchema),
+  asyncHandler(discountController.eligible)
+);
 companyRouter.post(
   '/:id/discounts',
   authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.FUNCIONARIO, UserRole.EMPRESA),

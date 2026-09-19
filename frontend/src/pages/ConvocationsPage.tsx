@@ -13,7 +13,8 @@ function formatDateTime(value: string) {
   }).format(new Date(value));
 }
 
-export function ConvocationsPage() { // LICITAGESTAO_PRIORITY_FIRST_PLACE_V1 // LICITAGESTAO_PREQUAL_ALL_EMAILS_V1_EMAIL_PAGE
+export function ConvocationsPage() {
+  // LICITAGESTAO_PRIORITY_FIRST_PLACE_V1 // LICITAGESTAO_PREQUAL_ALL_EMAILS_V1_EMAIL_PAGE
   const { user, activeCompanyId, setActiveCompanyId } = useAuth();
   const [data, setData] = useState<GmailConvocationAlertData>({ items: [], unread: 0 });
   const [companies, setCompanies] = useState<CompanySummary[]>([]);
@@ -44,7 +45,7 @@ export function ConvocationsPage() { // LICITAGESTAO_PRIORITY_FIRST_PLACE_V1 // 
         if (activeCompanyId && options.some((company) => company.id === activeCompanyId)) {
           return activeCompanyId;
         }
-        if (user?.role === 'ADMIN' && !activeCompanyId) return '';
+        if ((user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && !activeCompanyId) return '';
         if (options.some((company) => company.id === current)) return current;
         return options[0]?.id ?? '';
       });
@@ -96,9 +97,7 @@ export function ConvocationsPage() { // LICITAGESTAO_PRIORITY_FIRST_PLACE_V1 // 
     setData((current) => ({
       ...current,
       unread: Math.max(0, current.unread - unreadItems.length),
-      items: current.items.map((item) =>
-        unreadIds.has(item.messageId) ? { ...item, read: true } : item
-      )
+      items: current.items.map((item) => (unreadIds.has(item.messageId) ? { ...item, read: true } : item))
     }));
   };
 
@@ -111,12 +110,13 @@ export function ConvocationsPage() { // LICITAGESTAO_PRIORITY_FIRST_PLACE_V1 // 
   }, [data.items]);
 
   const companyItems = useMemo(
-    () => selectedCompanyId ? data.items.filter((item) => item.companyId === selectedCompanyId) : data.items,
+    () =>
+      selectedCompanyId ? data.items.filter((item) => item.companyId === selectedCompanyId) : data.items,
     [data.items, selectedCompanyId]
   );
   const importantCount = companyItems.filter((item) => item.priority).length;
   const visibleItems = useMemo(
-    () => emailFilter === 'IMPORTANTES' ? companyItems.filter((item) => item.priority) : companyItems,
+    () => (emailFilter === 'IMPORTANTES' ? companyItems.filter((item) => item.priority) : companyItems),
     [companyItems, emailFilter]
   );
   const selectedUnread = visibleItems.filter((item) => !item.read).length;
@@ -154,12 +154,16 @@ export function ConvocationsPage() { // LICITAGESTAO_PRIORITY_FIRST_PLACE_V1 // 
         <div>
           <span className="eyebrow">E-mail</span>
           <h2>E-mails recebidos</h2>
-          <p>Todos os e-mails das contas conectadas aparecem aqui, com associação automática à licitação quando houver correspondência segura.</p>
+          <p>
+            Todos os e-mails das contas conectadas aparecem aqui, com associação automática à licitação quando
+            houver correspondência segura.
+          </p>
         </div>
         <div className="page-heading-actions">
           {!!selectedUnread && (
             <button className="secondary-button" onClick={() => void markAll()}>
-              <CheckCheck size={16} /> {selectedCompanyId ? 'Marcar empresa como lida' : 'Marcar todos como lidos'}
+              <CheckCheck size={16} />{' '}
+              {selectedCompanyId ? 'Marcar empresa como lida' : 'Marcar todos como lidos'}
             </button>
           )}
           <button className="secondary-button" onClick={() => void load()} disabled={loading}>
@@ -170,11 +174,8 @@ export function ConvocationsPage() { // LICITAGESTAO_PRIORITY_FIRST_PLACE_V1 // 
 
       {companies.length > 0 && (
         <nav className="company-alert-tabs" aria-label="Avisos separados por empresa">
-          {user?.role === 'ADMIN' && (
-            <button
-              className={selectedCompanyId === '' ? 'active' : ''}
-              onClick={() => selectCompany(null)}
-            >
+          {(user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && (
+            <button className={selectedCompanyId === '' ? 'active' : ''} onClick={() => selectCompany(null)}>
               <Building2 size={16} />
               <span>Todas as empresas</span>
               {data.unread > 0 && (
@@ -208,10 +209,7 @@ export function ConvocationsPage() { // LICITAGESTAO_PRIORITY_FIRST_PLACE_V1 // 
         >
           Importantes ({importantCount})
         </button>
-        <button
-          className={emailFilter === 'TODOS' ? 'active' : ''}
-          onClick={() => setEmailFilter('TODOS')}
-        >
+        <button className={emailFilter === 'TODOS' ? 'active' : ''} onClick={() => setEmailFilter('TODOS')}>
           Todos ({companyItems.length})
         </button>
       </nav>
@@ -237,7 +235,8 @@ export function ConvocationsPage() { // LICITAGESTAO_PRIORITY_FIRST_PLACE_V1 // 
           <MailWarning size={36} />
           <h2>Nenhum aviso encontrado para este escopo</h2>
           <p>
-            Quando o Gmail ou Outlook receber qualquer e-mail dentro do escopo selecionado, ele aparecerá aqui.
+            Quando o Gmail ou Outlook receber qualquer e-mail dentro do escopo selecionado, ele aparecerá
+            aqui.
           </p>
         </section>
       ) : (

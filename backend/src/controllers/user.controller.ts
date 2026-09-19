@@ -1,5 +1,12 @@
 import type { Request, Response } from 'express';
-import { createUser, getUser, listUsers, resetUserPassword, updateUser } from '../services/user.service.js';
+import {
+  createUser,
+  getUser,
+  listUsers,
+  resetUserPassword,
+  unlinkUserFromCompany,
+  updateUser
+} from '../services/user.service.js';
 import { AuditActions, recordAudit } from '../services/audit.service.js';
 
 export const index = async (req: Request, res: Response) => {
@@ -31,12 +38,33 @@ export const update = async (req: Request, res: Response) => {
     entityType: 'USER',
     entityId: user.id,
     entityLabel: user.name,
-    description: req.body.password ? 'Usuário atualizado e senha redefinida pelo administrador' : 'Usuário atualizado',
+    description: req.body.password
+      ? 'Usuário atualizado e senha redefinida pelo administrador'
+      : 'Usuário atualizado',
     metadata: { changedFields }
   });
   res.json({ success: true, message: 'Usuário atualizado', data: user });
 };
 
+export const unlinkCompany = async (req: Request, res: Response) => {
+  const result = await unlinkUserFromCompany(
+    req.params.id as string,
+    req.params.companyId as string,
+    req.auth!
+  );
+  await recordAudit(req.auth!, {
+    action: AuditActions.UPDATE,
+    entityType: 'USER',
+    entityId: result.user.id,
+    entityLabel: result.user.name,
+    description: 'Vínculo do usuário com empresa removido',
+    metadata: {
+      companyId: result.company.id,
+      companyName: result.company.tradeName || result.company.legalName
+    }
+  });
+  res.json({ success: true, message: 'Usuário desassociado da empresa sem ser excluído', data: result.user });
+};
 
 export const resetPassword = async (req: Request, res: Response) => {
   const user = await resetUserPassword(req.params.id as string, req.body.newPassword, req.auth!);

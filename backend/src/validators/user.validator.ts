@@ -9,13 +9,25 @@ type CompanyRuleValue = {
 
 const validateCompanyRules = (value: CompanyRuleValue, ctx: z.RefinementCtx) => {
   if (value.role === UserRole.EMPRESA && !value.companyId) {
-    ctx.addIssue({ code: 'custom', path: ['companyId'], message: 'Usuário EMPRESA deve possuir uma empresa' });
+    ctx.addIssue({
+      code: 'custom',
+      path: ['companyId'],
+      message: 'Usuário EMPRESA deve possuir uma empresa'
+    });
   }
   if (value.role !== UserRole.EMPRESA && value.companyId) {
-    ctx.addIssue({ code: 'custom', path: ['companyId'], message: 'Somente usuário EMPRESA pode ser vinculado' });
+    ctx.addIssue({
+      code: 'custom',
+      path: ['companyId'],
+      message: 'Somente usuário EMPRESA pode ser vinculado'
+    });
   }
   if (value.role !== UserRole.FUNCIONARIO && value.companyIds.length > 0) {
-    ctx.addIssue({ code: 'custom', path: ['companyIds'], message: 'Somente funcionário recebe várias empresas' });
+    ctx.addIssue({
+      code: 'custom',
+      path: ['companyIds'],
+      message: 'Somente funcionário recebe várias empresas'
+    });
   }
 };
 
@@ -23,9 +35,14 @@ export const createUserSchema = z.object({
   body: z
     .object({
       name: z.string().trim().min(2).max(120),
-      email: z.string().email().transform((value) => value.trim().toLowerCase()),
+      email: z
+        .string()
+        .email()
+        .transform((value) => value.trim().toLowerCase()),
       password: z.string().min(12, 'A senha deve possuir pelo menos 12 caracteres').max(128),
-      role: z.nativeEnum(UserRole).refine((role) => role !== UserRole.SUPER_ADMIN, 'Perfil reservado ao proprietário da plataforma'), // LICITAGESTAO_SAAS_RENTAL_V1_USER_VALIDATOR
+      role: z
+        .nativeEnum(UserRole)
+        .refine((role) => role !== UserRole.SUPER_ADMIN, 'Perfil reservado ao proprietário da plataforma'), // LICITAGESTAO_SAAS_RENTAL_V1_USER_VALIDATOR
       companyId: z.string().uuid().nullable().optional(),
       companyIds: z.array(z.string().uuid()).max(100).optional().default([]),
       active: z.boolean().optional()
@@ -39,9 +56,16 @@ export const updateUserSchema = z.object({
   body: z
     .object({
       name: z.string().trim().min(2).max(120).optional(),
-      email: z.string().email().transform((value) => value.trim().toLowerCase()).optional(),
+      email: z
+        .string()
+        .email()
+        .transform((value) => value.trim().toLowerCase())
+        .optional(),
       password: z.string().min(12, 'A senha deve possuir pelo menos 12 caracteres').max(128).optional(),
-      role: z.nativeEnum(UserRole).refine((role) => role !== UserRole.SUPER_ADMIN, 'Perfil reservado ao proprietário da plataforma').optional(),
+      role: z
+        .nativeEnum(UserRole)
+        .refine((role) => role !== UserRole.SUPER_ADMIN, 'Perfil reservado ao proprietário da plataforma')
+        .optional(),
       companyId: z.string().uuid().nullable().optional(),
       companyIds: z.array(z.string().uuid()).max(100).optional(),
       active: z.boolean().optional()
@@ -59,7 +83,11 @@ export const resetUserPasswordSchema = z.object({
     })
     .superRefine((value, ctx) => {
       if (value.newPassword !== value.confirmPassword) {
-        ctx.addIssue({ code: 'custom', path: ['confirmPassword'], message: 'A confirmação da senha não confere' });
+        ctx.addIssue({
+          code: 'custom',
+          path: ['confirmPassword'],
+          message: 'A confirmação da senha não confere'
+        });
       }
     }),
   params: z.object({ id: z.string().uuid() }),
@@ -69,6 +97,12 @@ export const resetUserPasswordSchema = z.object({
 export const userIdSchema = z.object({
   body: z.object({}),
   params: z.object({ id: z.string().uuid() }),
+  query: z.object({})
+});
+
+export const userCompanyLinkSchema = z.object({
+  body: z.object({}),
+  params: z.object({ id: z.string().uuid(), companyId: z.string().uuid() }),
   query: z.object({})
 });
 

@@ -45,7 +45,9 @@ export const listBidsSchema = z.object({
     search: z.string().trim().max(180).optional(),
     companyId: z.string().uuid().optional(),
     progress: z.nativeEnum(BidProgress).optional(),
-    situation: z.nativeEnum(BidSituation).optional(),
+    situation: z
+      .enum([BidSituation.PENDENTE, BidSituation.ANEXADA, BidSituation.CLASSIFICADA, BidSituation.FINALIZADA])
+      .optional(),
     page: z.coerce.number().int().positive().default(1),
     pageSize: z.coerce.number().int().min(1).max(100).default(20),
     sort: z.enum(['sessionDate', 'createdAt', 'municipality']).default('sessionDate'),

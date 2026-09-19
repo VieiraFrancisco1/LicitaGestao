@@ -1,6 +1,6 @@
 import { Building2, Edit3, FolderOpen, Plus, Search } from 'lucide-react';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Modal } from '../components/Modal';
 import { useAuth } from '../contexts/AuthContext';
 import { api, errorMessage } from '../services/api';
@@ -37,7 +37,8 @@ const formatCnpj = (value: string) =>
     .slice(0, 18);
 
 export function CompaniesPage() {
-  const { user } = useAuth();
+  const { user, setActiveCompanyId } = useAuth();
+  const navigate = useNavigate();
   const [data, setData] = useState<Paginated<Company> | null>(null);
   const [search, setSearch] = useState('');
   const [active, setActive] = useState('');
@@ -48,6 +49,10 @@ export function CompaniesPage() {
   const [editing, setEditing] = useState<Company | null | undefined>(undefined);
 
   const load = useCallback(async () => {
+    if (user?.role === 'FUNCIONARIO') {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError('');
     try {
@@ -60,16 +65,43 @@ export function CompaniesPage() {
     } finally {
       setLoading(false);
     }
-  }, [search, active, page]);
+  }, [user?.role, search, active, page]);
 
   useEffect(() => {
     const timer = setTimeout(() => void load(), 250);
     return () => clearTimeout(timer);
   }, [load]);
+  useEffect(() => {
+    if (user?.role !== 'FUNCIONARIO') return;
+    const companies = user.assignedCompanies.filter((company) => company.active);
+    const first = companies[0];
+    if (!first) return;
+    setActiveCompanyId(first.id);
+    navigate(`/empresas/${first.id}`, { replace: true });
+  }, [navigate, setActiveCompanyId, user]);
   const notify = (message: string) => {
     setSuccess(message);
     setTimeout(() => setSuccess(''), 3500);
   };
+
+  if (user?.role === 'FUNCIONARIO') {
+    const hasCompany = user.assignedCompanies.some((company) => company.active);
+    return (
+      <div className="page-stack">
+        {hasCompany ? (
+          <div className="app-loader">
+            <span className="spinner" />
+            Abrindo sua empresa...
+          </div>
+        ) : (
+          <div className="empty-state compact">
+            <Building2 size={28} />
+            <p>Você não possui empresa ativa vinculada.</p>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="page-stack">

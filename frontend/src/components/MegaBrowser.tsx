@@ -141,7 +141,9 @@ export function MegaBrowser({ companyId, compact = false }: Props) {
         if (companyId) form.append('companyId', companyId);
         await api.post('/mega/upload', form);
       }
-      setMessage(files.length === 1 ? 'Arquivo enviado ao MEGA.' : `${files.length} arquivos enviados ao MEGA.`);
+      setMessage(
+        files.length === 1 ? 'Arquivo enviado ao MEGA.' : `${files.length} arquivos enviados ao MEGA.`
+      );
       await load(path, true);
     } catch (err) {
       setError(errorMessage(err));
@@ -203,7 +205,9 @@ export function MegaBrowser({ companyId, compact = false }: Props) {
       const opened = window.open(url, '_blank', 'noopener,noreferrer');
       if (!opened) {
         URL.revokeObjectURL(url);
-        throw new Error('O navegador bloqueou a abertura da pré-visualização. Permita pop-ups para este site.');
+        throw new Error(
+          'O navegador bloqueou a abertura da pré-visualização. Permita pop-ups para este site.'
+        );
       }
       window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch (err) {
@@ -380,12 +384,17 @@ export function MegaBrowser({ companyId, compact = false }: Props) {
                       <Download size={16} />
                     </button>
                   )}
-                  {(item.type === 'file' || user?.role === 'ADMIN') && (
-                    <button className="icon-action" title="Renomear" disabled={busy} onClick={() => rename(item)}>
+                  {(item.type === 'file' || user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && (
+                    <button
+                      className="icon-action"
+                      title="Renomear"
+                      disabled={busy}
+                      onClick={() => rename(item)}
+                    >
                       <Pencil size={15} />
                     </button>
                   )}
-                  {(item.type === 'file' || user?.role === 'ADMIN') && (
+                  {(item.type === 'file' || user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && (
                     <button
                       className="icon-action danger"
                       title="Mover para lixeira"

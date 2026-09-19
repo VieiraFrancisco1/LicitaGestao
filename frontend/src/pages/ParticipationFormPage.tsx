@@ -3,7 +3,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api, errorMessage } from '../services/api';
 import type { ApiResponse, Bid, BidProgress, BidSituation } from '../types';
-import { progressOptions, situationOptions } from '../utils/bid';
+import { availableSituationOptions, normalizeEditableSituation, progressOptions } from '../utils/bid';
 
 export function ParticipationFormPage() {
   const { id } = useParams();
@@ -25,7 +25,7 @@ export function ParticipationFormPage() {
         setBid(item);
         setProposalValue(item.proposalValue ?? '');
         setProgress(item.progress);
-        setSituation(item.situation);
+        setSituation(normalizeEditableSituation(item.situation, item.tender.isPreQualification));
         setObservations(item.observations ?? '');
       })
       .catch((err) => setError(errorMessage(err)))
@@ -103,7 +103,7 @@ export function ParticipationFormPage() {
           <label>
             Situação
             <select value={situation} onChange={(event) => setSituation(event.target.value as BidSituation)}>
-              {situationOptions.map((option) => (
+              {availableSituationOptions(bid.tender.isPreQualification).map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>

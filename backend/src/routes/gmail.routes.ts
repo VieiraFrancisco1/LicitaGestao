@@ -18,7 +18,7 @@ export const gmailRouter = Router();
 gmailRouter.get('/callback', asyncHandler(controller.callback));
 
 gmailRouter.use(authenticate);
-gmailRouter.use(authorize(UserRole.ADMIN, UserRole.FUNCIONARIO, UserRole.EMPRESA));
+gmailRouter.use(authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.FUNCIONARIO, UserRole.EMPRESA));
 
 gmailRouter.get('/alerts', asyncHandler(controller.alerts));
 gmailRouter.post('/alerts/read', validate(gmailReadAlertSchema), asyncHandler(controller.readAlert));
@@ -33,7 +33,11 @@ gmailRouter.put(
   validate(gmailLinkMessageSchema),
   asyncHandler(controller.linkMessage)
 );
-gmailRouter.get('/:companyId/access-request', validate(gmailCompanyIdSchema), asyncHandler(controller.accessRequest));
+gmailRouter.get(
+  '/:companyId/access-request',
+  validate(gmailCompanyIdSchema),
+  asyncHandler(controller.accessRequest)
+);
 gmailRouter.post(
   '/:companyId/access-request',
   validate(gmailAccessRequestSchema),

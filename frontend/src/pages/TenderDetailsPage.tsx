@@ -19,7 +19,7 @@ import { Modal } from '../components/Modal';
 import { useAuth } from '../contexts/AuthContext';
 import { api, errorMessage } from '../services/api';
 import type { ApiResponse, Tender } from '../types';
-import { formatCurrency, formatDate, optionLabel, progressOptions, situationOptions } from '../utils/bid';
+import { formatCurrency, formatDate, optionLabel, progressOptions, situationLabel } from '../utils/bid';
 
 export function TenderDetailsPage() {
   const { id } = useParams();
@@ -104,7 +104,9 @@ export function TenderDetailsPage() {
 
   const removeTender = async () => {
     if (!tender) return;
-    const label = tender.noticeNumber ? `${tender.municipality} · ${tender.noticeNumber}` : tender.municipality;
+    const label = tender.noticeNumber
+      ? `${tender.municipality} · ${tender.noticeNumber}`
+      : tender.municipality;
     const confirmation = window.prompt(
       `ATENÇÃO: excluir ${label} também remove as participações e os registros vinculados.\n\nDigite EXCLUIR para confirmar:`
     );
@@ -130,8 +132,8 @@ export function TenderDetailsPage() {
 
   const isResponsible = tender.spreadsheetResponsibleUserId === user?.id;
   const canManageSpreadsheet = user?.role !== 'EMPRESA';
-  const canEditNotes = (user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') || isResponsible;
-  const canRelease = isResponsible || (user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN');
+  const canEditNotes = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN' || isResponsible;
+  const canRelease = isResponsible || user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
 
   return (
     <div className="page-stack">
@@ -160,7 +162,11 @@ export function TenderDetailsPage() {
             <Pencil size={16} />
             Editar dados gerais
           </Link>
-          <button className="secondary-button danger-action" disabled={action} onClick={() => void removeTender()}>
+          <button
+            className="secondary-button danger-action"
+            disabled={action}
+            onClick={() => void removeTender()}
+          >
             <Trash2 size={16} />
             Excluir
           </button>
@@ -179,13 +185,21 @@ export function TenderDetailsPage() {
           </div>
           <div className="spreadsheet-detail-actions">
             {canManageSpreadsheet && !tender.spreadsheetResponsibleUserId && (
-              <button className="primary-button" disabled={action} onClick={() => void toggleResponsibility(true)}>
+              <button
+                className="primary-button"
+                disabled={action}
+                onClick={() => void toggleResponsibility(true)}
+              >
                 <UserRoundCheck size={16} />
                 Assumir planilha
               </button>
             )}
             {canManageSpreadsheet && tender.spreadsheetResponsibleUserId && canRelease && (
-              <button className="secondary-button" disabled={action} onClick={() => void toggleResponsibility(false)}>
+              <button
+                className="secondary-button"
+                disabled={action}
+                onClick={() => void toggleResponsibility(false)}
+              >
                 <UserRoundX size={16} />
                 Liberar responsabilidade
               </button>
@@ -236,14 +250,18 @@ export function TenderDetailsPage() {
       )}
       <div className="details-grid">
         <Info label="Modalidade" value={tender.modality || 'Não informada'} />
-        <Info label="Pré-qualificação" value={tender.isPreQualification ? 'Sim' : 'Não'} /> {/* LICITAGESTAO_PREQUAL_ALL_EMAILS_V1_DETAILS */}
+        <Info label="Pré-qualificação" value={tender.isPreQualification ? 'Sim' : 'Não'} />{' '}
+        {/* LICITAGESTAO_PREQUAL_ALL_EMAILS_V1_DETAILS */}
         <Info label="Número da licitação" value={tender.noticeNumber || 'Não informado'} />
         <Info label="Processo administrativo" value={tender.processNumber || 'Não informado'} />
         <Info label="Prazo de execução" value={tender.executionTerm || 'Não informado'} />
         <Info label="Data" value={formatDate(tender.sessionDate)} />
         <Info label="Plataforma" value={tender.platform?.name || 'Não informada'} />
         <Info label="Valor global" value={formatCurrency(tender.estimatedValue)} />
-        <Info label="Validade" value={tender.proposalValidityDays ? `${tender.proposalValidityDays} dias` : 'Não informada'} />
+        <Info
+          label="Validade"
+          value={tender.proposalValidityDays ? `${tender.proposalValidityDays} dias` : 'Não informada'}
+        />
         <Info label="Garantia de 1%" value={Number(tender.guaranteePercentage) === 1 ? 'Sim' : 'Não'} />
         <Info label="Planilha" value={tender.spreadsheetReady ? 'Pronta' : 'Ainda não pronta'} />
         <Info label="Lista" value={tender.listStatus === 'ANEXADA' ? 'Já anexada' : 'Pendente'} />
@@ -257,7 +275,8 @@ export function TenderDetailsPage() {
           </div>
         </div>
         <p className="section-note">
-          Cada perfil vê aqui somente as participações das empresas às quais tem acesso. Dados e documentos das demais empresas não são exibidos.
+          Cada perfil vê aqui somente as participações das empresas às quais tem acesso. Dados e documentos
+          das demais empresas não são exibidos.
         </p>
         <div className="participation-cards">
           {tender.bids.length === 0 && (
@@ -276,7 +295,8 @@ export function TenderDetailsPage() {
                 <span>
                   <strong>{bid.company.tradeName || bid.company.legalName}</strong>
                   <small>
-                    {optionLabel(progressOptions, bid.progress)} · {optionLabel(situationOptions, bid.situation)}
+                    {optionLabel(progressOptions, bid.progress)} ·{' '}
+                    {situationLabel(bid.situation, tender.isPreQualification)}
                   </small>
                 </span>
               </div>
@@ -313,7 +333,9 @@ export function TenderDetailsPage() {
                 placeholder="Registre alterações, pendências e pontos que precisam ser conferidos."
               />
             </label>
-            {!canEditNotes && <small>Somente o responsável pela planilha ou um administrador pode editar.</small>}
+            {!canEditNotes && (
+              <small>Somente o responsável pela planilha ou um administrador pode editar.</small>
+            )}
             <div className="modal-actions">
               <button type="button" className="secondary-button" onClick={() => setNotesOpen(false)}>
                 Fechar

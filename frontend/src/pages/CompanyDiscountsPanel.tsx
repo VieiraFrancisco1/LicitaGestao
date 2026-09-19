@@ -1,7 +1,7 @@
 import { Calculator, Plus, Trash2, TrendingDown } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { api, errorMessage } from '../services/api';
-import type { ApiResponse, DiscountCalculation, Paginated, Tender } from '../types';
+import type { ApiResponse, DiscountCalculation, Tender } from '../types';
 import { formatCurrency, formatDate } from '../utils/bid';
 
 export function CompanyDiscountsPanel({ companyId }: { companyId: string }) {
@@ -19,10 +19,10 @@ export function CompanyDiscountsPanel({ companyId }: { companyId: string }) {
     try {
       const [discountResponse, tenderResponse] = await Promise.all([
         api.get<ApiResponse<DiscountCalculation[]>>(`/companies/${companyId}/discounts`),
-        api.get<ApiResponse<Paginated<Tender>>>('/tenders', { params: { pageSize: 100 } })
+        api.get<ApiResponse<Tender[]>>(`/companies/${companyId}/discounts-eligible`)
       ]);
       setItems(discountResponse.data.data);
-      setTenders(tenderResponse.data.data.items);
+      setTenders(tenderResponse.data.data);
       setValues(
         Object.fromEntries(discountResponse.data.data.map((item) => [item.id, item.discountedValue ?? '']))
       );
@@ -37,12 +37,6 @@ export function CompanyDiscountsPanel({ companyId }: { companyId: string }) {
     const timer = window.setTimeout(() => void load(), 0);
     return () => window.clearTimeout(timer);
   }, [load]);
-
-  const availableTenders = useMemo(
-    () =>
-      tenders.filter((tender) => tender.estimatedValue && !items.some((item) => item.tenderId === tender.id)),
-    [tenders, items]
-  );
 
   const add = async () => {
     if (!selectedTenderId) return;
@@ -108,7 +102,7 @@ export function CompanyDiscountsPanel({ companyId }: { companyId: string }) {
       <div className="discount-add-row">
         <select value={selectedTenderId} onChange={(event) => setSelectedTenderId(event.target.value)}>
           <option value="">Selecione uma licitação do controle geral</option>
-          {availableTenders.map((tender) => (
+          {tenders.map((tender) => (
             <option key={tender.id} value={tender.id}>
               {tender.municipality} · {formatDate(tender.sessionDate)} ·{' '}
               {formatCurrency(tender.estimatedValue)}

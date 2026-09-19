@@ -59,8 +59,8 @@ export function SettingsPage() {
         <div>
           <strong>Conta protegida e acesso controlado</strong>
           <p>
-            O LicitaGestão utiliza perfis de acesso e vínculos com empresas para limitar o que cada usuário pode
-            visualizar e alterar.
+            O LicitaGestão utiliza perfis de acesso e vínculos com empresas para limitar o que cada usuário
+            pode visualizar e alterar.
           </p>
         </div>
         <span className={`settings-status ${user.active ? 'is-active' : 'is-inactive'}`}>
@@ -123,7 +123,7 @@ export function SettingsPage() {
             </div>
           </div>
 
-          {user.role === 'ADMIN' && associatedCompanies.length === 0 ? (
+          {(user.role === 'ADMIN' || user.role === 'SUPER_ADMIN') && associatedCompanies.length === 0 ? (
             <div className="settings-inline-note">
               <ShieldCheck size={19} />
               <div>
@@ -149,7 +149,9 @@ export function SettingsPage() {
               ))}
             </div>
           ) : (
-            <div className="settings-empty-company">Nenhuma empresa associada foi encontrada para esta conta.</div>
+            <div className="settings-empty-company">
+              Nenhuma empresa associada foi encontrada para esta conta.
+            </div>
           )}
         </section>
 
@@ -173,21 +175,29 @@ export function SettingsPage() {
               <CheckCircle2 size={18} />
               <div>
                 <strong>Use uma senha exclusiva</strong>
-                <p>A nova senha deve ter pelo menos 12 caracteres e não deve ser reutilizada em outros serviços.</p>
+                <p>
+                  A nova senha deve ter pelo menos 12 caracteres e não deve ser reutilizada em outros
+                  serviços.
+                </p>
               </div>
             </div>
             <div className="settings-guidance-item">
               <CheckCircle2 size={18} />
               <div>
                 <strong>Não compartilhe sua conta</strong>
-                <p>Cada pessoa deve utilizar seu próprio usuário para manter permissões e auditoria confiáveis.</p>
+                <p>
+                  Cada pessoa deve utilizar seu próprio usuário para manter permissões e auditoria confiáveis.
+                </p>
               </div>
             </div>
             <div className="settings-guidance-item">
               <CheckCircle2 size={18} />
               <div>
                 <strong>Revise seus vínculos</strong>
-                <p>Se sua função mudar, confirme se as empresas associadas e o perfil de acesso continuam corretos.</p>
+                <p>
+                  Se sua função mudar, confirme se as empresas associadas e o perfil de acesso continuam
+                  corretos.
+                </p>
               </div>
             </div>
           </div>
@@ -212,24 +222,24 @@ export function SettingsPage() {
 
           <div className="settings-copy-list">
             <p>
-              O sistema utiliza dados de conta, empresas, licitações, documentos, prazos e mensagens relacionadas ao
-              trabalho para executar suas funcionalidades de gestão.
+              O sistema utiliza dados de conta, empresas, licitações, documentos, prazos e mensagens
+              relacionadas ao trabalho para executar suas funcionalidades de gestão.
             </p>
             <p>
-              O acesso às informações deve respeitar o perfil do usuário e, quando aplicável, as empresas às quais ele
-              está associado.
+              O acesso às informações deve respeitar o perfil do usuário e, quando aplicável, as empresas às
+              quais ele está associado.
             </p>
             <p>
-              Integrações externas, como armazenamento de documentos e contas de e-mail, são utilizadas apenas quando
-              configuradas para as funções do sistema.
+              Integrações externas, como armazenamento de documentos e contas de e-mail, são utilizadas apenas
+              quando configuradas para as funções do sistema.
             </p>
           </div>
 
           <div className="settings-lgpd-note">
             <ShieldCheck size={18} />
             <p>
-              Esta área organiza transparência e controles já existentes, mas não representa certificação nem garante,
-              sozinha, conformidade integral com a LGPD.
+              Esta área organiza transparência e controles já existentes, mas não representa certificação nem
+              garante, sozinha, conformidade integral com a LGPD.
             </p>
           </div>
         </section>
@@ -247,16 +257,16 @@ export function SettingsPage() {
 
           <div className="settings-copy-list">
             <p>
-              Nesta versão, o LicitaGestão não executa exclusão automática de registros apenas porque determinado prazo
-              de tempo foi atingido.
+              Nesta versão, o LicitaGestão não executa exclusão automática de registros apenas porque
+              determinado prazo de tempo foi atingido.
             </p>
             <p>
-              Antes de excluir informações, a organização deve considerar a finalidade do dado, obrigações aplicáveis,
-              necessidade de auditoria e possibilidade de recuperação por backup.
+              Antes de excluir informações, a organização deve considerar a finalidade do dado, obrigações
+              aplicáveis, necessidade de auditoria e possibilidade de recuperação por backup.
             </p>
             <p>
-              Os backups administrativos são voltados à recuperação do sistema e não incluem senhas, sessões nem
-              credenciais das integrações externas.
+              Os backups administrativos são voltados à recuperação do sistema e não incluem senhas, sessões
+              nem credenciais das integrações externas.
             </p>
           </div>
 
@@ -264,7 +274,10 @@ export function SettingsPage() {
             <Database size={18} />
             <div>
               <strong>Próximo passo organizacional</strong>
-              <p>Definir e documentar internamente prazos de retenção e responsáveis por pedidos de correção ou exclusão.</p>
+              <p>
+                Definir e documentar internamente prazos de retenção e responsáveis por pedidos de correção ou
+                exclusão.
+              </p>
             </div>
           </div>
         </section>

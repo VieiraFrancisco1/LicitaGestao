@@ -28,7 +28,7 @@ bidRouter.get('/:id', validate(bidIdSchema), asyncHandler(bidController.show));
 bidRouter.put('/:id', validate(updateBidSchema), asyncHandler(bidController.update));
 bidRouter.delete(
   '/:id',
-  authorize(UserRole.ADMIN, UserRole.FUNCIONARIO),
+  authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.FUNCIONARIO),
   validate(bidIdSchema),
   asyncHandler(bidController.remove)
 );

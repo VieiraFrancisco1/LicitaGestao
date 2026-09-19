@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import {
   createDiscount,
   deleteDiscount,
+  listEligibleDiscountTenders,
   listDiscounts,
   updateDiscount
 } from '../services/discount.service.js';
@@ -9,6 +10,11 @@ import { AuditActions, recordAudit } from '../services/audit.service.js';
 
 export const index = async (req: Request, res: Response) => {
   const items = await listDiscounts(req.params.id as string, req.auth!);
+  res.json({ success: true, data: items });
+};
+
+export const eligible = async (req: Request, res: Response) => {
+  const items = await listEligibleDiscountTenders(req.params.id as string, req.auth!);
   res.json({ success: true, data: items });
 };
 

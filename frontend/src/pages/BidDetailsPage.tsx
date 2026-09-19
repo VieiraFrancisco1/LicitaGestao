@@ -1,10 +1,29 @@
-import { ArrowLeft, CalendarClock, CheckCircle2, Download, ExternalLink, File as FileIcon, FilePlus2, Percent, Pencil, Trash2, Unlink } from 'lucide-react';
+import {
+  ArrowLeft,
+  CalendarClock,
+  CheckCircle2,
+  Download,
+  ExternalLink,
+  File as FileIcon,
+  FilePlus2,
+  Percent,
+  Pencil,
+  Trash2,
+  Unlink
+} from 'lucide-react';
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { CompanyConvocationsPanel } from '../components/CompanyConvocationsPanel';
 import { api, errorMessage } from '../services/api';
-import type { ApiResponse, Bid, BidDocument, DeadlineAlert, DiscountCalculation, DocumentCategory } from '../types';
+import type {
+  ApiResponse,
+  Bid,
+  BidDocument,
+  DeadlineAlert,
+  DiscountCalculation,
+  DocumentCategory
+} from '../types';
 import {
   documentCategoryOptions,
   formatBytes,
@@ -13,7 +32,7 @@ import {
   guaranteeOptions,
   optionLabel,
   progressOptions,
-  situationOptions
+  situationLabel
 } from '../utils/bid';
 import { DOCUMENT_UPLOAD_ACCEPT, validateDocumentUpload } from '../utils/upload';
 
@@ -31,7 +50,10 @@ export function BidDetailsPage() {
   const [deadlineError, setDeadlineError] = useState('');
   const requestedTab = searchParams.get('tab');
   const [tab, setTab] = useState<Tab>(
-    requestedTab && ['summary', 'data', 'discount', 'documents', 'convocations', 'deadlines', 'history'].includes(requestedTab)
+    requestedTab &&
+      ['summary', 'data', 'discount', 'documents', 'convocations', 'deadlines', 'history'].includes(
+        requestedTab
+      )
       ? (requestedTab as Tab)
       : 'summary'
   );
@@ -97,6 +119,7 @@ export function BidDetailsPage() {
   if (!bid) return <div className="alert alert-error">{error || 'Licitação não encontrada'}</div>;
   const canEdit = Boolean(
     user?.role === 'ADMIN' ||
+    user?.role === 'SUPER_ADMIN' ||
     user?.role === 'EMPRESA' ||
     user?.assignedCompanies.some((company) => company.id === bid.companyId)
   );
@@ -115,7 +138,12 @@ export function BidDetailsPage() {
   };
 
   const removeAssociation = async () => {
-    if (!window.confirm('Desassociar esta licitação da empresa? A licitação geral continuará cadastrada, mas esta participação, sua baixa e os vínculos de documentos desta participação serão removidos.')) return;
+    if (
+      !window.confirm(
+        'Desassociar esta licitação da empresa? A licitação geral continuará cadastrada, mas esta participação, sua baixa e os vínculos de documentos desta participação serão removidos.'
+      )
+    )
+      return;
     setRemovingAssociation(true);
     setError('');
     try {
@@ -150,57 +178,59 @@ export function BidDetailsPage() {
         </div>
         <div className="details-actions bid-details-actions">
           <div className="external-action-group">
-          {bid.tender.seobraLink && (
-            <a
-              className="secondary-button compact-header-action"
-              href={bid.tender.seobraLink}
-              target="_blank"
-              rel="noreferrer"
-            >
-              <ExternalLink size={15} />
-              SEOBRA
-            </a>
-          )}
-          {bid.tender.platformLink && (
-            <a
-              className="secondary-button compact-header-action"
-              href={bid.tender.platformLink}
-              target="_blank"
-              rel="noreferrer"
-            >
-              <ExternalLink size={15} />
-              Plataforma
-            </a>
-          )}
+            {bid.tender.seobraLink && (
+              <a
+                className="secondary-button compact-header-action"
+                href={bid.tender.seobraLink}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <ExternalLink size={15} />
+                SEOBRA
+              </a>
+            )}
+            {bid.tender.platformLink && (
+              <a
+                className="secondary-button compact-header-action"
+                href={bid.tender.platformLink}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <ExternalLink size={15} />
+                Plataforma
+              </a>
+            )}
           </div>
           <div className="workflow-action-group">
-          <span className="status-pill active">{optionLabel(situationOptions, bid.situation)}</span>
-          {canEdit && bid.situation !== 'ANEXADA' && (
-            <button
-              className="secondary-button compact-header-action"
-              disabled={markingAttached}
-              onClick={() => void markAttached()}
-            >
-              <CheckCircle2 size={16} />
-              {markingAttached ? 'Marcando...' : 'Marcar como anexada'}
-            </button>
-          )}
-          {canRemoveAssociation && (
-            <button
-              className="secondary-button compact-header-action danger-outline"
-              disabled={removingAssociation}
-              onClick={() => void removeAssociation()}
-            >
-              <Unlink size={15} />
-              {removingAssociation ? 'Desassociando...' : 'Desassociar'}
-            </button>
-          )}
-          {canEdit && (
-            <Link className="primary-button compact-header-action" to={`/participacoes/${bid.id}/editar`}>
-              <Pencil size={15} />
-              Editar
-            </Link>
-          )}
+            <span className="status-pill active">
+              {situationLabel(bid.situation, bid.tender.isPreQualification)}
+            </span>
+            {canEdit && bid.situation === 'PENDENTE' && (
+              <button
+                className="secondary-button compact-header-action"
+                disabled={markingAttached}
+                onClick={() => void markAttached()}
+              >
+                <CheckCircle2 size={16} />
+                {markingAttached ? 'Marcando...' : 'Marcar como anexada'}
+              </button>
+            )}
+            {canRemoveAssociation && (
+              <button
+                className="secondary-button compact-header-action danger-outline"
+                disabled={removingAssociation}
+                onClick={() => void removeAssociation()}
+              >
+                <Unlink size={15} />
+                {removingAssociation ? 'Desassociando...' : 'Desassociar'}
+              </button>
+            )}
+            {canEdit && (
+              <Link className="primary-button compact-header-action" to={`/participacoes/${bid.id}/editar`}>
+                <Pencil size={15} />
+                Editar
+              </Link>
+            )}
           </div>
         </div>
       </div>
@@ -230,7 +260,9 @@ export function BidDetailsPage() {
           <InfoCard label="Proposta" value={formatCurrency(bid.proposalValue)} />
           <InfoCard
             label="Validade"
-            value={bid.tender.proposalValidityDays ? `${bid.tender.proposalValidityDays} dias` : 'Não informada'}
+            value={
+              bid.tender.proposalValidityDays ? `${bid.tender.proposalValidityDays} dias` : 'Não informada'
+            }
           />
           <InfoCard label="Garantia" value={optionLabel(guaranteeOptions, bid.tender.guaranteeType)} />
         </div>
@@ -345,7 +377,9 @@ function DiscountPanel({ bid, canEdit }: { bid: Bid; canEdit: boolean }) {
     setLoading(true);
     setError('');
     try {
-      const response = await api.get<ApiResponse<DiscountCalculation[]>>(`/companies/${bid.companyId}/discounts`);
+      const response = await api.get<ApiResponse<DiscountCalculation[]>>(
+        `/companies/${bid.companyId}/discounts`
+      );
       const current = response.data.data.find((row) => row.tenderId === bid.tenderId) ?? null;
       setItem(current);
       setValue(current?.discountedValue ?? '');
@@ -368,9 +402,12 @@ function DiscountPanel({ bid, canEdit }: { bid: Bid; canEdit: boolean }) {
     try {
       let discountId = item?.id;
       if (!discountId) {
-        const created = await api.post<ApiResponse<DiscountCalculation>>(`/companies/${bid.companyId}/discounts`, {
-          tenderId: bid.tenderId
-        });
+        const created = await api.post<ApiResponse<DiscountCalculation>>(
+          `/companies/${bid.companyId}/discounts`,
+          {
+            tenderId: bid.tenderId
+          }
+        );
         discountId = created.data.data.id;
       }
       await api.put(`/companies/${bid.companyId}/discounts/${discountId}`, { discountedValue: value });
@@ -395,16 +432,42 @@ function DiscountPanel({ bid, canEdit }: { bid: Bid; canEdit: boolean }) {
       </div>
       {error && <div className="alert alert-error">{error}</div>}
       {loading ? (
-        <div className="table-message"><span className="spinner" />Carregando baixa...</div>
+        <div className="table-message">
+          <span className="spinner" />
+          Carregando baixa...
+        </div>
       ) : (
         <div className="bid-discount-grid">
-          <div><small>Valor global</small><strong>{formatCurrency(bid.tender.estimatedValue)}</strong></div>
+          <div>
+            <small>Valor global</small>
+            <strong>{formatCurrency(bid.tender.estimatedValue)}</strong>
+          </div>
           <label>
             Valor final após a baixa
-            <input type="number" min="0" step="0.01" max={bid.tender.estimatedValue ?? undefined} value={value} onChange={(event) => setValue(event.target.value)} disabled={!canEdit} placeholder="0,00" />
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              max={bid.tender.estimatedValue ?? undefined}
+              value={value}
+              onChange={(event) => setValue(event.target.value)}
+              disabled={!canEdit}
+              placeholder="0,00"
+            />
           </label>
-          <div><small>Percentual de baixa</small><strong>{percentage === null ? '—' : `${percentage.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`}</strong></div>
-          {canEdit && <button className="primary-button" onClick={() => void save()} disabled={saving || !value}>{saving ? 'Salvando...' : item ? 'Atualizar baixa' : 'Salvar baixa'}</button>}
+          <div>
+            <small>Percentual de baixa</small>
+            <strong>
+              {percentage === null
+                ? '—'
+                : `${percentage.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`}
+            </strong>
+          </div>
+          {canEdit && (
+            <button className="primary-button" onClick={() => void save()} disabled={saving || !value}>
+              {saving ? 'Salvando...' : item ? 'Atualizar baixa' : 'Salvar baixa'}
+            </button>
+          )}
         </div>
       )}
     </section>
@@ -457,7 +520,8 @@ function DeadlinesPanel({
   return (
     <section className="detail-panel deadline-panel">
       <div className="section-note">
-        Aqui aparecem somente datas operacionais da licitação, como a sessão. A validade da Carta Proposta não é tratada como prazo.
+        Aqui aparecem somente datas operacionais da licitação, como a sessão. A validade da Carta Proposta não
+        é tratada como prazo.
       </div>
       <div className="deadline-list">
         {deadlines.map((item) => (
@@ -578,7 +642,9 @@ function DocumentsPanel({
           <div>
             <FilePlus2 size={24} />
             <strong>Anexar documento</strong>
-            <small>O arquivo será armazenado no MEGA — PDF, Word, Excel, imagem, CSV ou ZIP — até 25 MB</small>
+            <small>
+              O arquivo será armazenado no MEGA — PDF, Word, Excel, imagem, CSV ou ZIP — até 25 MB
+            </small>
           </div>
           <select value={category} onChange={(event) => setCategory(event.target.value as DocumentCategory)}>
             {documentCategoryOptions.map((option) => (

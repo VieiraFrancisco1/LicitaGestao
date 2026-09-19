@@ -6,5 +6,8 @@ import { asyncHandler } from '../utils/async-handler.js';
 
 export const emailSyncRouter = Router();
 
-emailSyncRouter.use(authenticate, authorize(UserRole.ADMIN, UserRole.FUNCIONARIO, UserRole.EMPRESA));
+emailSyncRouter.use(
+  authenticate,
+  authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.FUNCIONARIO, UserRole.EMPRESA)
+);
 emailSyncRouter.post('/sync', asyncHandler(controller.syncAccessible));

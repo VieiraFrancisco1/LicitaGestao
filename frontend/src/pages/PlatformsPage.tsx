@@ -32,7 +32,7 @@ export function PlatformsPage() {
           <h2>Plataformas de licitação</h2>
           <span>Cadastre os portais utilizados nas disputas.</span>
         </div>
-        {user?.role === 'ADMIN' && (
+        {(user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && (
           <button className="primary-button" onClick={() => setEditing(null)}>
             <Plus size={17} />
             Nova plataforma
@@ -65,7 +65,7 @@ export function PlatformsPage() {
             <span className={`status-pill ${platform.active ? 'active' : 'inactive'}`}>
               {platform.active ? 'Ativa' : 'Inativa'}
             </span>
-            {user?.role === 'ADMIN' && (
+            {(user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && (
               <button className="action-button" onClick={() => setEditing(platform)}>
                 <Edit3 size={15} />
               </button>

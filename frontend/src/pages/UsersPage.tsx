@@ -1,4 +1,4 @@
-import { Edit3, Plus, Search, UserRound } from 'lucide-react';
+import { Edit3, Plus, Search, Unlink, UserRound } from 'lucide-react';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { Modal } from '../components/Modal';
 import { api, errorMessage } from '../services/api';
@@ -18,7 +18,8 @@ const roles: { value: UserRole; label: string }[] = [
   { value: 'FUNCIONARIO', label: 'Funcionário' },
   { value: 'EMPRESA', label: 'Empresa' }
 ];
-const roleLabel = (role: UserRole) => role === 'SUPER_ADMIN' ? 'Super Admin' : roles.find((item) => item.value === role)?.label ?? role;
+const roleLabel = (role: UserRole) =>
+  role === 'SUPER_ADMIN' ? 'Super Admin' : (roles.find((item) => item.value === role)?.label ?? role);
 
 export function UsersPage() {
   const [data, setData] = useState<Paginated<User> | null>(null);
@@ -28,6 +29,7 @@ export function UsersPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [editing, setEditing] = useState<User | null | undefined>(undefined);
+  const [unlinking, setUnlinking] = useState('');
   const load = useCallback(async () => {
     setLoading(true);
     setError('');
@@ -49,6 +51,27 @@ export function UsersPage() {
   const notify = (message: string) => {
     setSuccess(message);
     setTimeout(() => setSuccess(''), 3500);
+  };
+  const unlinkCompany = async (item: User, company: CompanySummary) => {
+    const companyName = company.tradeName || company.legalName;
+    if (
+      !window.confirm(
+        `Desassociar ${item.name} da empresa ${companyName}? O usuário não será apagado e os outros vínculos serão mantidos.`
+      )
+    )
+      return;
+    const key = `${item.id}:${company.id}`;
+    setUnlinking(key);
+    setError('');
+    try {
+      await api.delete(`/users/${item.id}/companies/${company.id}`);
+      notify(`${item.name} foi desassociado de ${companyName}.`);
+      await load();
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setUnlinking('');
+    }
   };
   return (
     <div className="page-stack">
@@ -134,10 +157,38 @@ export function UsersPage() {
                       </span>
                     </td>
                     <td>
-                      <button className="action-button" onClick={() => setEditing(item)}>
-                        <Edit3 size={16} />
-                        Editar
-                      </button>
+                      <div className="row-actions user-row-actions">
+                        <button className="action-button" onClick={() => setEditing(item)}>
+                          <Edit3 size={16} />
+                          Editar
+                        </button>
+                        {item.role === 'FUNCIONARIO' &&
+                          item.assignedCompanies.map((company) => (
+                            <button
+                              key={company.id}
+                              className="action-button danger-outline"
+                              disabled={unlinking === `${item.id}:${company.id}`}
+                              onClick={() => void unlinkCompany(item, company)}
+                            >
+                              <Unlink size={15} />
+                              {unlinking === `${item.id}:${company.id}`
+                                ? 'Desassociando...'
+                                : `Desassociar ${company.tradeName || company.legalName}`}
+                            </button>
+                          ))}
+                        {item.role === 'EMPRESA' && item.company && (
+                          <button
+                            className="action-button danger-outline"
+                            disabled={unlinking === `${item.id}:${item.company.id}`}
+                            onClick={() => void unlinkCompany(item, item.company!)}
+                          >
+                            <Unlink size={15} />
+                            {unlinking === `${item.id}:${item.company.id}`
+                              ? 'Desassociando...'
+                              : 'Desassociar'}
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

@@ -12,7 +12,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { api, errorMessage } from '../services/api';
 import type { ApiResponse, DashboardData } from '../types';
-import { optionLabel, progressOptions, situationOptions } from '../utils/bid';
+import { optionLabel, progressOptions, situationLabel } from '../utils/bid';
 
 function relative(days?: number) {
   if (days === undefined) return '';
@@ -237,7 +237,7 @@ export function DashboardPage() {
             )}
             {data?.statusBreakdown.map((item) => (
               <div key={item.situation}>
-                <span>{optionLabel(situationOptions, item.situation)}</span>
+                <span>{situationLabel(item.situation)}</span>
                 <strong>{item.count}</strong>
               </div>
             ))}

@@ -11,7 +11,7 @@ export const outlookRouter = Router();
 outlookRouter.get('/callback', asyncHandler(controller.callback));
 
 outlookRouter.use(authenticate);
-outlookRouter.use(authorize(UserRole.ADMIN, UserRole.FUNCIONARIO, UserRole.EMPRESA));
+outlookRouter.use(authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.FUNCIONARIO, UserRole.EMPRESA));
 
 outlookRouter.get('/:companyId/status', validate(outlookCompanyIdSchema), asyncHandler(controller.status));
 outlookRouter.get('/:companyId/auth-url', validate(outlookCompanyIdSchema), asyncHandler(controller.authUrl));

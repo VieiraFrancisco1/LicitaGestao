@@ -1,4 +1,4 @@
-import { BidProgress, Prisma } from '@prisma/client';
+import { BidProgress, BidSituation, Prisma } from '@prisma/client';
 import { prisma } from '../config/database.js';
 import { AppError } from '../utils/app-error.js';
 import type { AuthScope } from './access.service.js';
@@ -21,6 +21,12 @@ function todayUtc() {
 
 const dateOnly = (value: Date) => value.toISOString().slice(0, 10);
 const daysBetween = (date: Date, today: Date) => Math.round((date.getTime() - today.getTime()) / DAY_MS);
+const visibleSituation = (situation: BidSituation) =>
+  situation === BidSituation.PENDENTE ||
+  situation === BidSituation.ANEXADA ||
+  situation === BidSituation.CLASSIFICADA
+    ? situation
+    : BidSituation.FINALIZADA;
 
 export async function getDashboard(auth: AuthScope, requestedCompanyId?: string) {
   const companies = await listCompanyOptions(auth);
@@ -39,106 +45,131 @@ export async function getDashboard(auth: AuthScope, requestedCompanyId?: string)
   };
 
   const gmailData = await listGmailConvocationAlerts(auth);
-  const gmailItems = gmailData.items.filter((item) => !requestedCompanyId || item.companyId === requestedCompanyId);
+  const gmailItems = gmailData.items.filter(
+    (item) => !requestedCompanyId || item.companyId === requestedCompanyId
+  );
 
-  const [activeBids, upcomingSessions, statusGroups, upcomingBids, deadlineCandidates, activeByCompany, upcomingByCompany] =
-    await Promise.all([
-      prisma.bid.count({ where: { ...baseWhere, progress: { not: BidProgress.FINALIZADA } } }),
-      prisma.bid.count({
-        where: {
-          ...baseWhere,
-          progress: { not: BidProgress.FINALIZADA },
-          tender: { sessionDate: { gte: today, lte: in7Days } }
-        }
-      }),
-      prisma.bid.groupBy({ by: ['situation'], where: baseWhere, _count: { _all: true } }),
-      prisma.bid.findMany({
-        where: {
-          ...baseWhere,
-          progress: { not: BidProgress.FINALIZADA },
-          tender: { sessionDate: { gte: today } }
-        },
-        include: { company: true, tender: { include: { platform: true } } },
-        orderBy: { tender: { sessionDate: 'asc' } },
-        take: 6
-      }),
-      prisma.bid.findMany({
-        where: {
-          ...baseWhere,
-          progress: { not: BidProgress.FINALIZADA },
-          tender: { sessionDate: { gte: sevenDaysAgo, lte: in3Days } }
-        },
-        include: { company: true, tender: { include: { platform: true } } },
-        orderBy: { tender: { sessionDate: 'asc' } },
-        take: 50
-      }),
-      prisma.bid.groupBy({
-        by: ['companyId'],
-        where: { ...accessibleBidWhere(auth), companyId: { in: companies.map((company) => company.id) }, progress: { not: BidProgress.FINALIZADA } },
-        _count: { _all: true }
-      }),
-      prisma.bid.groupBy({
-        by: ['companyId'],
-        where: {
-          ...accessibleBidWhere(auth),
-          companyId: { in: companies.map((company) => company.id) },
-          progress: { not: BidProgress.FINALIZADA },
-          tender: { sessionDate: { gte: today, lte: in7Days } }
-        },
-        _count: { _all: true }
-      })
-    ]);
+  const [
+    activeBids,
+    upcomingSessions,
+    statusGroups,
+    upcomingBids,
+    deadlineCandidates,
+    activeByCompany,
+    upcomingByCompany
+  ] = await Promise.all([
+    prisma.bid.count({ where: { ...baseWhere, progress: { not: BidProgress.FINALIZADA } } }),
+    prisma.bid.count({
+      where: {
+        ...baseWhere,
+        progress: { not: BidProgress.FINALIZADA },
+        tender: { sessionDate: { gte: today, lte: in7Days } }
+      }
+    }),
+    prisma.bid.groupBy({ by: ['situation'], where: baseWhere, _count: { _all: true } }),
+    prisma.bid.findMany({
+      where: {
+        ...baseWhere,
+        progress: { not: BidProgress.FINALIZADA },
+        tender: { sessionDate: { gte: today } }
+      },
+      include: { company: true, tender: { include: { platform: true } } },
+      orderBy: { tender: { sessionDate: 'asc' } },
+      take: 6
+    }),
+    prisma.bid.findMany({
+      where: {
+        ...baseWhere,
+        progress: { not: BidProgress.FINALIZADA },
+        tender: { sessionDate: { gte: sevenDaysAgo, lte: in3Days } }
+      },
+      include: { company: true, tender: { include: { platform: true } } },
+      orderBy: { tender: { sessionDate: 'asc' } },
+      take: 50
+    }),
+    prisma.bid.groupBy({
+      by: ['companyId'],
+      where: {
+        ...accessibleBidWhere(auth),
+        companyId: { in: companies.map((company) => company.id) },
+        progress: { not: BidProgress.FINALIZADA }
+      },
+      _count: { _all: true }
+    }),
+    prisma.bid.groupBy({
+      by: ['companyId'],
+      where: {
+        ...accessibleBidWhere(auth),
+        companyId: { in: companies.map((company) => company.id) },
+        progress: { not: BidProgress.FINALIZADA },
+        tender: { sessionDate: { gte: today, lte: in7Days } }
+      },
+      _count: { _all: true }
+    })
+  ]);
 
   const activeMap = new Map(activeByCompany.map((item) => [item.companyId, item._count._all]));
   const upcomingMap = new Map(upcomingByCompany.map((item) => [item.companyId, item._count._all]));
   const gmailUnreadByCompany = new Map<string, number>();
-  gmailData.items.filter((item) => !item.read).forEach((item) => {
-    gmailUnreadByCompany.set(item.companyId, (gmailUnreadByCompany.get(item.companyId) ?? 0) + 1);
+  gmailData.items
+    .filter((item) => !item.read)
+    .forEach((item) => {
+      gmailUnreadByCompany.set(item.companyId, (gmailUnreadByCompany.get(item.companyId) ?? 0) + 1);
+    });
+  const visibleStatusCounts = new Map<BidSituation, number>();
+  statusGroups.forEach((item) => {
+    const situation = visibleSituation(item.situation);
+    visibleStatusCounts.set(situation, (visibleStatusCounts.get(situation) ?? 0) + item._count._all);
   });
 
-  const deadlineItems = deadlineCandidates.flatMap((bid) => {
-    const items: Array<{
-      key: string;
-      type: 'SESSION';
-      title: string;
-      date: string;
-      days: number;
-      bidId: string;
-      companyId: string;
-      companyName: string;
-      municipality: string;
-      platformName: string | null;
-    }> = [];
-    const companyName = bid.company.tradeName || bid.company.legalName;
-    const sessionDays = daysBetween(bid.tender.sessionDate, today);
-    if (sessionDays >= -7 && sessionDays <= 3) {
-      items.push({
-        key: `SESSION:${bid.id}:${dateOnly(bid.tender.sessionDate)}`,
-        type: 'SESSION',
-        title: 'Sessão da licitação',
-        date: dateOnly(bid.tender.sessionDate),
-        days: sessionDays,
-        bidId: bid.id,
-        companyId: bid.companyId,
-        companyName,
-        municipality: bid.tender.municipality,
-        platformName: bid.tender.platform?.name ?? null
-      });
-    }
-    return items;
-  }).sort((a, b) => a.days - b.days);
+  const deadlineItems = deadlineCandidates
+    .flatMap((bid) => {
+      const items: Array<{
+        key: string;
+        type: 'SESSION';
+        title: string;
+        date: string;
+        days: number;
+        bidId: string;
+        companyId: string;
+        companyName: string;
+        municipality: string;
+        platformName: string | null;
+      }> = [];
+      const companyName = bid.company.tradeName || bid.company.legalName;
+      const sessionDays = daysBetween(bid.tender.sessionDate, today);
+      if (sessionDays >= -7 && sessionDays <= 3) {
+        items.push({
+          key: `SESSION:${bid.id}:${dateOnly(bid.tender.sessionDate)}`,
+          type: 'SESSION',
+          title: 'Sessão da licitação',
+          date: dateOnly(bid.tender.sessionDate),
+          days: sessionDays,
+          bidId: bid.id,
+          companyId: bid.companyId,
+          companyName,
+          municipality: bid.tender.municipality,
+          platformName: bid.tender.platform?.name ?? null
+        });
+      }
+      return items;
+    })
+    .sort((a, b) => a.days - b.days);
 
   const attention = [
-    ...gmailItems.filter((item) => !item.read).slice(0, 4).map((item) => ({
-      key: item.key,
-      type: 'CONVOCATION' as const,
-      title: 'Possível convocação',
-      subtitle: `${item.companyName} · ${item.tender?.municipality || item.subject || 'E-mail recebido'}`,
-      bidId: item.bidId,
-      companyId: item.companyId,
-      date: item.receivedAt,
-      severity: 'INFO' as const
-    })),
+    ...gmailItems
+      .filter((item) => !item.read)
+      .slice(0, 4)
+      .map((item) => ({
+        key: item.key,
+        type: 'CONVOCATION' as const,
+        title: 'Possível convocação',
+        subtitle: `${item.companyName} · ${item.tender?.municipality || item.subject || 'E-mail recebido'}`,
+        bidId: item.bidId,
+        companyId: item.companyId,
+        date: item.receivedAt,
+        severity: 'INFO' as const
+      })),
     ...deadlineItems.slice(0, 6).map((item) => ({
       key: item.key,
       type: item.type,
@@ -148,7 +179,8 @@ export async function getDashboard(auth: AuthScope, requestedCompanyId?: string)
       companyId: item.companyId,
       date: item.date,
       days: item.days,
-      severity: item.days < 0 ? ('OVERDUE' as const) : item.days <= 1 ? ('URGENT' as const) : ('WARNING' as const)
+      severity:
+        item.days < 0 ? ('OVERDUE' as const) : item.days <= 1 ? ('URGENT' as const) : ('WARNING' as const)
     }))
   ].slice(0, 8);
 
@@ -156,7 +188,8 @@ export async function getDashboard(auth: AuthScope, requestedCompanyId?: string)
     scope: requestedCompanyId
       ? {
           companyId: requestedCompanyId,
-          companyName: companies.find((company) => company.id === requestedCompanyId)?.tradeName ||
+          companyName:
+            companies.find((company) => company.id === requestedCompanyId)?.tradeName ||
             companies.find((company) => company.id === requestedCompanyId)?.legalName ||
             null
         }
@@ -181,7 +214,7 @@ export async function getDashboard(auth: AuthScope, requestedCompanyId?: string)
       progress: bid.progress
     })),
     recentConvocations: gmailItems.slice(0, 6),
-    statusBreakdown: statusGroups.map((item) => ({ situation: item.situation, count: item._count._all })),
+    statusBreakdown: Array.from(visibleStatusCounts, ([situation, count]) => ({ situation, count })),
     companyCards: companies.map((company) => ({
       id: company.id,
       name: company.tradeName || company.legalName,

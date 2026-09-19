@@ -1,10 +1,28 @@
-import { ExternalLink, FileText, FilterX, FolderOpen, Link2, Pencil, Search } from 'lucide-react';
+import {
+  CheckCircle2,
+  ExternalLink,
+  FileText,
+  FilterX,
+  FolderOpen,
+  Link2,
+  Pencil,
+  Search
+} from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Modal } from '../components/Modal';
 import { useAuth } from '../contexts/AuthContext';
 import { api, errorMessage } from '../services/api';
 import type { ApiResponse, Bid, BidProgress, BidSituation, CompanySummary, Paginated } from '../types';
-import { formatCurrency, formatDate, optionLabel, progressOptions, situationOptions } from '../utils/bid';
+import {
+  formatCurrency,
+  formatDate,
+  normalizeEditableSituation,
+  optionLabel,
+  progressOptions,
+  situationLabel,
+  situationOptions
+} from '../utils/bid';
 
 export function BidsPage({ fixedCompanyId }: { fixedCompanyId?: string }) {
   const { user } = useAuth();
@@ -17,6 +35,8 @@ export function BidsPage({ fixedCompanyId }: { fixedCompanyId?: string }) {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [linksBid, setLinksBid] = useState<Bid | null>(null);
+  const [markingBidId, setMarkingBidId] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -60,12 +80,29 @@ export function BidsPage({ fixedCompanyId }: { fixedCompanyId?: string }) {
   };
   const canEdit = (bid: Bid) =>
     user?.role === 'ADMIN' ||
+    user?.role === 'SUPER_ADMIN' ||
     user?.role === 'EMPRESA' ||
     user?.assignedCompanies.some((company) => company.id === bid.companyId);
   const canCreate =
-    user?.role === 'ADMIN' || user?.role === 'EMPRESA' || Boolean(user?.assignedCompanies.length);
+    user?.role === 'ADMIN' ||
+    user?.role === 'SUPER_ADMIN' ||
+    user?.role === 'EMPRESA' ||
+    Boolean(user?.assignedCompanies.length);
   const embeddedInCompany = Boolean(fixedCompanyId);
   const columnCount = embeddedInCompany ? 9 : 11;
+  const markAsAttached = async (bid: Bid) => {
+    if (!window.confirm(`Marcar a licitação de ${bid.tender.municipality} como Anexada?`)) return;
+    setMarkingBidId(bid.id);
+    setError('');
+    try {
+      await api.put(`/bids/${bid.id}`, { situation: 'ANEXADA' });
+      await load();
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setMarkingBidId('');
+    }
+  };
 
   return (
     <div className="page-stack">
@@ -219,7 +256,9 @@ export function BidsPage({ fixedCompanyId }: { fixedCompanyId?: string }) {
                         </td>
                         <td className="company-tender-validity">
                           <strong>
-                            {bid.tender.proposalValidityDays ? `${bid.tender.proposalValidityDays} dias` : '—'}
+                            {bid.tender.proposalValidityDays
+                              ? `${bid.tender.proposalValidityDays} dias`
+                              : '—'}
                           </strong>
                         </td>
                         <td>
@@ -241,9 +280,26 @@ export function BidsPage({ fixedCompanyId }: { fixedCompanyId?: string }) {
                           </span>
                         </td>
                         <td>
-                          <span className={`company-bid-situation ${bid.situation.toLowerCase()}`}>
-                            {optionLabel(situationOptions, bid.situation as BidSituation)}
-                          </span>
+                          <div className="company-situation-actions">
+                            <span
+                              className={`company-bid-situation ${normalizeEditableSituation(
+                                bid.situation,
+                                bid.tender.isPreQualification
+                              ).toLowerCase()}`}
+                            >
+                              {situationLabel(bid.situation as BidSituation, bid.tender.isPreQualification)}
+                            </span>
+                            {canEdit(bid) && bid.situation === 'PENDENTE' && (
+                              <button
+                                className="inline-link-button"
+                                disabled={markingBidId === bid.id}
+                                onClick={() => void markAsAttached(bid)}
+                              >
+                                <CheckCircle2 size={13} />
+                                {markingBidId === bid.id ? 'Marcando...' : 'Marcar anexada'}
+                              </button>
+                            )}
+                          </div>
                         </td>
                         <td>
                           <div className="company-bid-actions">
@@ -251,6 +307,10 @@ export function BidsPage({ fixedCompanyId }: { fixedCompanyId?: string }) {
                               <FolderOpen size={15} />
                               Abrir
                             </Link>
+                            <button className="action-button" onClick={() => setLinksBid(bid)}>
+                              <Link2 size={15} />
+                              Links
+                            </button>
                             {canEdit(bid) && (
                               <Link className="action-button" to={`/participacoes/${bid.id}/editar`}>
                                 <Pencil size={15} />
@@ -327,7 +387,9 @@ export function BidsPage({ fixedCompanyId }: { fixedCompanyId?: string }) {
                             </div>
                           </div>
                         </td>
-                        <td>{optionLabel(situationOptions, bid.situation as BidSituation)}</td>
+                        <td>
+                          {situationLabel(bid.situation as BidSituation, bid.tender.isPreQualification)}
+                        </td>
                         <td>
                           <div className="row-actions">
                             <Link className="action-button" to={`/participacoes/${bid.id}`}>
@@ -365,6 +427,47 @@ export function BidsPage({ fixedCompanyId }: { fixedCompanyId?: string }) {
           </div>
         )}
       </section>
+      {linksBid && (
+        <Modal title="Links da licitação" onClose={() => setLinksBid(null)}>
+          <div className="bid-links-modal">
+            <p>
+              {linksBid.tender.municipality} · {formatDate(linksBid.tender.sessionDate)}
+            </p>
+            <div className="bid-links-list">
+              <div>
+                <span>SEOBRA</span>
+                {linksBid.tender.seobraLink ? (
+                  <a
+                    href={linksBid.tender.seobraLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="primary-button"
+                  >
+                    <ExternalLink size={16} /> Abrir SEOBRA
+                  </a>
+                ) : (
+                  <small>Link não cadastrado.</small>
+                )}
+              </div>
+              <div>
+                <span>Plataforma</span>
+                {linksBid.tender.platformLink ? (
+                  <a
+                    href={linksBid.tender.platformLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="primary-button"
+                  >
+                    <ExternalLink size={16} /> Abrir plataforma
+                  </a>
+                ) : (
+                  <small>Link não cadastrado.</small>
+                )}
+              </div>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

@@ -79,7 +79,8 @@ export function OutlookIntegrationPanel({ companyId }: { companyId: string }) {
   };
 
   const disconnect = async () => {
-    if (!window.confirm('Desconectar esta conta Microsoft? Os e-mails já sincronizados serão preservados.')) return;
+    if (!window.confirm('Desconectar esta conta Microsoft? Os e-mails já sincronizados serão preservados.'))
+      return;
     setWorking(true);
     setError('');
     setMessage('');
@@ -97,17 +98,44 @@ export function OutlookIntegrationPanel({ companyId }: { companyId: string }) {
   if (loading) {
     return (
       <section className="detail-panel gmail-integration-panel">
-        <div className="app-loader compact-loader"><span className="spinner" />Carregando integração...</div>
+        <div className="app-loader compact-loader">
+          <span className="spinner" />
+          Carregando integração...
+        </div>
       </section>
     );
   }
 
-  if (!status?.configured) {
+  if (!status) {
     return (
       <section className="detail-panel gmail-integration-panel">
         <div className="integration-heading">
-          <span className="integration-icon"><Mail size={22} /></span>
-          <div><strong>Outlook / Hotmail</strong><small>Microsoft OAuth 2.0 + Microsoft Graph</small></div>
+          <span className="integration-icon">
+            <Mail size={22} />
+          </span>
+          <div>
+            <strong>Outlook / Hotmail</strong>
+            <small>Microsoft OAuth 2.0 + Microsoft Graph</small>
+          </div>
+        </div>
+        <div className="alert alert-error">
+          {error || 'Não foi possível consultar a configuração do Outlook no servidor.'}
+        </div>
+      </section>
+    );
+  }
+
+  if (!status.configured) {
+    return (
+      <section className="detail-panel gmail-integration-panel">
+        <div className="integration-heading">
+          <span className="integration-icon">
+            <Mail size={22} />
+          </span>
+          <div>
+            <strong>Outlook / Hotmail</strong>
+            <small>Microsoft OAuth 2.0 + Microsoft Graph</small>
+          </div>
         </div>
         <div className="integration-warning">
           <WifiOff size={20} />
@@ -123,7 +151,9 @@ export function OutlookIntegrationPanel({ companyId }: { companyId: string }) {
   return (
     <section className="detail-panel gmail-integration-panel">
       <div className="integration-heading">
-        <span className="integration-icon"><Mail size={22} /></span>
+        <span className="integration-icon">
+          <Mail size={22} />
+        </span>
         <div>
           <strong>Outlook / Hotmail</strong>
           <small>Somente leitura. A senha da conta Microsoft nunca é solicitada pelo LicitaGestão.</small>
@@ -141,7 +171,10 @@ export function OutlookIntegrationPanel({ companyId }: { companyId: string }) {
           <Mail size={36} />
           <div>
             <strong>Outlook não conectado</strong>
-            <p>Conecte a conta Outlook ou Hotmail usada pela empresa para receber novos e-mails no LicitaGestão.</p>
+            <p>
+              Conecte a conta Outlook ou Hotmail usada pela empresa para receber novos e-mails no
+              LicitaGestão.
+            </p>
           </div>
           <button className="primary-button" onClick={() => void connect()} disabled={working}>
             <Mail size={17} />
@@ -158,13 +191,22 @@ export function OutlookIntegrationPanel({ companyId }: { companyId: string }) {
             </div>
           </div>
           <dl className="integration-data">
-            <div><dt>Última sincronização</dt><dd>{formatDateTime(status.lastSuccessfulSyncAt)}</dd></div>
-            <div><dt>Verificação automática</dt><dd>A cada {status.pollingIntervalSeconds} segundos</dd></div>
+            <div>
+              <dt>Última sincronização</dt>
+              <dd>{formatDateTime(status.lastSuccessfulSyncAt)}</dd>
+            </div>
+            <div>
+              <dt>Verificação automática</dt>
+              <dd>A cada {status.pollingIntervalSeconds} segundos</dd>
+            </div>
           </dl>
           {status.lastError && (
             <div className="integration-warning compact">
               <WifiOff size={18} />
-              <div><strong>Última tentativa apresentou erro</strong><p>{status.lastError}</p></div>
+              <div>
+                <strong>Última tentativa apresentou erro</strong>
+                <p>{status.lastError}</p>
+              </div>
             </div>
           )}
           <div className="integration-actions">

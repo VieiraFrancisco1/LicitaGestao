@@ -8,6 +8,7 @@ import { GmailIntegrationPanel } from '../components/GmailIntegrationPanel';
 import { OutlookIntegrationPanel } from '../components/OutlookIntegrationPanel';
 import { CompanyConvocationsPanel } from '../components/CompanyConvocationsPanel';
 import { api, errorMessage } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 import type { ApiResponse, BidDocument, BidProgress, Company } from '../types';
 import { formatBytes, formatDate, optionLabel, progressOptions } from '../utils/bid';
 
@@ -29,6 +30,7 @@ type PlatformGroup = {
 
 export function CompanyDetailsPage() {
   const { id } = useParams();
+  const { user, setActiveCompanyId } = useAuth();
   const [searchParams] = useSearchParams();
   const [company, setCompany] = useState<Company | null>(null);
   const requestedTab = searchParams.get('tab');
@@ -40,6 +42,8 @@ export function CompanyDetailsPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const load = useCallback(async () => {
+    setLoading(true);
+    setError('');
     try {
       const response = await api.get<ApiResponse<Company>>(`/companies/${id}`);
       setCompany(response.data.data);
@@ -98,8 +102,24 @@ export function CompanyDetailsPage() {
       </div>
     );
   if (!company) return <div className="alert alert-error">{error || 'Empresa não encontrada'}</div>;
+  const employeeCompanies =
+    user?.role === 'FUNCIONARIO' ? user.assignedCompanies.filter((item) => item.active) : [];
   return (
     <div className="page-stack">
+      {employeeCompanies.length > 1 && (
+        <div className="employee-company-switcher" aria-label="Empresas vinculadas">
+          {employeeCompanies.map((item) => (
+            <Link
+              key={item.id}
+              className={item.id === company.id ? 'active' : ''}
+              to={`/empresas/${item.id}`}
+              onClick={() => setActiveCompanyId(item.id)}
+            >
+              {item.tradeName || item.legalName}
+            </Link>
+          ))}
+        </div>
+      )}
       <div className="details-header company-header">
         <div>
           <Link className="back-link" to="/empresas">
@@ -172,7 +192,8 @@ export function CompanyDetailsPage() {
         <div className="page-stack company-documents-stack">
           <section className="detail-panel">
             <div className="section-note">
-              Pasta principal da empresa no MEGA. O sistema tenta localizar a pasta existente pelo nome da empresa e só cria uma nova se não encontrar.
+              Pasta principal da empresa no MEGA. O sistema tenta localizar a pasta existente pelo nome da
+              empresa e só cria uma nova se não encontrar.
             </div>
             <MegaBrowser companyId={company.id} compact />
           </section>

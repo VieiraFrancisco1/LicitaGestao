@@ -28,9 +28,30 @@ export type BidQuery = {
   direction: 'asc' | 'desc';
 };
 
+const normalSituations = new Set<BidSituation>([
+  BidSituation.PENDENTE,
+  BidSituation.ANEXADA,
+  BidSituation.FINALIZADA
+]);
+
+const assertSituationAllowed = (situation: BidSituation | undefined, isPreQualification: boolean) => {
+  if (!situation) return;
+  const allowed =
+    normalSituations.has(situation) || (isPreQualification && situation === BidSituation.CLASSIFICADA);
+  if (!allowed) {
+    throw new AppError(
+      isPreQualification
+        ? 'Situação inválida. Use Pendente, Anexada, Classificada ou Finalizada.'
+        : 'Situação inválida. Use Pendente, Anexada ou Finalizada.',
+      422
+    );
+  }
+};
+
 export const accessibleBidWhere = (auth: AuthScope): Prisma.BidWhereInput => {
   const organizationId = requireOrganizationId(auth);
-  if ((auth.role === UserRole.ADMIN || auth.role === UserRole.SUPER_ADMIN)) return { tender: { organizationId }, company: { organizationId } };
+  if (auth.role === UserRole.ADMIN || auth.role === UserRole.SUPER_ADMIN)
+    return { tender: { organizationId }, company: { organizationId } };
   if (auth.role === UserRole.EMPRESA) {
     return {
       companyId: auth.companyId ?? '00000000-0000-0000-0000-000000000000',
@@ -59,10 +80,14 @@ export const createBid = async (
   await assertCompanyWriteAccess(companyId, auth);
   const [company, tender] = await Promise.all([
     prisma.company.findFirst({ where: { id: companyId, organizationId }, select: { active: true } }),
-    prisma.tender.findFirst({ where: { id: input.tenderId, organizationId }, select: { id: true } })
+    prisma.tender.findFirst({
+      where: { id: input.tenderId, organizationId },
+      select: { id: true, isPreQualification: true }
+    })
   ]);
   if (!company?.active) throw new AppError('Empresa não encontrada ou inativa', 422);
   if (!tender) throw new AppError('Licitação geral não encontrada', 404);
+  assertSituationAllowed(input.situation, tender.isPreQualification);
 
   try {
     return await prisma.bid.create({
@@ -87,9 +112,13 @@ export const createBid = async (
 };
 
 export const updateBid = async (id: string, input: BidInput, auth: AuthScope) => {
-  const current = await prisma.bid.findFirst({ where: { id, ...accessibleBidWhere(auth) } });
+  const current = await prisma.bid.findFirst({
+    where: { id, ...accessibleBidWhere(auth) },
+    include: { tender: { select: { isPreQualification: true } } }
+  });
   if (!current) throw new AppError('Participação não encontrada', 404);
   await assertCompanyWriteAccess(current.companyId, auth);
+  assertSituationAllowed(input.situation, current.tender.isPreQualification);
   return prisma.bid.update({
     where: { id },
     data: {
@@ -138,16 +167,31 @@ export const listBids = async (query: BidQuery, auth: AuthScope) => {
       : {})
   };
   const orderBy: Prisma.BidOrderByWithRelationInput =
-    query.sort === 'createdAt' ? { createdAt: query.direction } : { tender: { [query.sort]: query.direction } };
+    query.sort === 'createdAt'
+      ? { createdAt: query.direction }
+      : { tender: { [query.sort]: query.direction } };
   const [items, total] = await prisma.$transaction([
-    prisma.bid.findMany({ where, orderBy, skip: (query.page - 1) * query.pageSize, take: query.pageSize, include: includeBid }),
+    prisma.bid.findMany({
+      where,
+      orderBy,
+      skip: (query.page - 1) * query.pageSize,
+      take: query.pageSize,
+      include: includeBid
+    }),
     prisma.bid.count({ where })
   ]);
-  return { items, total, page: query.page, pageSize: query.pageSize, pages: Math.ceil(total / query.pageSize) };
+  return {
+    items,
+    total,
+    page: query.page,
+    pageSize: query.pageSize,
+    pages: Math.ceil(total / query.pageSize)
+  };
 };
 
 export const deleteBid = async (id: string, auth: AuthScope) => {
-  if (auth.role === UserRole.EMPRESA) throw new AppError('Seu perfil não pode desassociar a licitação inteira', 403);
+  if (auth.role === UserRole.EMPRESA)
+    throw new AppError('Seu perfil não pode desassociar a licitação inteira', 403);
   const bid = await getBid(id, auth);
   await assertCompanyWriteAccess(bid.companyId, auth);
   await prisma.$transaction([

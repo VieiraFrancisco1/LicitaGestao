@@ -6,7 +6,10 @@ import { prisma } from '../config/database.js';
 import { env } from '../config/env.js';
 import { AppError } from '../utils/app-error.js';
 import { publicUser } from '../utils/public-user.js';
-import { passwordResetEmailConfigured, sendOrganizationPasswordResetEmail } from './transactional-email.service.js';
+import {
+  passwordResetEmailConfigured,
+  sendOrganizationPasswordResetEmail
+} from './transactional-email.service.js';
 import { issueBillingToken, organizationHasPaidAccess } from './billing.service.js';
 
 type TokenUser = {
@@ -80,7 +83,10 @@ export async function registerOrganization(input: {
   password: string;
 }) {
   const email = input.email.trim().toLowerCase();
-  const existing = await prisma.organization.findUnique({ where: { loginEmail: email }, select: { id: true } });
+  const existing = await prisma.organization.findUnique({
+    where: { loginEmail: email },
+    select: { id: true }
+  });
   if (existing) throw new AppError('Este e-mail principal já está cadastrado', 409);
 
   const passwordHash = await bcrypt.hash(input.password, 12);
@@ -166,7 +172,11 @@ export async function authenticateOrganizationMember(
   } catch {
     throw new AppError('O acesso da empresa expirou. Entre novamente com a conta principal.', 401);
   }
-  if (payload.type !== 'organization-access' || !payload.organizationId || payload.sub !== payload.organizationId) {
+  if (
+    payload.type !== 'organization-access' ||
+    !payload.organizationId ||
+    payload.sub !== payload.organizationId
+  ) {
     throw new AppError('Acesso da empresa inválido', 401);
   }
 
@@ -175,7 +185,11 @@ export async function authenticateOrganizationMember(
     throw new AppError('O acesso da empresa não está mais válido. Entre novamente.', 401);
   }
   if (!organizationHasPaidAccess(organization)) {
-    throw new AppError('A assinatura desta organização está pendente ou vencida.', 402, 'SUBSCRIPTION_REQUIRED');
+    throw new AppError(
+      'A assinatura desta organização está pendente ou vencida.',
+      402,
+      'SUBSCRIPTION_REQUIRED'
+    );
   }
 
   const user = await prisma.user.findFirst({
@@ -207,7 +221,11 @@ export const authenticateUser = async (email: string, password: string) => {
     throw new AppError('E-mail ou senha inválidos', 401);
   }
   if (!organizationHasPaidAccess(user.organization)) {
-    throw new AppError('A assinatura desta organização está pendente ou vencida.', 402, 'SUBSCRIPTION_REQUIRED');
+    throw new AppError(
+      'A assinatura desta organização está pendente ou vencida.',
+      402,
+      'SUBSCRIPTION_REQUIRED'
+    );
   }
   if (user.role === 'EMPRESA' && (!user.company || !user.company.active)) {
     throw new AppError('Empresa sem acesso ao sistema', 403);
@@ -239,17 +257,25 @@ export const rotateRefreshToken = async (token: string) => {
     !user ||
     !user.active ||
     !user.organization.active ||
-    !organizationHasPaidAccess(user.organization) ||
     (user.role === 'EMPRESA' && !user.company?.active)
   ) {
     throw new AppError('Usuário sem acesso ao sistema', 403);
+  }
+  if (!organizationHasPaidAccess(user.organization)) {
+    throw new AppError(
+      'A assinatura desta organização está pendente ou vencida.',
+      402,
+      'SUBSCRIPTION_REQUIRED'
+    );
   }
 
   const nextRefreshToken = signRefreshToken(user.id);
   const expiresAt = new Date(Date.now() + env.REFRESH_TOKEN_EXPIRES_IN_DAYS * 86_400_000);
   await prisma.$transaction([
     prisma.refreshToken.update({ where: { id: stored.id }, data: { revokedAt: new Date() } }),
-    prisma.refreshToken.create({ data: { userId: user.id, tokenHash: hashToken(nextRefreshToken), expiresAt } })
+    prisma.refreshToken.create({
+      data: { userId: user.id, tokenHash: hashToken(nextRefreshToken), expiresAt }
+    })
   ]);
 
   return { accessToken: signAccessToken(user), refreshToken: nextRefreshToken, user: publicUser(user) };
@@ -283,7 +309,11 @@ export const changeOwnPassword = async (userId: string, currentPassword: string,
 
 export async function requestOrganizationPasswordReset(email: string) {
   if (!passwordResetEmailConfigured()) {
-    throw new AppError('A recuperação de senha ainda não foi configurada no servidor', 503, 'PASSWORD_RESET_NOT_CONFIGURED');
+    throw new AppError(
+      'A recuperação de senha ainda não foi configurada no servidor',
+      503,
+      'PASSWORD_RESET_NOT_CONFIGURED'
+    );
   }
   const organization = await prisma.organization.findUnique({ where: { loginEmail: email.toLowerCase() } });
   if (!organization?.active) return;

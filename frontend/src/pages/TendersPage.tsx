@@ -28,7 +28,7 @@ import type {
   TenderFilterOptions,
   TenderWorkflowStatus
 } from '../types';
-import { formatCurrency, formatDate, progressOptions, situationOptions } from '../utils/bid';
+import { availableSituationOptions, formatCurrency, formatDate, progressOptions } from '../utils/bid';
 
 const monthOptions = [
   { value: '1', label: 'Janeiro' },
@@ -182,9 +182,10 @@ export function TendersPage() {
     }
   };
 
-
   const deleteTender = async (tender: Tender) => {
-    const label = tender.noticeNumber ? `${tender.municipality} · ${tender.noticeNumber}` : tender.municipality;
+    const label = tender.noticeNumber
+      ? `${tender.municipality} · ${tender.noticeNumber}`
+      : tender.municipality;
     const confirmation = window.prompt(
       `ATENÇÃO: excluir ${label} também remove as participações e os registros vinculados.\n\nDigite EXCLUIR para confirmar:`
     );
@@ -246,7 +247,8 @@ export function TendersPage() {
           >
             {label}
           </button>
-        ))}      </div>
+        ))}{' '}
+      </div>
 
       <section className="table-card tender-control-card">
         <div className="tender-date-filter-bar">
@@ -385,13 +387,16 @@ export function TendersPage() {
               {!loading &&
                 data?.items.map((tender) => {
                   const isResponsible = tender.spreadsheetResponsibleUserId === user?.id;
-                  const canRelease = isResponsible || (user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN');
+                  const canRelease = isResponsible || user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
                   const canManageSpreadsheet = user?.role !== 'EMPRESA';
                   const hasAssociableCompanies = companies.some(
                     (company) => !tender.bids.some((bid) => bid.companyId === company.id)
                   );
                   const attachedBids = tender.bids.filter((bid) => bid.situation === 'ANEXADA');
-                  const tenderLabel = [tender.modality, tender.noticeNumber ? `Nº ${tender.noticeNumber}` : null]
+                  const tenderLabel = [
+                    tender.modality,
+                    tender.noticeNumber ? `Nº ${tender.noticeNumber}` : null
+                  ]
                     .filter(Boolean)
                     .join(' · ');
 
@@ -401,9 +406,7 @@ export function TendersPage() {
                         <div className="tender-cell-content">
                           <strong>{tender.municipality}</strong>
                           {tenderLabel && (
-                            <small style={{ marginTop: '-2px', lineHeight: 1.15 }}>
-                              {tenderLabel}
-                            </small>
+                            <small style={{ marginTop: '-2px', lineHeight: 1.15 }}>{tenderLabel}</small>
                           )}
                           {tender.isPreQualification && (
                             <small
@@ -416,7 +419,8 @@ export function TendersPage() {
                             >
                               Pré-qualificação
                             </small>
-                          )} {/* LICITAGESTAO_PREQUAL_ALL_EMAILS_V1_LIST */}
+                          )}{' '}
+                          {/* LICITAGESTAO_PREQUAL_ALL_EMAILS_V1_LIST */}
                           <small
                             style={{
                               marginTop: '2px',
@@ -470,7 +474,9 @@ export function TendersPage() {
                             className="association-count"
                             disabled={attachedBids.length === 0}
                             onClick={() => setViewingCompanies(tender)}
-                            title={attachedBids.length ? 'Ver empresas que anexaram' : 'Nenhuma empresa anexou'}
+                            title={
+                              attachedBids.length ? 'Ver empresas que anexaram' : 'Nenhuma empresa anexou'
+                            }
                           >
                             <Building2 size={15} />
                             {attachedBids.length} {attachedBids.length === 1 ? 'anexou' : 'anexaram'}
@@ -480,8 +486,14 @@ export function TendersPage() {
                       <td className="spreadsheet-control-cell">
                         <div className="spreadsheet-inline-layout">
                           <div className="spreadsheet-inline-info">
-                            <span className={`spreadsheet-status-pill ${tender.spreadsheetReady ? 'ready' : ''}`}>
-                              {tender.spreadsheetReady ? <CheckCircle2 size={14} /> : <ClipboardCheck size={14} />}
+                            <span
+                              className={`spreadsheet-status-pill ${tender.spreadsheetReady ? 'ready' : ''}`}
+                            >
+                              {tender.spreadsheetReady ? (
+                                <CheckCircle2 size={14} />
+                              ) : (
+                                <ClipboardCheck size={14} />
+                              )}
                               {tender.spreadsheetReady ? 'Pronta' : 'Em preparação'}
                             </span>
                             <div className="spreadsheet-inline-owner">
@@ -522,7 +534,10 @@ export function TendersPage() {
                       </td>
                       <td className="organized-actions-cell">
                         <div className="organized-row-actions paired-row-actions">
-                          <Link className="action-button compact-action-button" to={`/licitacoes/${tender.id}`}>
+                          <Link
+                            className="action-button compact-action-button"
+                            to={`/licitacoes/${tender.id}`}
+                          >
                             <FolderOpen size={15} />
                             Abrir
                           </Link>
@@ -530,12 +545,19 @@ export function TendersPage() {
                             className="action-button compact-action-button"
                             disabled={!hasAssociableCompanies}
                             onClick={() => hasAssociableCompanies && setAssociating(tender)}
-                            title={hasAssociableCompanies ? 'Associar empresa' : 'Todas as empresas já foram associadas'}
+                            title={
+                              hasAssociableCompanies
+                                ? 'Associar empresa'
+                                : 'Todas as empresas já foram associadas'
+                            }
                           >
                             <Link2 size={15} />
                             Associar
                           </button>
-                          <Link className="action-button compact-action-button" to={`/licitacoes/${tender.id}/editar`}>
+                          <Link
+                            className="action-button compact-action-button"
+                            to={`/licitacoes/${tender.id}/editar`}
+                          >
                             <Pencil size={15} />
                             Editar
                           </Link>
@@ -576,7 +598,9 @@ export function TendersPage() {
       {associating && (
         <AssociationModal
           tender={associating}
-          companies={companies.filter((company) => !associating.bids.some((bid) => bid.companyId === company.id))}
+          companies={companies.filter(
+            (company) => !associating.bids.some((bid) => bid.companyId === company.id)
+          )}
           onClose={() => setAssociating(null)}
           onSaved={() => {
             setAssociating(null);
@@ -588,7 +612,6 @@ export function TendersPage() {
       {viewingCompanies && (
         <TenderCompaniesModal tender={viewingCompanies} onClose={() => setViewingCompanies(null)} />
       )}
-
     </div>
   );
 }
@@ -613,7 +636,9 @@ function TenderCompaniesModal({ tender, onClose }: { tender: Tender; onClose: ()
             <strong>{reference}</strong>
             <small>
               {attachedBids.length}{' '}
-              {attachedBids.length === 1 ? 'empresa anexou esta licitação' : 'empresas anexaram esta licitação'}
+              {attachedBids.length === 1
+                ? 'empresa anexou esta licitação'
+                : 'empresas anexaram esta licitação'}
             </small>
           </div>
         </div>
@@ -655,7 +680,10 @@ function AssociationModal({
   const [observations, setObservations] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const companyName = useMemo(() => companies.find((company) => company.id === companyId), [companies, companyId]);
+  const companyName = useMemo(
+    () => companies.find((company) => company.id === companyId),
+    [companies, companyId]
+  );
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     setSaving(true);
@@ -679,7 +707,8 @@ function AssociationModal({
     <Modal title="Associar licitação à empresa" onClose={onClose}>
       <form className="entity-form" onSubmit={(event) => void submit(event)}>
         <div className="section-note">
-          {tender.municipality} · {formatDate(tender.sessionDate)}. A participação e os documentos ficarão privados para a empresa.
+          {tender.municipality} · {formatDate(tender.sessionDate)}. A participação e os documentos ficarão
+          privados para a empresa.
         </div>
         {error && <div className="alert alert-error">{error}</div>}
         <label>
@@ -717,7 +746,7 @@ function AssociationModal({
           <label>
             Situação
             <select value={situation} onChange={(event) => setSituation(event.target.value as BidSituation)}>
-              {situationOptions.map((option) => (
+              {availableSituationOptions(tender.isPreQualification).map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>
@@ -729,7 +758,9 @@ function AssociationModal({
           Observações privadas
           <textarea rows={3} value={observations} onChange={(event) => setObservations(event.target.value)} />
         </label>
-        {companyName && <small>Será adicionada à lista de {companyName.tradeName || companyName.legalName}.</small>}
+        {companyName && (
+          <small>Será adicionada à lista de {companyName.tradeName || companyName.legalName}.</small>
+        )}
         <div className="modal-actions">
           <button type="button" className="secondary-button" onClick={onClose}>
             Cancelar

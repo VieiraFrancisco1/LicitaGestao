@@ -16,13 +16,25 @@ export const situationOptions: Array<{ value: BidSituation; label: string }> = [
   { value: 'PENDENTE', label: 'Pendente' },
   { value: 'ANEXADA', label: 'Anexada' },
   { value: 'CLASSIFICADA', label: 'Classificada' },
-  { value: 'DESCLASSIFICADA', label: 'Desclassificada' },
-  { value: 'HABILITADA', label: 'Habilitada' },
-  { value: 'INABILITADA', label: 'Inabilitada' },
-  { value: 'VENCEDORA', label: 'Vencedora' },
-  { value: 'PERDIDA', label: 'Perdida' },
   { value: 'FINALIZADA', label: 'Finalizada' }
 ];
+
+export const availableSituationOptions = (isPreQualification: boolean) =>
+  situationOptions.filter((option) => isPreQualification || option.value !== 'CLASSIFICADA');
+
+export const normalizeEditableSituation = (
+  situation: BidSituation,
+  isPreQualification: boolean
+): BidSituation => {
+  if (situation === 'PENDENTE' || situation === 'ANEXADA' || situation === 'FINALIZADA') return situation;
+  if (situation === 'CLASSIFICADA' && isPreQualification) return situation;
+  return 'FINALIZADA';
+};
+
+export const situationLabel = (situation: BidSituation, isPreQualification = true) => {
+  const normalized = normalizeEditableSituation(situation, isPreQualification);
+  return situationOptions.find((option) => option.value === normalized)?.label ?? 'Finalizada';
+};
 
 export const guaranteeOptions: Array<{ value: GuaranteeType; label: string }> = [
   { value: 'NAO_EXIGIDA', label: 'Não exigida' },

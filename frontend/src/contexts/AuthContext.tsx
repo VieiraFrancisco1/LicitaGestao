@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { rawApi, setAccessToken, setRefreshHandler } from '../services/api';
+import axios from 'axios';
+import { api, rawApi, setAccessToken, setRefreshHandler } from '../services/api';
 import type { ApiResponse, OrganizationAccess, User } from '../types';
 
 type AuthContextValue = {
@@ -46,9 +47,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAccessToken(response.data.data.accessToken);
       applyUser(response.data.data.user);
       return response.data.data.accessToken;
-    } catch {
+    } catch (error) {
+      const responseData = axios.isAxiosError(error)
+        ? (error.response?.data as { code?: string } | undefined)
+        : undefined;
+      const subscriptionExpired =
+        axios.isAxiosError(error) &&
+        error.response?.status === 402 &&
+        responseData?.code === 'SUBSCRIPTION_REQUIRED';
       setAccessToken(null);
       applyUser(null);
+      if (subscriptionExpired && !window.location.pathname.startsWith('/login')) {
+        window.location.assign('/login?assinatura=vencida');
+      }
       return null;
     }
   }, [applyUser]);
@@ -58,6 +69,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const timer = window.setTimeout(() => void refresh().finally(() => setLoading(false)), 0);
     return () => window.clearTimeout(timer);
   }, [refresh]);
+
+  useEffect(() => {
+    if (!user) return;
+    const timer = window.setInterval(() => {
+      void api.get('/auth/me').catch(() => undefined);
+    }, 60_000);
+    return () => window.clearInterval(timer);
+  }, [user]);
 
   const organizationLogin = useCallback(async (email: string, password: string) => {
     const response = await rawApi.post<ApiResponse<OrganizationAccess>>('/auth/organization-login', {
@@ -69,11 +88,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const memberLogin = useCallback(
     async (organizationToken: string, userId: string, password: string) => {
-      const response = await rawApi.post<ApiResponse<{ accessToken: string; user: User }>>('/auth/member-login', {
-        organizationToken,
-        userId,
-        password
-      });
+      const response = await rawApi.post<ApiResponse<{ accessToken: string; user: User }>>(
+        '/auth/member-login',
+        {
+          organizationToken,
+          userId,
+          password
+        }
+      );
       setAccessToken(response.data.data.accessToken);
       applyUser(response.data.data.user);
     },

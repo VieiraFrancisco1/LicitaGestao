@@ -149,7 +149,7 @@ export function ReportsPage() {
   const [detailPage, setDetailPage] = useState(1);
 
   const scopedCompanyId = user?.role === 'EMPRESA' ? user.companyId : activeCompanyId;
-  const needsCompanySelection = user?.role === 'ADMIN' && !scopedCompanyId;
+  const needsCompanySelection = (user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && !scopedCompanyId;
 
   const load = useCallback(async () => {
     if (!filters.dateFrom || !filters.dateTo) return;
@@ -235,14 +235,7 @@ export function ReportsPage() {
         }
       })();
       if (!matchesView || !query) return matchesView;
-      return [
-        row.municipality,
-        row.state,
-        row.noticeNumber,
-        row.processNumber,
-        row.agency,
-        row.platformName
-      ]
+      return [row.municipality, row.state, row.noticeNumber, row.processNumber, row.agency, row.platformName]
         .filter(Boolean)
         .join(' ')
         .toLocaleLowerCase('pt-BR')
@@ -252,10 +245,7 @@ export function ReportsPage() {
 
   const detailPageCount = Math.max(1, Math.ceil(detailRows.length / PAGE_SIZE));
   const safeDetailPage = Math.min(detailPage, detailPageCount);
-  const detailPageRows = detailRows.slice(
-    (safeDetailPage - 1) * PAGE_SIZE,
-    safeDetailPage * PAGE_SIZE
-  );
+  const detailPageRows = detailRows.slice((safeDetailPage - 1) * PAGE_SIZE, safeDetailPage * PAGE_SIZE);
 
   if (loading && !data && !needsCompanySelection) {
     return (
@@ -272,20 +262,35 @@ export function ReportsPage() {
         <div>
           <span className="eyebrow">Relatório operacional</span>
           <h2>Resumo da empresa</h2>
-          <p>Escolha o período e consulte somente as informações que ajudam no acompanhamento das licitações.</p>
+          <p>
+            Escolha o período e consulte somente as informações que ajudam no acompanhamento das licitações.
+          </p>
         </div>
-        <button className="secondary-button compact" onClick={() => void load()} disabled={loading || needsCompanySelection}>
+        <button
+          className="secondary-button compact"
+          onClick={() => void load()}
+          disabled={loading || needsCompanySelection}
+        >
           <RefreshCw size={15} /> Atualizar
         </button>
       </section>
 
       <section className="reports-context-card">
         <div className="reports-company-context">
-          <span className="reports-context-icon"><Building2 size={20} /></span>
+          <span className="reports-context-icon">
+            <Building2 size={20} />
+          </span>
           <div>
             <small>Empresa selecionada</small>
-            <strong>{data?.scope.companyName || (needsCompanySelection ? 'Nenhuma empresa selecionada' : 'Empresa atual')}</strong>
-            <span>{user?.role === 'ADMIN' ? 'Troque a empresa pelo seletor fixo no topo.' : 'O relatório acompanha a empresa ativa no sistema.'}</span>
+            <strong>
+              {data?.scope.companyName ||
+                (needsCompanySelection ? 'Nenhuma empresa selecionada' : 'Empresa atual')}
+            </strong>
+            <span>
+              {user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN'
+                ? 'Troque a empresa pelo seletor fixo no topo.'
+                : 'O relatório acompanha a empresa ativa no sistema.'}
+            </span>
           </div>
         </div>
 
@@ -326,7 +331,8 @@ export function ReportsPage() {
           <div>
             <h3>Selecione uma empresa para gerar o relatório</h3>
             <p>
-              O relatório foi pensado para a visão individual de cada empresa. Use o seletor “Empresa ativa” no topo da tela.
+              O relatório foi pensado para a visão individual de cada empresa. Use o seletor “Empresa ativa”
+              no topo da tela.
             </p>
           </div>
         </section>
@@ -335,9 +341,15 @@ export function ReportsPage() {
           <section className="reports-period-heading">
             <div>
               <span className="eyebrow">Período analisado</span>
-              <h3>{data ? `${dateLabel(data.period.dateFrom)} a ${dateLabel(data.period.dateTo)}` : 'Período selecionado'}</h3>
+              <h3>
+                {data
+                  ? `${dateLabel(data.period.dateFrom)} a ${dateLabel(data.period.dateTo)}`
+                  : 'Período selecionado'}
+              </h3>
             </div>
-            <span><CalendarDays size={16} /> Dados da empresa selecionada</span>
+            <span>
+              <CalendarDays size={16} /> Dados da empresa selecionada
+            </span>
           </section>
 
           <section className="reports-summary-grid">
@@ -347,11 +359,13 @@ export function ReportsPage() {
               value={data?.metrics.tenders ?? 0}
               description="Relação completa das licitações da empresa neste período."
               action="Ver licitações"
-              onClick={() => openDetail({
-                kind: 'all',
-                title: 'Licitações do período',
-                description: 'Todas as licitações participadas pela empresa no período selecionado.'
-              })}
+              onClick={() =>
+                openDetail({
+                  kind: 'all',
+                  title: 'Licitações do período',
+                  description: 'Todas as licitações participadas pela empresa no período selecionado.'
+                })
+              }
             />
             <SummaryCard
               icon={<FileCheck2 />}
@@ -360,11 +374,13 @@ export function ReportsPage() {
               description="Licitações que ainda precisam concluir a anexação."
               action="Ver pendências"
               attention={Boolean(data?.metrics.pendingAttachments)}
-              onClick={() => openDetail({
-                kind: 'pendingAttachments',
-                title: 'Pendentes de anexação',
-                description: 'Licitações do período que ainda possuem pendência de anexação.'
-              })}
+              onClick={() =>
+                openDetail({
+                  kind: 'pendingAttachments',
+                  title: 'Pendentes de anexação',
+                  description: 'Licitações do período que ainda possuem pendência de anexação.'
+                })
+              }
             />
             <SummaryCard
               icon={<CheckCircle2 />}
@@ -373,11 +389,13 @@ export function ReportsPage() {
               description="Licitações cuja planilha ainda não foi marcada como pronta."
               action="Ver planilhas"
               attention={Boolean(data?.metrics.spreadsheetsPending)}
-              onClick={() => openDetail({
-                kind: 'spreadsheetPending',
-                title: 'Planilhas pendentes',
-                description: 'Licitações do período cuja planilha ainda precisa ser concluída.'
-              })}
+              onClick={() =>
+                openDetail({
+                  kind: 'spreadsheetPending',
+                  title: 'Planilhas pendentes',
+                  description: 'Licitações do período cuja planilha ainda precisa ser concluída.'
+                })
+              }
             />
           </section>
 
@@ -386,10 +404,14 @@ export function ReportsPage() {
               <div>
                 <span className="eyebrow">Plataformas</span>
                 <h3>Participação por plataforma</h3>
-                <p>Veja quantas licitações do período aconteceram em cada plataforma. Clique para abrir a relação.</p>
+                <p>
+                  Veja quantas licitações do período aconteceram em cada plataforma. Clique para abrir a
+                  relação.
+                </p>
               </div>
               <span className="reports-platform-total">
-                <Layers3 size={16} /> {data?.platforms.length ?? 0} plataforma{(data?.platforms.length ?? 0) === 1 ? '' : 's'}
+                <Layers3 size={16} /> {data?.platforms.length ?? 0} plataforma
+                {(data?.platforms.length ?? 0) === 1 ? '' : 's'}
               </span>
             </div>
 
@@ -402,17 +424,23 @@ export function ReportsPage() {
                     type="button"
                     key={platform.name}
                     className="reports-platform-item"
-                    onClick={() => openDetail({
-                      kind: 'platform',
-                      platform: platform.name,
-                      title: platform.name,
-                      description: `Licitações do período realizadas pela empresa na plataforma ${platform.name}.`
-                    })}
+                    onClick={() =>
+                      openDetail({
+                        kind: 'platform',
+                        platform: platform.name,
+                        title: platform.name,
+                        description: `Licitações do período realizadas pela empresa na plataforma ${platform.name}.`
+                      })
+                    }
                   >
-                    <span className="reports-platform-icon"><Layers3 size={18} /></span>
+                    <span className="reports-platform-icon">
+                      <Layers3 size={18} />
+                    </span>
                     <span className="reports-platform-copy">
                       <strong>{platform.name}</strong>
-                      <small>{platform.count} licitação{platform.count === 1 ? '' : 'ões'} no período</small>
+                      <small>
+                        {platform.count} licitação{platform.count === 1 ? '' : 'ões'} no período
+                      </small>
                     </span>
                     <strong className="reports-platform-count">{platform.count}</strong>
                     <ArrowRight size={16} />
@@ -438,17 +466,32 @@ export function ReportsPage() {
                 <span className="eyebrow">{data.scope.companyName || 'Empresa selecionada'}</span>
                 <h2 id="reports-modal-title">{detailView.title}</h2>
                 <p>{detailView.description}</p>
-                <small>{dateLabel(data.period.dateFrom)} a {dateLabel(data.period.dateTo)}</small>
+                <small>
+                  {dateLabel(data.period.dateFrom)} a {dateLabel(data.period.dateTo)}
+                </small>
               </div>
-              <button type="button" className="reports-modal-close" onClick={() => setDetailView(null)} aria-label="Fechar janela">
+              <button
+                type="button"
+                className="reports-modal-close"
+                onClick={() => setDetailView(null)}
+                aria-label="Fechar janela"
+              >
                 <X size={20} />
               </button>
             </header>
 
             <div className="reports-modal-summary">
-              <span><strong>{detailRows.length}</strong> licitação{detailRows.length === 1 ? '' : 'ões'}</span>
-              <span><strong>{detailRows.filter((row) => row.pendingAttachments > 0).length}</strong> com anexação pendente</span>
-              <span><strong>{detailRows.filter((row) => !row.spreadsheetReady).length}</strong> com planilha pendente</span>
+              <span>
+                <strong>{detailRows.length}</strong> licitação{detailRows.length === 1 ? '' : 'ões'}
+              </span>
+              <span>
+                <strong>{detailRows.filter((row) => row.pendingAttachments > 0).length}</strong> com anexação
+                pendente
+              </span>
+              <span>
+                <strong>{detailRows.filter((row) => !row.spreadsheetReady).length}</strong> com planilha
+                pendente
+              </span>
             </div>
 
             <div className="reports-modal-toolbar">
@@ -484,15 +527,20 @@ export function ReportsPage() {
                     <article className="reports-detail-row" key={row.id}>
                       <div className="reports-detail-date">
                         <strong>{row.sessionDate.slice(8, 10)}</strong>
-                        <span>{new Intl.DateTimeFormat('pt-BR', { month: 'short', timeZone: 'UTC' })
-                          .format(new Date(`${row.sessionDate}T00:00:00Z`))
-                          .replace('.', '')}</span>
+                        <span>
+                          {new Intl.DateTimeFormat('pt-BR', { month: 'short', timeZone: 'UTC' })
+                            .format(new Date(`${row.sessionDate}T00:00:00Z`))
+                            .replace('.', '')}
+                        </span>
                       </div>
 
                       <div className="reports-detail-main">
                         <div className="reports-detail-title-line">
                           <div>
-                            <strong>{row.municipality}{row.state ? `/${row.state}` : ''}</strong>
+                            <strong>
+                              {row.municipality}
+                              {row.state ? `/${row.state}` : ''}
+                            </strong>
                             <small>
                               {row.noticeNumber
                                 ? `Edital ${row.noticeNumber}`
@@ -501,13 +549,25 @@ export function ReportsPage() {
                                   : 'Sem número informado'}
                             </small>
                           </div>
-                          <span className="reports-detail-platform">{row.platformName || 'Sem plataforma'}</span>
+                          <span className="reports-detail-platform">
+                            {row.platformName || 'Sem plataforma'}
+                          </span>
                         </div>
 
                         <div className="reports-detail-meta">
-                          {row.processNumber && row.noticeNumber && <span>Processo: <strong>{row.processNumber}</strong></span>}
-                          {row.agency && <span>Órgão: <strong>{row.agency}</strong></span>}
-                          <span>Data: <strong>{dateLabel(row.sessionDate)}</strong></span>
+                          {row.processNumber && row.noticeNumber && (
+                            <span>
+                              Processo: <strong>{row.processNumber}</strong>
+                            </span>
+                          )}
+                          {row.agency && (
+                            <span>
+                              Órgão: <strong>{row.agency}</strong>
+                            </span>
+                          )}
+                          <span>
+                            Data: <strong>{dateLabel(row.sessionDate)}</strong>
+                          </span>
                         </div>
 
                         <div className="reports-detail-statuses">
@@ -520,7 +580,11 @@ export function ReportsPage() {
                         </div>
                       </div>
 
-                      <Link className="reports-open-link" to={`/licitacoes/${row.id}`} onClick={() => setDetailView(null)}>
+                      <Link
+                        className="reports-open-link"
+                        to={`/licitacoes/${row.id}`}
+                        onClick={() => setDetailView(null)}
+                      >
                         Abrir licitação <ArrowRight size={14} />
                       </Link>
                     </article>
@@ -532,7 +596,8 @@ export function ReportsPage() {
             {detailPageCount > 1 && (
               <footer className="reports-modal-footer">
                 <span>
-                  Mostrando {(safeDetailPage - 1) * PAGE_SIZE + 1}–{Math.min(safeDetailPage * PAGE_SIZE, detailRows.length)} de {detailRows.length}
+                  Mostrando {(safeDetailPage - 1) * PAGE_SIZE + 1}–
+                  {Math.min(safeDetailPage * PAGE_SIZE, detailRows.length)} de {detailRows.length}
                 </span>
                 <div>
                   <button
@@ -542,7 +607,9 @@ export function ReportsPage() {
                   >
                     Anterior
                   </button>
-                  <strong>{safeDetailPage} de {detailPageCount}</strong>
+                  <strong>
+                    {safeDetailPage} de {detailPageCount}
+                  </strong>
                   <button
                     type="button"
                     disabled={safeDetailPage === detailPageCount}
@@ -578,13 +645,19 @@ function SummaryCard({
   onClick: () => void;
 }) {
   return (
-    <button type="button" className={`reports-summary-card ${attention ? 'attention' : ''}`} onClick={onClick}>
+    <button
+      type="button"
+      className={`reports-summary-card ${attention ? 'attention' : ''}`}
+      onClick={onClick}
+    >
       <span className="reports-summary-icon">{icon}</span>
       <span className="reports-summary-copy">
         <small>{label}</small>
         <strong>{value}</strong>
         <span>{description}</span>
-        <em>{action} <ArrowRight size={13} /></em>
+        <em>
+          {action} <ArrowRight size={13} />
+        </em>
       </span>
     </button>
   );
