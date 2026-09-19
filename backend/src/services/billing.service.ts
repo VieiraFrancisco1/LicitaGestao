@@ -78,6 +78,8 @@ export const BILLING_PLANS = {
 
 const planByCode = (plan: SubscriptionPlan) => BILLING_PLANS[plan];
 
+const mercadoPagoTestMode = () => env.MERCADO_PAGO_MODE === 'test'; // LICITAGESTAO_MP_MODE_V18
+
 export const billingConfigured = () =>
   Boolean(
     env.MERCADO_PAGO_ACCESS_TOKEN &&
@@ -205,8 +207,10 @@ export async function getBillingStatus(token: string) {
       loginEmail: organization.loginEmail
     },
     payerEmail:
-      env.MERCADO_PAGO_TEST_PAYER_EMAIL?.trim().toLowerCase() ||
-      organization.loginEmail,
+      mercadoPagoTestMode()
+        ? env.MERCADO_PAGO_TEST_PAYER_EMAIL?.trim().toLowerCase() ||
+          organization.loginEmail
+        : organization.loginEmail,
     billingExempt: organization.billingExempt,
     subscriptionStatus,
     subscriptionPlan: organization.subscriptionPlan,
@@ -305,9 +309,10 @@ export async function createBillingCheckout(token: string, plan: SubscriptionPla
   });
 
   const frontendUrl = env.FRONTEND_URL.replace(/\/$/, '');
-  const payerEmail =
-    env.MERCADO_PAGO_TEST_PAYER_EMAIL?.trim().toLowerCase() ||
-    organization.loginEmail;
+  const payerEmail = mercadoPagoTestMode()
+    ? env.MERCADO_PAGO_TEST_PAYER_EMAIL?.trim().toLowerCase() ||
+      organization.loginEmail
+    : organization.loginEmail;
 
   try {
     const order = await mercadoPagoFetch<MercadoPagoOrder>('/v1/orders', {
@@ -459,7 +464,7 @@ export async function createBillingPix(
         processing_mode: 'automatic',
         total_amount: selectedPlan.amountText,
         external_reference: payment.id,
-        payer: env.MERCADO_PAGO_TEST_PAYER_EMAIL
+        payer: mercadoPagoTestMode()
           ? {
               email: 'test_user_br@testuser.com',
               first_name: 'APRO'
@@ -540,10 +545,11 @@ export async function createBillingCard(
   const { organization, selectedPlan, payment, payerEmail } =
     await prepareDirectBillingPayment(token, plan);
 
-  const effectivePayerEmail =
-    env.MERCADO_PAGO_TEST_PAYER_EMAIL?.trim().toLowerCase() ||
-    card.payerEmail?.trim().toLowerCase() ||
-    payerEmail;
+  const effectivePayerEmail = mercadoPagoTestMode()
+    ? env.MERCADO_PAGO_TEST_PAYER_EMAIL?.trim().toLowerCase() ||
+      card.payerEmail?.trim().toLowerCase() ||
+      payerEmail
+    : card.payerEmail?.trim().toLowerCase() || payerEmail;
 
   try {
     const order = await mercadoPagoFetch<MercadoPagoOrder>('/v1/orders', {
