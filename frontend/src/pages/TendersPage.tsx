@@ -234,7 +234,7 @@ export function TendersPage({
     }
   };
 
-  const detach = async (tender: Tender, bidId: string) => {
+  const detach = async (bidId: string) => {
     const label = selectedCompany ? companyName(selectedCompany) : 'esta empresa';
     if (!window.confirm(`Desassociar a licitação de ${label}? A licitação continuará no controle geral.`)) return;
     setActionId(bidId);
@@ -611,7 +611,7 @@ export function TendersPage({
                             <button
                               className="action-button compact-action-button danger-soft-button"
                               disabled={actionId === selectedBid.id}
-                              onClick={() => void detach(tender, selectedBid.id)}
+                              onClick={() => void detach(selectedBid.id)}
                             >
                               <Unlink size={15} /> Desassociar
                             </button>
