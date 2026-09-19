@@ -135,6 +135,9 @@ model Organization {
   auditLogs             AuditLog[]
   passwordResetTokens   OrganizationPasswordResetToken[]
   gmailAccessRequests   GmailAccessRequest[]
+  agendaItems           AgendaItem[]
+  tenderPriorities      TenderPriority[]
+  companyChatMessages   CompanyChatMessage[]
   createdAt             DateTime                          @default(now()) @map("created_at")
   updatedAt             DateTime                          @updatedAt @map("updated_at")
 
@@ -169,6 +172,9 @@ model User {
   gmailAccessRequests          GmailAccessRequest[] @relation("GmailAccessRequestedBy")
   gmailAccessReviews           GmailAccessRequest[] @relation("GmailAccessReviewedBy")
   spreadsheetResponsibilities Tender[]              @relation("TenderSpreadsheetResponsible")
+  agendaItemsCreated          AgendaItem[]           @relation("AgendaCreatedBy")
+  prioritiesCreated           TenderPriority[]       @relation("PriorityCreatedBy")
+  chatMessages                CompanyChatMessage[]   @relation("CompanyChatAuthor")
   megaIntegration             MegaIntegration?
   createdAt                   DateTime              @default(now()) @map("created_at")
   updatedAt                   DateTime              @updatedAt @map("updated_at")
@@ -202,6 +208,9 @@ model Company {
   emailMessages      EmailMessage[]
   gmailAccessRequests GmailAccessRequest[]
   megaFolderLinks    MegaCompanyFolder[]
+  agendaItems        AgendaItem[]
+  tenderPriorities   TenderPriority[]
+  chatMessages       CompanyChatMessage[]
   createdAt          DateTime              @default(now()) @map("created_at")
   updatedAt          DateTime              @updatedAt @map("updated_at")
 
@@ -282,6 +291,8 @@ model Tender {
   bids                         Bid[]
   discounts                    DiscountCalculation[]
   emailMessages                EmailMessage[]        @relation("EmailMatchedTender")
+  agendaItems                   AgendaItem[]
+  priorities                    TenderPriority[]
 
   @@index([organizationId])
   @@index([platformId])
@@ -490,6 +501,64 @@ model EmailMessage {
 }
 
 
+
+
+model AgendaItem {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @map("organization_id") @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  companyId      String       @map("company_id") @db.Uuid
+  company        Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  tenderId       String?      @map("tender_id") @db.Uuid
+  tender         Tender?      @relation(fields: [tenderId], references: [id], onDelete: SetNull)
+  title          String       @db.VarChar(180)
+  notes          String?      @db.Text
+  eventDate      DateTime     @map("event_date")
+  createdById    String       @map("created_by_id") @db.Uuid
+  createdBy      User         @relation("AgendaCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  @@index([organizationId, companyId, eventDate])
+  @@index([tenderId])
+  @@map("agenda_items")
+}
+
+model TenderPriority {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @map("organization_id") @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  companyId      String       @map("company_id") @db.Uuid
+  company        Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  tenderId       String       @map("tender_id") @db.Uuid
+  tender         Tender       @relation(fields: [tenderId], references: [id], onDelete: Cascade)
+  createdById    String       @map("created_by_id") @db.Uuid
+  createdBy      User         @relation("PriorityCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  @@unique([companyId, tenderId])
+  @@index([organizationId, companyId, createdAt])
+  @@index([tenderId])
+  @@map("tender_priorities")
+}
+
+model CompanyChatMessage {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @map("organization_id") @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  companyId      String       @map("company_id") @db.Uuid
+  company        Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  authorId       String       @map("author_id") @db.Uuid
+  author         User         @relation("CompanyChatAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  content        String       @db.VarChar(3000)
+  mentionUserIds String[]     @default([]) @map("mention_user_ids")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  @@index([organizationId, companyId, createdAt])
+  @@index([authorId])
+  @@map("company_chat_messages")
+}
 
 model BillingPayment {
   id                   String               @id @default(uuid()) @db.Uuid
