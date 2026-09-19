@@ -10,7 +10,7 @@ import {
 export const index = async (req: Request, res: Response) => {
   const data = await listDeadlineAlerts(
     req.auth!,
-    req.query as unknown as { horizon: number; pastDays: number }
+    req.query as unknown as { horizon: number; pastDays: number; companyId?: string }
   );
   res.json({ success: true, data });
 };
