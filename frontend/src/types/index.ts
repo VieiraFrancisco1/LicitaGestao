@@ -441,7 +441,7 @@ export type AgendaItem = {
   eventDate: string;
   createdAt: string;
   updatedAt: string;
-  createdBy: { id: string; name: string };
+  createdBy: { id: string; name: string } | null;
   tender: {
     id: string;
     municipality: string;
