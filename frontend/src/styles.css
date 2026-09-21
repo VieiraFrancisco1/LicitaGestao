@@ -7529,3 +7529,36 @@ button.bid-detail-action-card {
   overflow-y: auto;
   overscroll-behavior: contain;
 }
+
+
+/* V25.1 — mantém todas as abas do fluxo de licitações organizadas */
+.tender-status-tabs {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  align-self: stretch;
+  gap: 6px;
+}
+
+.tender-status-tabs button {
+  width: 100%;
+  min-width: 0;
+  padding: 9px 10px;
+  white-space: nowrap;
+  text-align: center;
+}
+
+@media (max-width: 900px) {
+  .tender-status-tabs {
+    display: flex;
+    width: 100%;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+
+  .tender-status-tabs button {
+    flex: 0 0 auto;
+    min-width: 112px;
+  }
+}
