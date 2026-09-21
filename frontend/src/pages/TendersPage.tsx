@@ -571,7 +571,7 @@ export function TendersPage({
                           <strong>{tender.municipality}</strong>
                           {tenderLabel && <small>{tenderLabel}</small>}
                           {tender.isPreQualification && <small className="prequalification-note">Pré-qualificação</small>}
-                          <small>Garantia: {tender.guaranteeType === 'NAO_EXIGIDA' ? 'Não' : 'Sim'}</small>
+                          <small className="tender-guarantee-note"><strong>Garantia:</strong> {tender.guaranteeType === 'NAO_EXIGIDA' ? 'Não' : 'Sim'}</small>
                           {tender.workflowStatus === 'CONVOCADA' && (
                             <small className="tender-workflow-note convoked">Convocada por aviso recebido</small>
                           )}

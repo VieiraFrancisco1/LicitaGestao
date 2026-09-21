@@ -384,3 +384,109 @@
     flex: 0 0 auto;
   }
 }
+
+
+/* ===== V29: cards de licitações mais demarcados ===== */
+.tender-company-tabs button,
+.tender-status-tabs button,
+.organized-tenders-table thead th,
+.organized-tenders-table tbody tr td,
+.organized-tender-filters .search-field,
+.organized-tender-filters .secondary-button {
+  border-color: #c6dafb !important;
+}
+
+.tender-status-tabs {
+  gap: 8px;
+}
+
+.tender-status-tabs button {
+  min-height: 44px;
+  padding: 6px 12px;
+  border-width: 1px;
+  box-shadow: 0 6px 15px rgba(37, 99, 235, 0.05);
+}
+
+.organized-tenders-table {
+  border-spacing: 0 16px;
+}
+
+.organized-tenders-table tbody tr td {
+  box-shadow: 0 10px 22px rgba(37, 99, 235, 0.08);
+}
+
+.organized-tenders-table tbody tr:hover td {
+  box-shadow: 0 14px 28px rgba(37, 99, 235, 0.12);
+}
+
+.compact-license-cell strong {
+  font-size: 18px;
+  font-weight: 900;
+  color: #15376b;
+}
+
+.compact-license-cell small {
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.tender-guarantee-note {
+  margin-top: 8px;
+  color: #163d73 !important;
+  font-size: 13px !important;
+  font-weight: 800;
+}
+
+.tender-guarantee-note strong {
+  color: #0f2f5d;
+  font-weight: 900;
+}
+
+.tender-date-cell strong,
+.tender-validity-cell strong,
+.tender-value-platform-cell strong {
+  font-size: 17px;
+  font-weight: 900;
+  color: #16376a;
+}
+
+.organized-object-cell strong {
+  font-size: 15px;
+  line-height: 1.5;
+  color: #112f58;
+}
+
+.tender-validity-cell small,
+.tender-value-platform-cell small,
+.spreadsheet-inline-owner small,
+.spreadsheet-inline-owner strong {
+  font-size: 12px;
+}
+
+.spreadsheet-inline-owner strong {
+  color: #143763;
+  font-weight: 900;
+}
+
+.spreadsheet-status-pill {
+  min-height: 30px;
+  padding: 5px 10px;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.company-action-grid .compact-action-button,
+.paired-row-actions .compact-action-button,
+.spreadsheet-inline-actions .mini-action-button,
+.spreadsheet-inline-actions .spreadsheet-ready-button {
+  min-height: 36px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.organized-tenders-table thead th {
+  color: #2a446d;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.03em;
+}

@@ -7765,3 +7765,151 @@ button.bid-detail-action-card {
     justify-content: center;
   }
 }
+
+
+/* ===== V29: refinamento visual de cards e dashboard ===== */
+:root {
+  --card-blue-border: #c9dbfb;
+  --card-blue-shadow: 0 10px 24px rgba(37, 99, 235, 0.08);
+  --card-blue-shadow-hover: 0 14px 30px rgba(37, 99, 235, 0.11);
+}
+
+.dashboard-metric-card,
+.dashboard-panel,
+.dashboard-companies-section,
+.table-card,
+.company-bids-card,
+.priority-card,
+.agenda-editable-row,
+.status-breakdown > div,
+.dashboard-company-cards button,
+.dashboard-compact-list > a,
+.attention-row,
+.team-chat-messages article,
+.profile-button,
+.global-search {
+  border-color: var(--card-blue-border) !important;
+}
+
+.dashboard-metric-card,
+.dashboard-panel,
+.dashboard-companies-section,
+.table-card,
+.company-bids-card,
+.dashboard-company-cards button {
+  box-shadow: var(--card-blue-shadow);
+}
+
+.dashboard-panel,
+.dashboard-companies-section,
+.table-card {
+  border-width: 1px;
+}
+
+.dashboard-metric-card {
+  min-height: 122px;
+  border-radius: 16px;
+}
+
+.dashboard-panel,
+.dashboard-companies-section {
+  border-radius: 16px;
+}
+
+.dashboard-panel:hover,
+.dashboard-companies-section:hover,
+.dashboard-metric-card:hover,
+.table-card:hover,
+.company-bids-card:hover {
+  box-shadow: var(--card-blue-shadow-hover);
+}
+
+.dashboard-top-layout,
+.dashboard-grid-secondary {
+  align-items: start;
+}
+
+.dashboard-panel-heading,
+.dashboard-section-heading {
+  margin-bottom: 14px;
+}
+
+.dashboard-priority-panel,
+.dashboard-agenda-panel,
+.team-chat-card,
+.dashboard-grid-secondary > .dashboard-panel {
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+}
+
+.dashboard-priority-panel .dashboard-empty,
+.dashboard-agenda-panel .dashboard-empty,
+.team-chat-card .dashboard-empty,
+.dashboard-grid-secondary .dashboard-empty {
+  min-height: 96px;
+  display: grid;
+  place-items: center;
+  border: 1px dashed #d7e5fb;
+  border-radius: 12px;
+  background: #fbfdff;
+}
+
+.dashboard-compact-list {
+  gap: 8px;
+}
+
+.dashboard-compact-list > a,
+.attention-row,
+.status-breakdown > div,
+.agenda-editable-row,
+.priority-card,
+.dashboard-company-cards button {
+  border: 1px solid var(--card-blue-border);
+  border-radius: 14px;
+  background: #fff;
+}
+
+.dashboard-compact-list > a,
+.attention-row {
+  min-height: 64px;
+  padding: 12px 12px;
+}
+
+.status-breakdown > div {
+  min-height: 44px;
+  background: #f9fbff;
+}
+
+.team-chat-card {
+  padding: 16px;
+}
+
+.team-chat-messages {
+  padding: 8px 4px 8px 2px;
+  border: 1px solid #d5e2fb;
+  border-radius: 14px;
+  background: #fbfdff;
+}
+
+.team-chat-form {
+  margin-top: 2px;
+}
+
+.team-chat-form textarea {
+  border: 1px solid #bcd0f8;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.team-chat-messages article {
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.06);
+}
+
+.dashboard-grid-secondary > .dashboard-panel {
+  min-height: 320px;
+}
+
+@media (max-width: 1100px) {
+  .dashboard-grid-secondary > .dashboard-panel {
+    min-height: 0;
+  }
+}
