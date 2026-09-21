@@ -1,5 +1,6 @@
 import {
   Building2,
+  ChevronDown,
   CheckCircle2,
   ClipboardCheck,
   ExternalLink,
@@ -10,7 +11,6 @@ import {
   Pencil,
   Plus,
   Search,
-  Trash2,
   Unlink,
   UserRoundCheck,
   UserRoundX
@@ -91,6 +91,7 @@ export function TendersPage({
   const [data, setData] = useState<Paginated<Tender> | null>(null);
   const [companies, setCompanies] = useState<CompanySummary[]>([]);
   const [companyScopeId, setCompanyScopeId] = useState(fixedCompanyId ?? '');
+  const [companyPickerOpen, setCompanyPickerOpen] = useState(false);
   const [companyStaffCount, setCompanyStaffCount] = useState<number | null>(null);
   const [search, setSearch] = useState('');
   const [workflowStatus, setWorkflowStatus] = useState<TenderWorkflowStatus>('PENDENTE');
@@ -307,32 +308,6 @@ export function TendersPage({
     }
   };
 
-  const deleteTender = async (tender: Tender) => {
-    const label = tender.noticeNumber ? `${tender.municipality} · ${tender.noticeNumber}` : tender.municipality;
-    const confirmation = window.prompt(
-      `ATENÇÃO: excluir ${label} também remove as participações vinculadas.\n\nDigite EXCLUIR para confirmar:`
-    );
-    if (confirmation?.trim().toUpperCase() !== 'EXCLUIR') return;
-    setActionId(tender.id);
-    setError('');
-    try {
-      await api.delete(`/tenders/${tender.id}`);
-      setData((current) =>
-        current
-          ? {
-              ...current,
-              items: current.items.filter((item) => item.id !== tender.id),
-              total: Math.max(0, current.total - 1)
-            }
-          : current
-      );
-    } catch (err) {
-      setError(errorMessage(err));
-    } finally {
-      setActionId('');
-    }
-  };
-
   const selectedDateLabel =
     month === 'all'
       ? `todos os meses de ${year}`
@@ -360,31 +335,60 @@ export function TendersPage({
       )}
 
       {!fixedCompanyId && (
-        <nav className="tender-company-tabs" aria-label="Licitações por empresa">
-          <button
-            className={!companyScopeId ? 'active' : ''}
-            onClick={() => {
-              setCompanyScopeId('');
-              setPage(1);
-              setCity('');
-            }}
-          >
-            GERAL
-          </button>
-          {companies.map((company) => (
+        <div className="tender-scope-switcher">
+          <nav className="tender-company-tabs tender-company-tabs-compact" aria-label="Licitações por empresa">
             <button
-              key={company.id}
-              className={companyScopeId === company.id ? 'active' : ''}
+              className={!companyScopeId ? 'active' : ''}
               onClick={() => {
-                setCompanyScopeId(company.id);
+                setCompanyScopeId('');
+                setCompanyPickerOpen(false);
                 setPage(1);
                 setCity('');
               }}
             >
-              {companyName(company)}
+              GERAL
             </button>
-          ))}
-        </nav>
+            <button
+              className={companyMode ? 'active company-picker-trigger' : 'company-picker-trigger'}
+              onClick={() => setCompanyPickerOpen((current) => !current)}
+              aria-expanded={companyPickerOpen}
+            >
+              <span>EMPRESAS</span>
+              <ChevronDown size={15} className={companyPickerOpen ? 'rotated' : ''} />
+            </button>
+          </nav>
+
+          {companyPickerOpen && (
+            <div className="tender-company-picker">
+              <div className="tender-company-picker-heading">
+                <div>
+                  <strong>Selecione uma empresa</strong>
+                  <small>Abra somente as licitações vinculadas à empresa escolhida.</small>
+                </div>
+              </div>
+              <div className="tender-company-picker-grid">
+                {companies.map((company) => (
+                  <button
+                    key={company.id}
+                    className={companyScopeId === company.id ? 'selected' : ''}
+                    onClick={() => {
+                      setCompanyScopeId(company.id);
+                      setCompanyPickerOpen(false);
+                      setPage(1);
+                      setCity('');
+                    }}
+                  >
+                    <Building2 size={17} />
+                    <span>
+                      <strong>{companyName(company)}</strong>
+                      <small>{companyScopeId === company.id ? 'Empresa selecionada' : 'Abrir licitações'}</small>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
       {companyMode && !embedded && selectedCompany && (
@@ -706,15 +710,6 @@ export function TendersPage({
                             <button className="action-button compact-action-button" onClick={() => setLinksTender(tender)}>
                               <ExternalLink size={15} /> Links
                             </button>
-                            {(user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && (
-                              <button
-                                className="action-button compact-action-button danger-soft-button"
-                                disabled={actionId === tender.id}
-                                onClick={() => void deleteTender(tender)}
-                              >
-                                <Trash2 size={15} /> Apagar
-                              </button>
-                            )}
                           </div>
                         )}
                       </td>

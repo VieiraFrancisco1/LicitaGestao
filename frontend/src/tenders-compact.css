@@ -490,3 +490,143 @@
   font-weight: 900;
   letter-spacing: 0.03em;
 }
+
+/* ===== V30: escopo de empresas compacto nas licitações ===== */
+.tender-scope-switcher {
+  position: relative;
+  display: grid;
+  gap: 10px;
+}
+
+.tender-company-tabs.tender-company-tabs-compact {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(150px, 220px));
+  justify-content: start;
+  gap: 10px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow: visible;
+}
+
+.tender-company-tabs.tender-company-tabs-compact button {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid #c6dafb;
+  border-radius: 13px;
+  background: #fff;
+  color: #4d5f7a;
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.05);
+}
+
+.tender-company-tabs.tender-company-tabs-compact button.active {
+  color: #155bd7;
+  background: #eef4ff;
+  box-shadow: 0 9px 20px rgba(37, 99, 235, 0.10);
+}
+
+.company-picker-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.company-picker-trigger svg {
+  transition: transform 0.18s ease;
+}
+
+.company-picker-trigger svg.rotated {
+  transform: rotate(180deg);
+}
+
+.tender-company-picker {
+  width: min(860px, 100%);
+  padding: 14px;
+  border: 1px solid #c6dafb;
+  border-radius: 15px;
+  background: #fff;
+  box-shadow: 0 16px 36px rgba(37, 99, 235, 0.12);
+}
+
+.tender-company-picker-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.tender-company-picker-heading > div {
+  display: grid;
+  gap: 2px;
+}
+
+.tender-company-picker-heading strong {
+  color: #163762;
+  font-size: 13px;
+}
+
+.tender-company-picker-heading small {
+  color: #71819a;
+  font-size: 10px;
+}
+
+.tender-company-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.tender-company-picker-grid > button {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-height: 58px;
+  padding: 10px 12px;
+  border: 1px solid #d4e1f7;
+  border-radius: 12px;
+  color: #315079;
+  background: #fbfdff;
+  text-align: left;
+}
+
+.tender-company-picker-grid > button:hover,
+.tender-company-picker-grid > button.selected {
+  border-color: #9fc0f7;
+  background: #eef5ff;
+}
+
+.tender-company-picker-grid > button > svg {
+  color: #2563eb;
+}
+
+.tender-company-picker-grid > button > span {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.tender-company-picker-grid strong {
+  overflow: hidden;
+  color: #173b6b;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tender-company-picker-grid small {
+  color: #71819a;
+  font-size: 9px;
+}
+
+@media (max-width: 680px) {
+  .tender-company-tabs.tender-company-tabs-compact {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tender-company-picker-grid {
+    grid-template-columns: 1fr;
+  }
+}

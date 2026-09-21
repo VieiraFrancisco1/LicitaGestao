@@ -120,7 +120,7 @@ export function CompaniesPage() {
       </div>
       {success && <div className="alert alert-success">{success}</div>}
       {error && <div className="alert alert-error">{error}</div>}
-      <section className="table-card">
+      <section className="table-card companies-admin-section">
         <div className="table-toolbar">
           <label className="search-field">
             <Search size={18} />
@@ -145,67 +145,67 @@ export function CompaniesPage() {
             <option value="false">Inativas</option>
           </select>
         </div>
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Empresa</th>
-                <th>CNPJ</th>
-                <th>Responsável</th>
-                <th>Usuários</th>
-                <th>Status</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading && (
-                <tr>
-                  <td colSpan={6} className="table-message">
-                    Carregando empresas...
-                  </td>
-                </tr>
-              )}
-              {!loading && !data?.items.length && (
-                <tr>
-                  <td colSpan={6} className="table-message">
-                    <Building2 size={28} />
-                    Nenhuma empresa encontrada.
-                  </td>
-                </tr>
-              )}
-              {!loading &&
-                data?.items.map((company) => (
-                  <tr key={company.id}>
-                    <td>
-                      <strong>{company.legalName}</strong>
-                      <small>{company.tradeName || 'Sem nome fantasia'}</small>
-                    </td>
-                    <td>{formatCnpj(company.cnpj)}</td>
-                    <td>{company.contactName || '—'}</td>
-                    <td>{company._count?.users ?? 0}</td>
-                    <td>
-                      <span className={`status-pill ${company.active ? 'active' : 'inactive'}`}>
-                        {company.active ? 'Ativa' : 'Inativa'}
-                      </span>
-                    </td>
-                    <td>
-                      <div className="row-actions">
-                        <Link className="action-button" to={`/empresas/${company.id}`}>
-                          <FolderOpen size={16} />
-                          Abrir
-                        </Link>
-                        {(user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && (
-                          <button className="action-button" onClick={() => setEditing(company)}>
-                            <Edit3 size={16} />
-                            Editar
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
+        <div className="company-admin-grid-wrap">
+          {loading && (
+            <div className="company-admin-state">
+              <span className="spinner" />
+              Carregando empresas...
+            </div>
+          )}
+          {!loading && !data?.items.length && (
+            <div className="company-admin-state">
+              <Building2 size={28} />
+              Nenhuma empresa encontrada.
+            </div>
+          )}
+          {!loading && Boolean(data?.items.length) && (
+            <div className="company-admin-grid">
+              {data?.items.map((company) => (
+                <article className="company-admin-card" key={company.id}>
+                  <div className="company-admin-card-heading">
+                    <span className="company-admin-card-icon">
+                      <Building2 size={20} />
+                    </span>
+                    <div>
+                      <strong>{company.tradeName || company.legalName}</strong>
+                      <small>{company.tradeName ? company.legalName : 'Empresa cliente'}</small>
+                    </div>
+                    <span className={`status-pill ${company.active ? 'active' : 'inactive'}`}>
+                      {company.active ? 'Ativa' : 'Inativa'}
+                    </span>
+                  </div>
+
+                  <div className="company-admin-card-details">
+                    <div>
+                      <small>CNPJ</small>
+                      <strong>{formatCnpj(company.cnpj)}</strong>
+                    </div>
+                    <div>
+                      <small>Responsável</small>
+                      <strong>{company.contactName || 'Não informado'}</strong>
+                    </div>
+                    <div>
+                      <small>Usuários</small>
+                      <strong>{company._count?.users ?? 0}</strong>
+                    </div>
+                  </div>
+
+                  <div className="company-admin-card-actions">
+                    <Link className="action-button" to={`/empresas/${company.id}`}>
+                      <FolderOpen size={16} />
+                      Abrir
+                    </Link>
+                    {(user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && (
+                      <button className="action-button" onClick={() => setEditing(company)}>
+                        <Edit3 size={16} />
+                        Editar
+                      </button>
+                    )}
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
         </div>
         {data && data.pages > 1 && (
           <div className="pagination">
