@@ -2,8 +2,8 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 const slides = [
-  { src: '/auth-showcase-1.jpg', alt: 'Mais oportunidades para o seu negócio com o LicitaGestão' },
-  { src: '/auth-showcase-2.jpg', alt: 'Organize hoje e tenha mais oportunidades amanhã com o LicitaGestão' }
+  { src: '/auth-showcase-1.png', alt: 'Mais oportunidades para o seu negócio com o LicitaGestão' },
+  { src: '/auth-showcase-2.png', alt: 'Organize hoje e tenha mais oportunidades amanhã com o LicitaGestão' }
 ];
 
 export function AccessShowcaseCarousel() {
