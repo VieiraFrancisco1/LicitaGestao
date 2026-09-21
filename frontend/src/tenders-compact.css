@@ -1,7 +1,8 @@
-/* Ajuste pontual: compacta a coluna Planilha e dá mais espaço para Ações. */
+/* Organização da tabela de licitações conforme o layout de referência. */
 
 .organized-tenders-table {
-  min-width: 1180px;
+  width: 100%;
+  min-width: 1160px;
   table-layout: fixed;
 }
 
@@ -10,26 +11,43 @@
 .organized-tenders-table th:nth-child(3) { width: 22%; }
 .organized-tenders-table th:nth-child(4) { width: 7%; }
 .organized-tenders-table th:nth-child(5) { width: 11%; }
-.organized-tenders-table th:nth-child(6) { width: 11%; }
-.organized-tenders-table th:nth-child(7) { width: 14%; }
-.organized-tenders-table th:nth-child(8) { width: 18%; }
+.organized-tenders-table th:nth-child(6) { width: 9%; }
+.organized-tenders-table th:nth-child(7) { width: 18%; }
+.organized-tenders-table th:nth-child(8) { width: 16%; }
+
+.organized-tenders-table th,
+.organized-tenders-table td {
+  vertical-align: top;
+}
 
 .spreadsheet-control-cell {
   min-width: 0;
 }
 
 .spreadsheet-inline-layout {
-  grid-template-columns: minmax(0, 1fr);
-  gap: 6px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 92px;
+  align-items: start;
+  gap: 10px;
 }
 
 .spreadsheet-inline-info {
-  gap: 5px;
+  display: grid;
+  min-width: 0;
+  gap: 8px;
+}
+
+.spreadsheet-inline-owner {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
 }
 
 .spreadsheet-inline-owner small {
-  margin-bottom: 2px;
+  margin: 0;
   font-size: 9px;
+  line-height: 1.2;
+  text-transform: uppercase;
 }
 
 .spreadsheet-inline-owner strong {
@@ -43,42 +61,70 @@
 .spreadsheet-status-pill {
   width: fit-content;
   max-width: 100%;
-  padding: 3px 7px;
+  min-height: 27px;
+  padding: 4px 8px;
   font-size: 9px;
   white-space: nowrap;
 }
 
 .spreadsheet-inline-actions {
+  display: grid;
   grid-template-columns: 1fr;
-  gap: 4px;
+  align-content: start;
+  gap: 7px;
+  min-width: 0;
 }
 
 .spreadsheet-inline-actions .mini-action-button,
 .spreadsheet-inline-actions .spreadsheet-ready-button {
-  min-height: 29px;
-  padding: 5px 6px;
+  width: 100%;
+  min-height: 32px;
+  padding: 5px 7px;
+  justify-content: center;
   font-size: 10px;
+  white-space: nowrap;
 }
 
 .organized-actions-cell {
   min-width: 0;
 }
 
-.company-action-grid {
+.company-action-grid,
+.paired-row-actions {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
+  gap: 7px !important;
   width: 100%;
   min-width: 0;
-  gap: 6px !important;
 }
 
 .company-action-grid .compact-action-button,
 .paired-row-actions .compact-action-button {
-  min-height: 31px;
-  padding: 5px 6px;
+  width: 100%;
+  min-width: 0;
+  min-height: 32px;
+  padding: 5px 7px;
+  justify-content: center;
   font-size: 10px;
+  white-space: nowrap;
 }
 
 @media (max-width: 1400px) {
   .organized-tenders-table {
-    min-width: 1140px;
+    min-width: 1120px;
+  }
+
+  .spreadsheet-inline-layout {
+    grid-template-columns: minmax(0, 1fr) 84px;
+    gap: 7px;
+  }
+
+  .spreadsheet-inline-actions .mini-action-button,
+  .spreadsheet-inline-actions .spreadsheet-ready-button,
+  .company-action-grid .compact-action-button,
+  .paired-row-actions .compact-action-button {
+    padding-inline: 5px;
+    font-size: 9px;
   }
 }
