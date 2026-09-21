@@ -45,3 +45,5 @@ jobs:
           name: LicitaGestao-V25-atualizada-code
           path: patch
           retention-days: 2
+
+# pacote-v25-1
