@@ -312,6 +312,9 @@ export async function removePriority(companyId: string, tenderId: string, auth: 
 export async function listOrganizationChat(auth: AuthScope) {
   const organizationId = requireOrganizationId(auth);
   const members = await organizationChatMembers(organizationId);
+  if (!members.some((member) => member.id === auth.userId)) {
+    throw new AppError('Seu usuário não possui acesso ao chat da equipe', 403);
+  }
   const messages = await prisma.companyChatMessage.findMany({
     where: { organizationId },
     include: { author: { select: { id: true, name: true, role: true } } },
