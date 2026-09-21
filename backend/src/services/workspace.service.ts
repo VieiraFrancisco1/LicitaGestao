@@ -8,16 +8,12 @@ import {
   type AuthScope
 } from './access.service.js';
 
-const companyMembers = async (companyId: string, organizationId: string) =>
+const organizationChatMembers = async (organizationId: string) =>
   prisma.user.findMany({
     where: {
       organizationId,
       active: true,
-      OR: [
-        { role: { in: [UserRole.SUPER_ADMIN, UserRole.ADMIN] } },
-        { companyId },
-        { companyLinks: { some: { companyId } } }
-      ]
+      role: { in: [UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.FUNCIONARIO] }
     },
     select: { id: true, name: true, email: true, role: true },
     orderBy: { name: 'asc' }
@@ -313,30 +309,37 @@ export async function removePriority(companyId: string, tenderId: string, auth: 
   return { removed: true };
 }
 
-export async function listCompanyChat(companyId: string, auth: AuthScope) {
-  await assertCompanyPortalAccess(companyId, auth);
+export async function listOrganizationChat(auth: AuthScope) {
   const organizationId = requireOrganizationId(auth);
-  const members = await companyMembers(companyId, organizationId);
-  const chatEnabled = members.length > 1;
+  const members = await organizationChatMembers(organizationId);
   const messages = await prisma.companyChatMessage.findMany({
-    where: { organizationId, companyId },
+    where: { organizationId },
     include: { author: { select: { id: true, name: true, role: true } } },
     orderBy: { createdAt: 'desc' },
     take: 100
   });
-  return { enabled: chatEnabled, members, messages: messages.reverse() };
+
+  return {
+    enabled: members.length > 1,
+    members,
+    messages: messages.reverse()
+  };
 }
 
-export async function sendCompanyChatMessage(
-  companyId: string,
+export async function sendOrganizationChatMessage(
   input: { content: string; mentionUserIds?: string[] },
   auth: AuthScope
 ) {
-  await assertCompanyWriteAccess(companyId, auth);
   const organizationId = requireOrganizationId(auth);
-  const members = await companyMembers(companyId, organizationId);
+  const members = await organizationChatMembers(organizationId);
+
   if (members.length <= 1) {
-    throw new AppError('O chat é liberado quando a empresa possui mais de um usuário na equipe', 422);
+    throw new AppError('O chat é liberado quando a organização possui mais de um usuário na equipe', 422);
+  }
+
+  const author = members.find((member) => member.id === auth.userId);
+  if (!author) {
+    throw new AppError('Seu usuário não possui acesso ao chat da equipe', 403);
   }
 
   const allowedIds = new Set(members.map((member) => member.id));
@@ -344,15 +347,10 @@ export async function sendCompanyChatMessage(
     new Set((input.mentionUserIds ?? []).filter((id) => id !== auth.userId && allowedIds.has(id)))
   );
 
-  const author = members.find((member) => member.id === auth.userId);
-  if (!author && auth.role !== UserRole.ADMIN && auth.role !== UserRole.SUPER_ADMIN) {
-    throw new AppError('Você não está vinculado a esta empresa', 403);
-  }
-
   const message = await prisma.companyChatMessage.create({
     data: {
       organizationId,
-      companyId,
+      companyId: null,
       authorId: auth.userId,
       content: input.content.trim(),
       mentionUserIds
@@ -372,4 +370,18 @@ export async function sendCompanyChatMessage(
   }
 
   return message;
+}
+
+export async function listCompanyChat(companyId: string, auth: AuthScope) {
+  await assertCompanyPortalAccess(companyId, auth);
+  return listOrganizationChat(auth);
+}
+
+export async function sendCompanyChatMessage(
+  companyId: string,
+  input: { content: string; mentionUserIds?: string[] },
+  auth: AuthScope
+) {
+  await assertCompanyWriteAccess(companyId, auth);
+  return sendOrganizationChatMessage(input, auth);
 }
