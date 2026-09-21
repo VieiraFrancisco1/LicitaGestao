@@ -15,58 +15,67 @@ export const show = async (req: Request, res: Response) => {
 
 export const create = async (req: Request, res: Response) => {
   const bid = await createBid(req.body, req.auth!);
-  await recordAudit(req.auth!, {
+  res.status(201).json({ success: true, message: 'Participação criada com sucesso', data: bid });
+
+  void recordAudit(req.auth!, {
     action: AuditActions.CREATE,
     entityType: 'BID',
     entityId: bid.id,
     entityLabel: bid.company.tradeName || bid.company.legalName,
     description: 'Participação de empresa cadastrada na licitação',
     metadata: { tenderId: bid.tenderId, companyId: bid.companyId }
-  });
-  await relinkPotentialConvocationsForTender(bid.tenderId).catch((error) =>
-    console.error('Falha ao reavaliar convocações após associar empresa:', error)
+  }).catch((error) => console.error('Falha ao registrar auditoria da participação:', error));
+
+  void relinkPotentialConvocationsForTender(bid.tenderId).catch((error) =>
+    console.error('Falha ao reavaliar convocações após participar:', error)
   );
-  res.status(201).json({ success: true, message: 'Licitação associada à empresa', data: bid });
 };
 
 export const createForTender = async (req: Request, res: Response) => {
   const bid = await createBid({ ...req.body, tenderId: req.params.id as string }, req.auth!);
-  await recordAudit(req.auth!, {
+
+  // A participação já existe no banco neste ponto. Responde imediatamente e deixa
+  // auditoria/reanálise de e-mails em segundo plano para não travar o botão Participar.
+  res.status(201).json({ success: true, message: 'Participação criada com sucesso', data: bid });
+
+  void recordAudit(req.auth!, {
     action: AuditActions.CREATE,
     entityType: 'BID',
     entityId: bid.id,
     entityLabel: bid.company.tradeName || bid.company.legalName,
     description: 'Participação de empresa cadastrada na licitação',
     metadata: { tenderId: bid.tenderId, companyId: bid.companyId }
-  });
-  await relinkPotentialConvocationsForTender(bid.tenderId).catch((error) =>
-    console.error('Falha ao reavaliar convocações após associar empresa:', error)
+  }).catch((error) => console.error('Falha ao registrar auditoria da participação:', error));
+
+  void relinkPotentialConvocationsForTender(bid.tenderId).catch((error) =>
+    console.error('Falha ao reavaliar convocações após participar:', error)
   );
-  res.status(201).json({ success: true, message: 'Licitação associada à empresa', data: bid });
 };
 
 export const update = async (req: Request, res: Response) => {
   const bid = await updateBid(req.params.id as string, req.body, req.auth!);
-  await recordAudit(req.auth!, {
+  res.json({ success: true, message: 'Participação atualizada', data: bid });
+
+  void recordAudit(req.auth!, {
     action: AuditActions.UPDATE,
     entityType: 'BID',
     entityId: bid.id,
     entityLabel: bid.company.tradeName || bid.company.legalName,
     description: 'Participação atualizada',
     metadata: { changedFields: Object.keys(req.body), tenderId: bid.tenderId, companyId: bid.companyId }
-  });
-  res.json({ success: true, message: 'Participação atualizada', data: bid });
+  }).catch((error) => console.error('Falha ao registrar auditoria da participação:', error));
 };
 
 export const remove = async (req: Request, res: Response) => {
   const bid = await deleteBid(req.params.id as string, req.auth!);
-  await recordAudit(req.auth!, {
+  res.json({ success: true, message: 'Licitação desvinculada da empresa' });
+
+  void recordAudit(req.auth!, {
     action: AuditActions.DELETE,
     entityType: 'BID',
     entityId: bid.id,
     entityLabel: `${bid.company.tradeName || bid.company.legalName} · ${bid.tender.municipality}`,
-    description: 'Licitação desassociada da empresa',
+    description: 'Licitação desvinculada da empresa',
     metadata: { tenderId: bid.tenderId, companyId: bid.companyId }
-  });
-  res.json({ success: true, message: 'Licitação desassociada da empresa' });
+  }).catch((error) => console.error('Falha ao registrar auditoria do desvínculo:', error));
 };

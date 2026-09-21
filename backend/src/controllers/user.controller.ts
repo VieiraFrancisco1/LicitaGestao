@@ -73,7 +73,7 @@ export const resetPassword = async (req: Request, res: Response) => {
     entityType: 'USER_SECURITY',
     entityId: user.id,
     entityLabel: user.name,
-    description: 'Senha de funcionário redefinida pelo administrador'
+    description: 'Senha de usuário redefinida pelo administrador'
   });
   res.json({ success: true, message: 'Senha do usuário redefinida com sucesso.' });
 };

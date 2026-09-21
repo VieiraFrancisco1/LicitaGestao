@@ -29,6 +29,7 @@ import type {
   Paginated,
   Tender,
   TenderFilterOptions,
+  TenderParticipation,
   TenderWorkflowStatus
 } from '../types';
 import { availableSituationOptions, formatCurrency, formatDate, progressOptions } from '../utils/bid';
@@ -199,8 +200,21 @@ export function TendersPage({
     setActionId(tender.id);
     setError('');
     try {
-      await api.patch(`/tenders/${tender.id}/spreadsheet-ready`, { ready: !tender.spreadsheetReady });
-      await load();
+      const response = await api.patch<ApiResponse<Tender>>(`/tenders/${tender.id}/spreadsheet-ready`, {
+        ready: !tender.spreadsheetReady
+      });
+      setData((current) =>
+        current
+          ? {
+              ...current,
+              items: current.items.map((item) =>
+                item.id === tender.id
+                  ? { ...item, spreadsheetReady: response.data.data.spreadsheetReady }
+                  : item
+              )
+            }
+          : current
+      );
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -212,8 +226,25 @@ export function TendersPage({
     setActionId(tender.id);
     setError('');
     try {
-      await api.patch(`/tenders/${tender.id}/spreadsheet-responsibility`, { responsible });
-      await load();
+      const response = await api.patch<ApiResponse<Tender>>(`/tenders/${tender.id}/spreadsheet-responsibility`, {
+        responsible
+      });
+      setData((current) =>
+        current
+          ? {
+              ...current,
+              items: current.items.map((item) =>
+                item.id === tender.id
+                  ? {
+                      ...item,
+                      spreadsheetResponsibleUserId: response.data.data.spreadsheetResponsibleUserId,
+                      spreadsheetResponsibleUser: response.data.data.spreadsheetResponsibleUser
+                    }
+                  : item
+              )
+            }
+          : current
+      );
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -225,8 +256,18 @@ export function TendersPage({
     setActionId(bidId);
     setError('');
     try {
-      await api.put(`/bids/${bidId}`, { situation: 'ANEXADA' });
-      await load();
+      const response = await api.put<ApiResponse<TenderParticipation>>(`/bids/${bidId}`, { situation: 'ANEXADA' });
+      setData((current) =>
+        current
+          ? {
+              ...current,
+              items: current.items.map((item) => ({
+                ...item,
+                bids: item.bids.map((bid) => (bid.id === bidId ? { ...bid, ...response.data.data } : bid))
+              }))
+            }
+          : current
+      );
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -236,12 +277,29 @@ export function TendersPage({
 
   const detach = async (bidId: string) => {
     const label = selectedCompany ? companyName(selectedCompany) : 'esta empresa';
-    if (!window.confirm(`Desassociar a licitação de ${label}? A licitação continuará no controle geral.`)) return;
+    if (!window.confirm(`Desvincular a licitação de ${label}? A licitação continuará no controle geral.`)) return;
     setActionId(bidId);
     setError('');
     try {
       await api.delete(`/bids/${bidId}`);
-      await load();
+      setData((current) => {
+        if (!current) return current;
+        if (companyMode) {
+          const items = current.items.filter((item) => !item.bids.some((bid) => bid.id === bidId));
+          return {
+            ...current,
+            items,
+            total: Math.max(0, current.total - (items.length < current.items.length ? 1 : 0))
+          };
+        }
+        return {
+          ...current,
+          items: current.items.map((item) => ({
+            ...item,
+            bids: item.bids.filter((bid) => bid.id !== bidId)
+          }))
+        };
+      });
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -259,7 +317,15 @@ export function TendersPage({
     setError('');
     try {
       await api.delete(`/tenders/${tender.id}`);
-      await load();
+      setData((current) =>
+        current
+          ? {
+              ...current,
+              items: current.items.filter((item) => item.id !== tender.id),
+              total: Math.max(0, current.total - 1)
+            }
+          : current
+      );
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -562,7 +628,7 @@ export function TendersPage({
                           <div className="spreadsheet-inline-info">
                             <span className={`spreadsheet-status-pill ${tender.spreadsheetReady ? 'ready' : ''}`}>
                               {tender.spreadsheetReady ? <CheckCircle2 size={14} /> : <ClipboardCheck size={14} />}
-                              {tender.spreadsheetReady ? 'Pronta' : 'Em preparação'}
+                              {tender.spreadsheetReady ? 'Concluído' : 'Em andamento'}
                             </span>
                             <div className="spreadsheet-inline-owner">
                               <small>Responsável técnico</small>
@@ -579,7 +645,7 @@ export function TendersPage({
                                   onClick={() => void toggleResponsibility(tender, true)}
                                 >
                                   <UserRoundCheck size={14} />
-                                  Assumir planilha
+                                  Assumir
                                 </button>
                               )}
                             {canManageSpreadsheet && tender.spreadsheetResponsibleUserId && canRelease && (
@@ -597,7 +663,7 @@ export function TendersPage({
                               disabled={actionId === tender.id}
                               onClick={() => void toggleSpreadsheet(tender)}
                             >
-                              {tender.spreadsheetReady ? 'Desmarcar pronta' : 'Marcar pronta'}
+                              {tender.spreadsheetReady ? 'Concluído' : 'Em andamento'}
                             </button>
                           </div>
                         </div>
@@ -613,7 +679,7 @@ export function TendersPage({
                               disabled={actionId === selectedBid.id}
                               onClick={() => void detach(selectedBid.id)}
                             >
-                              <Unlink size={15} /> Desassociar
+                              <Unlink size={15} /> Desvincular
                             </button>
                             <Link className="action-button compact-action-button" to={`/participacoes/${selectedBid.id}/editar`}>
                               <Pencil size={15} /> Editar
@@ -632,7 +698,7 @@ export function TendersPage({
                               disabled={!hasAssociableCompanies}
                               onClick={() => hasAssociableCompanies && setAssociating(tender)}
                             >
-                              <Link2 size={15} /> Associar
+                              <Link2 size={15} /> Participar
                             </button>
                             <Link className="action-button compact-action-button" to={`/licitacoes/${tender.id}/editar`}>
                               <Pencil size={15} /> Editar
@@ -676,9 +742,18 @@ export function TendersPage({
           tender={associating}
           companies={companies.filter((company) => !associating.bids.some((bid) => bid.companyId === company.id))}
           onClose={() => setAssociating(null)}
-          onSaved={() => {
+          onSaved={(bid) => {
+            setData((current) =>
+              current
+                ? {
+                    ...current,
+                    items: current.items.map((item) =>
+                      item.id === associating.id ? { ...item, bids: [...item.bids, bid] } : item
+                    )
+                  }
+                : current
+            );
             setAssociating(null);
-            void load();
           }}
         />
       )}
@@ -728,9 +803,22 @@ function TenderCompaniesModal({ tender, onClose }: { tender: Tender; onClose: ()
 
 function TenderLinksModal({ tender, onClose }: { tender: Tender; onClose: () => void }) {
   const reference = [tender.municipality, formatDate(tender.sessionDate)].join(' · ');
+  const seobraLinks = tender.seobraLinks?.length
+    ? tender.seobraLinks
+    : tender.seobraLink
+      ? [tender.seobraLink]
+      : [];
   const links = [
-    { label: 'SEOBRA', url: tender.seobraLink, description: 'Consulta externa da licitação' },
-    { label: 'Plataforma', url: tender.platformLink || tender.platform?.site, description: tender.platform?.name || 'Plataforma do certame' }
+    ...seobraLinks.map((url, index) => ({
+      label: `Lote ${index + 1}`,
+      url,
+      description: 'SEOBRA'
+    })),
+    {
+      label: 'Plataforma',
+      url: tender.platformLink || tender.platform?.site,
+      description: tender.platform?.name || 'Plataforma do certame'
+    }
   ];
 
   return (
@@ -767,7 +855,7 @@ function AssociationModal({
   tender: Tender;
   companies: CompanySummary[];
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: (bid: TenderParticipation) => void;
 }) {
   const [companyId, setCompanyId] = useState(companies.length === 1 ? companies[0]!.id : '');
   const [progress, setProgress] = useState<BidProgress>('NAO_INICIADA');
@@ -782,8 +870,12 @@ function AssociationModal({
     setSaving(true);
     setError('');
     try {
-      await api.post(`/tenders/${tender.id}/participations`, { companyId, progress, situation });
-      onSaved();
+      const response = await api.post<ApiResponse<TenderParticipation>>(`/tenders/${tender.id}/participations`, {
+        companyId,
+        progress,
+        situation
+      });
+      onSaved(response.data.data);
     } catch (err) {
       setError(errorMessage(err));
       setSaving(false);
@@ -791,7 +883,7 @@ function AssociationModal({
   };
 
   return (
-    <Modal title="Associar licitação à empresa" onClose={onClose}>
+    <Modal title="Participar com a empresa" onClose={onClose}>
       <form className="entity-form association-form-clean" onSubmit={(event) => void submit(event)}>
         <div className="section-note">
           {tender.municipality} · {formatDate(tender.sessionDate)}. Escolha a empresa e o estado inicial da participação.
@@ -823,7 +915,7 @@ function AssociationModal({
         {company && <small>Será adicionada à lista de {companyName(company)}.</small>}
         <div className="modal-actions">
           <button type="button" className="secondary-button" onClick={onClose} disabled={saving}>Cancelar</button>
-          <button className="primary-button" disabled={saving || !companyId}>{saving ? 'Associando...' : 'Associar empresa'}</button>
+          <button className="primary-button" disabled={saving || !companyId}>{saving ? 'Participando...' : 'Participar'}</button>
         </div>
       </form>
     </Modal>

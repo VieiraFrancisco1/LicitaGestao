@@ -119,6 +119,7 @@ export type Tender = {
   platform: Platform | null;
   platformLink: string | null;
   seobraLink: string | null;
+  seobraLinks: string[];
   spreadsheetReady: boolean;
   spreadsheetResponsibleUserId: string | null;
   spreadsheetResponsibleUser: { id: string; name: string; email: string } | null;

@@ -15,7 +15,7 @@ import {
   TriangleAlert,
   X
 } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Modal } from '../components/Modal';
 import { useAuth } from '../contexts/AuthContext';
@@ -42,7 +42,7 @@ function relative(days?: number) {
 const chatRoleLabel = {
   SUPER_ADMIN: 'Super Admin',
   ADMIN: 'Administrador',
-  FUNCIONARIO: 'Funcionário',
+  FUNCIONARIO: 'Usuário',
   EMPRESA: 'Empresa'
 } as const;
 
@@ -81,6 +81,8 @@ export function DashboardPage() {
   const [editingAgenda, setEditingAgenda] = useState<AgendaItem | null>(null);
   const [chatText, setChatText] = useState('');
   const [chatMentions, setChatMentions] = useState<string[]>([]);
+  const [deletingChatId, setDeletingChatId] = useState('');
+  const chatMessagesRef = useRef<HTMLDivElement | null>(null);
   const [sendingChat, setSendingChat] = useState(false);
 
   const load = useCallback(async () => {
@@ -160,6 +162,12 @@ export function DashboardPage() {
     return () => window.clearInterval(timer);
   }, [loadChat]);
 
+  useEffect(() => {
+    const container = chatMessagesRef.current;
+    if (!container) return;
+    container.scrollTop = container.scrollHeight;
+  }, [chat?.messages.length]);
+
   const selectedName = useMemo(
     () =>
       data?.companies.find((company) => company.id === companyId)?.tradeName ||
@@ -196,20 +204,48 @@ export function DashboardPage() {
 
   const sendChat = async (event: FormEvent) => {
     event.preventDefault();
-    if (!chatText.trim() || sendingChat) return;
+    const content = chatText.trim();
+    if (!content || sendingChat) return;
+
+    const mentionUserIds = chatMentions.filter((memberId) => {
+      const member = chat?.members.find((item) => item.id === memberId);
+      return member ? content.includes(`@${member.name}`) : false;
+    });
+
     setSendingChat(true);
     try {
-      await api.post('/workspace/chat', {
-        content: chatText.trim(),
-        mentionUserIds: chatMentions
+      const response = await api.post<ApiResponse<CompanyChatData['messages'][number]>>('/workspace/chat', {
+        content,
+        mentionUserIds
       });
+      setChat((current) =>
+        current ? { ...current, messages: [...current.messages, response.data.data] } : current
+      );
       setChatText('');
       setChatMentions([]);
-      await loadChat();
     } catch (err) {
       setError(errorMessage(err));
     } finally {
       setSendingChat(false);
+    }
+  };
+
+  const deleteChatMessage = async (messageId: string) => {
+    if (deletingChatId) return;
+    if (!window.confirm('Excluir esta mensagem do chat?')) return;
+    setDeletingChatId(messageId);
+    setError('');
+    try {
+      await api.delete(`/workspace/chat/${messageId}`);
+      setChat((current) =>
+        current
+          ? { ...current, messages: current.messages.filter((message) => message.id !== messageId) }
+          : current
+      );
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setDeletingChatId('');
     }
   };
 
@@ -457,7 +493,7 @@ export function DashboardPage() {
             </div>
             <MessageCircle size={20} />
           </div>
-          <div className="team-chat-messages">
+          <div className="team-chat-messages" ref={chatMessagesRef}>
             {!chat.enabled && (
               <div className="dashboard-empty">
                 O chat será liberado assim que houver pelo menos dois usuários ativos na equipe da organização.
@@ -466,9 +502,23 @@ export function DashboardPage() {
             {chat.enabled && !chat.messages.length && <div className="dashboard-empty">Nenhuma mensagem ainda.</div>}
             {chat.enabled && chat.messages.map((message) => (
               <article key={message.id} className={message.authorId === user?.id ? 'mine' : ''}>
-                <div>
+                <div className="chat-message-heading">
                   <strong>{message.author.name}</strong>
-                  <small>{new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(message.createdAt))}</small>
+                  <span className="chat-message-meta">
+                    <small>{new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(message.createdAt))}</small>
+                    {message.authorId === user?.id && (
+                      <button
+                        type="button"
+                        className="chat-delete-message"
+                        title="Excluir minha mensagem"
+                        aria-label="Excluir minha mensagem"
+                        disabled={deletingChatId === message.id}
+                        onClick={() => void deleteChatMessage(message.id)}
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    )}
+                  </span>
                 </div>
                 <p>{message.content}</p>
               </article>
@@ -481,6 +531,12 @@ export function DashboardPage() {
                   rows={2}
                   value={chatText}
                   onChange={(event) => setChatText(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' && !event.shiftKey) {
+                      event.preventDefault();
+                      if (chatText.trim() && !sendingChat) event.currentTarget.form?.requestSubmit();
+                    }
+                  }}
                   placeholder="Escreva uma mensagem. Digite @ para marcar alguém."
                   maxLength={3000}
                 />

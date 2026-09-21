@@ -191,7 +191,7 @@ export const listBids = async (query: BidQuery, auth: AuthScope) => {
 
 export const deleteBid = async (id: string, auth: AuthScope) => {
   if (auth.role === UserRole.EMPRESA)
-    throw new AppError('Seu perfil não pode desassociar a licitação inteira', 403);
+    throw new AppError('Seu perfil não pode desvincular a licitação inteira', 403);
   const bid = await getBid(id, auth);
   await assertCompanyWriteAccess(bid.companyId, auth);
   await prisma.$transaction([

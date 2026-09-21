@@ -71,7 +71,7 @@ export function ForgotPasswordPage() {
 
             <div className="organization-login-security">
               <Building2 size={17} />
-              <span>Senhas individuais de funcionários continuam sendo administradas pelo administrador da empresa.</span>
+              <span>Senhas individuais de usuários continuam sendo administradas pelo administrador da empresa.</span>
             </div>
 
             <button className="primary-button large" disabled={submitting}>

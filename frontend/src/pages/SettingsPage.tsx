@@ -17,7 +17,7 @@ import './settings.css';
 const roleLabels = {
   SUPER_ADMIN: 'Super Admin',
   ADMIN: 'Administrador',
-  FUNCIONARIO: 'Funcionário',
+  FUNCIONARIO: 'Usuário',
   EMPRESA: 'Empresa'
 } as const;
 

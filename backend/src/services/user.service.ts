@@ -25,7 +25,7 @@ const ensureCompanyRule = (
   if (role !== UserRole.EMPRESA && companyId)
     throw new AppError('Somente usuário EMPRESA pode ser vinculado', 422);
   if (role !== UserRole.FUNCIONARIO && companyIds.length > 0)
-    throw new AppError('Somente funcionário pode ser vinculado a várias empresas', 422);
+    throw new AppError('Somente usuário operacional pode ser vinculado a várias empresas', 422);
 };
 
 async function assertCompaniesBelongToOrganization(
@@ -163,7 +163,7 @@ export const unlinkUserFromCompany = async (id: string, companyId: string, auth:
   await prisma.$transaction(async (tx) => {
     if (user.role === UserRole.FUNCIONARIO) {
       const linked = user.companyLinks.some((link) => link.companyId === companyId);
-      if (!linked) throw new AppError('Funcionário não está associado a esta empresa', 404);
+      if (!linked) throw new AppError('Usuário não está associado a esta empresa', 404);
       await tx.companyUser.delete({ where: { companyId_userId: { companyId, userId: id } } });
       return;
     }

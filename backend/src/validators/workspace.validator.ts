@@ -79,3 +79,9 @@ export const organizationChatCreateSchema = z.object({
   params: z.object({}),
   query: z.object({})
 });
+
+export const organizationChatDeleteSchema = z.object({
+  body: z.object({}),
+  params: z.object({ messageId: z.string().uuid() }),
+  query: z.object({})
+});

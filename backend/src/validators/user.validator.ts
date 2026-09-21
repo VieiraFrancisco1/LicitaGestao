@@ -26,7 +26,7 @@ const validateCompanyRules = (value: CompanyRuleValue, ctx: z.RefinementCtx) => 
     ctx.addIssue({
       code: 'custom',
       path: ['companyIds'],
-      message: 'Somente funcionário recebe várias empresas'
+      message: 'Somente usuário operacional recebe várias empresas'
     });
   }
 };

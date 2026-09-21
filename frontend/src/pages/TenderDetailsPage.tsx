@@ -135,6 +135,12 @@ export function TenderDetailsPage() {
   const canEditNotes = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN' || isResponsible;
   const canRelease = isResponsible || user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
 
+  const seobraLinks = tender.seobraLinks?.length
+    ? tender.seobraLinks
+    : tender.seobraLink
+      ? [tender.seobraLink]
+      : [];
+
   return (
     <div className="page-stack">
       <div className="details-header">
@@ -178,7 +184,7 @@ export function TenderDetailsPage() {
         <div className="spreadsheet-detail-summary">
           <div>
             <span className="eyebrow">Controle da planilha</span>
-            <h3>{tender.spreadsheetReady ? 'Planilha pronta' : 'Planilha em preparação'}</h3>
+            <h3>{tender.spreadsheetReady ? 'Planilha concluída' : 'Planilha em andamento'}</h3>
             <p>
               Responsável: <strong>{tender.spreadsheetResponsibleUser?.name || 'não definido'}</strong>
             </p>
@@ -223,7 +229,7 @@ export function TenderDetailsPage() {
         )}
       </section>
 
-      {(tender.seobraLink || tender.platformLink) && (
+      {(seobraLinks.length > 0 || tender.platformLink) && (
         <section className="detail-panel tender-links-panel">
           <div className="panel-heading">
             <div>
@@ -232,13 +238,13 @@ export function TenderDetailsPage() {
             </div>
           </div>
           <div className="tender-link-actions">
-            {tender.seobraLink && (
-              <a className="primary-button" href={tender.seobraLink} target="_blank" rel="noreferrer">
+            {seobraLinks.map((url, index) => (
+              <a className="primary-button" href={url} target="_blank" rel="noreferrer" key={url}>
                 <FileSpreadsheet size={17} />
-                Abrir no SEOBRA
+                SEOBRA · Lote {index + 1}
                 <ExternalLink size={14} />
               </a>
-            )}
+            ))}
             {tender.platformLink && (
               <a className="secondary-button" href={tender.platformLink} target="_blank" rel="noreferrer">
                 <ExternalLink size={17} />
@@ -252,7 +258,7 @@ export function TenderDetailsPage() {
         <Info label="Modalidade" value={tender.modality || 'Não informada'} />
         <Info label="Pré-qualificação" value={tender.isPreQualification ? 'Sim' : 'Não'} />{' '}
         {/* LICITAGESTAO_PREQUAL_ALL_EMAILS_V1_DETAILS */}
-        <Info label="Número da licitação" value={tender.noticeNumber || 'Não informado'} />
+        <Info label="Número do edital" value={tender.noticeNumber || 'Não informado'} />
         <Info label="Processo administrativo" value={tender.processNumber || 'Não informado'} />
         <Info label="Prazo de execução" value={tender.executionTerm || 'Não informado'} />
         <Info label="Data" value={formatDate(tender.sessionDate)} />
@@ -263,7 +269,7 @@ export function TenderDetailsPage() {
           value={tender.proposalValidityDays ? `${tender.proposalValidityDays} dias` : 'Não informada'}
         />
         <Info label="Garantia de 1%" value={Number(tender.guaranteePercentage) === 1 ? 'Sim' : 'Não'} />
-        <Info label="Planilha" value={tender.spreadsheetReady ? 'Pronta' : 'Ainda não pronta'} />
+        <Info label="Planilha" value={tender.spreadsheetReady ? 'Concluído' : 'Em andamento'} />
         <Info label="Lista" value={tender.listStatus === 'ANEXADA' ? 'Já anexada' : 'Pendente'} />
         <Info label="Empresas associadas" value={String(tender._count?.bids ?? 0)} />
       </div>
@@ -284,7 +290,7 @@ export function TenderDetailsPage() {
               <Building2 size={28} />
               <p>Esta licitação ainda não foi associada a uma das suas empresas.</p>
               <Link className="primary-button" to="/licitacoes">
-                Associar no controle geral
+                Participar pelo controle geral
               </Link>
             </div>
           )}

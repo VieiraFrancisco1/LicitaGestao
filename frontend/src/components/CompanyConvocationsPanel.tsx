@@ -20,7 +20,7 @@ function bidLabel(bid: Bid) {
 
 function matchLabel(item: EmailMessage) {
   if (item.convocationMatchMethod === 'PROCESS_NUMBER') return 'Processo administrativo identificado';
-  if (item.convocationMatchMethod === 'NOTICE_NUMBER') return 'Número da licitação identificado';
+  if (item.convocationMatchMethod === 'NOTICE_NUMBER') return 'Número do edital identificado';
   if (item.convocationMatchMethod === 'CONTEXT') return 'Cidade e plataforma identificadas';
   if (item.convocationMatchMethod === 'MANUAL') return 'Vinculação manual';
   return null;
@@ -135,7 +135,7 @@ export function CompanyConvocationsPanel({
           </p>
           <small>
             {bidId
-              ? 'Quando o processo ou número da licitação for identificado no e-mail, o aviso aparecerá aqui.'
+              ? 'Quando o processo ou número do edital for identificado no e-mail, o aviso aparecerá aqui.'
               : 'Avisos sem correspondência segura continuam disponíveis aqui para vinculação manual.'}
           </small>
         </div>

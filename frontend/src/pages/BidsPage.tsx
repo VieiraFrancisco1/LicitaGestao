@@ -111,7 +111,7 @@ export function BidsPage({ fixedCompanyId }: { fixedCompanyId?: string }) {
           <span>Participações e documentos exclusivos desta empresa</span>
           <Link className="primary-button" to="/licitacoes">
             <Link2 size={17} />
-            Associar do controle geral
+            Participar pelo controle geral
           </Link>
         </div>
       )}
@@ -372,18 +372,24 @@ export function BidsPage({ fixedCompanyId }: { fixedCompanyId?: string }) {
                                   Plataforma
                                 </a>
                               )}
-                              {bid.tender.seobraLink && (
+                              {(bid.tender.seobraLinks?.length
+                                ? bid.tender.seobraLinks
+                                : bid.tender.seobraLink
+                                  ? [bid.tender.seobraLink]
+                                  : []
+                              ).map((url, index) => (
                                 <a
                                   className="inline-link-button"
-                                  href={bid.tender.seobraLink}
+                                  href={url}
                                   target="_blank"
                                   rel="noreferrer"
-                                  title="Abrir esta licitação no SEOBRA"
+                                  title={`Abrir Lote ${index + 1} no SEOBRA`}
+                                  key={url}
                                 >
                                   <ExternalLink size={13} />
-                                  SEOBRA
+                                  Lote {index + 1}
                                 </a>
-                              )}
+                              ))}
                             </div>
                           </div>
                         </td>
@@ -436,15 +442,24 @@ export function BidsPage({ fixedCompanyId }: { fixedCompanyId?: string }) {
             <div className="bid-links-list">
               <div>
                 <span>SEOBRA</span>
-                {linksBid.tender.seobraLink ? (
-                  <a
-                    href={linksBid.tender.seobraLink}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="primary-button"
-                  >
-                    <ExternalLink size={16} /> Abrir SEOBRA
-                  </a>
+                {(linksBid.tender.seobraLinks?.length
+                  ? linksBid.tender.seobraLinks
+                  : linksBid.tender.seobraLink
+                    ? [linksBid.tender.seobraLink]
+                    : []
+                ).length > 0 ? (
+                  <div className="seobra-modal-links">
+                    {(linksBid.tender.seobraLinks?.length
+                      ? linksBid.tender.seobraLinks
+                      : linksBid.tender.seobraLink
+                        ? [linksBid.tender.seobraLink]
+                        : []
+                    ).map((url, index) => (
+                      <a href={url} target="_blank" rel="noreferrer" className="primary-button" key={url}>
+                        <ExternalLink size={16} /> Lote {index + 1}
+                      </a>
+                    ))}
+                  </div>
                 ) : (
                   <small>Link não cadastrado.</small>
                 )}

@@ -33,6 +33,7 @@ export type TenderInput = {
   platformId?: string | null;
   platformLink?: string | null;
   seobraLink?: string | null;
+  seobraLinks?: string[];
   requiresGuaranteeOnePercent?: boolean;
 };
 
@@ -81,6 +82,7 @@ const ensurePlatform = async (platformId: string | null | undefined, auth: AuthS
 const clean = (data: TenderInput, referenceValue?: number | Prisma.Decimal | null) => {
   const { requiresGuaranteeOnePercent, ...rest } = data;
   const estimatedValue = data.estimatedValue ?? referenceValue;
+  const normalizedSeobraLinks = data.seobraLinks?.map((link) => link.trim()).filter(Boolean);
   return {
     ...rest,
     ...(data.modality !== undefined ? { modality: data.modality || null } : {}),
@@ -88,7 +90,14 @@ const clean = (data: TenderInput, referenceValue?: number | Prisma.Decimal | nul
     ...(data.processNumber !== undefined ? { processNumber: data.processNumber || null } : {}),
     ...(data.executionTerm !== undefined ? { executionTerm: data.executionTerm || null } : {}),
     ...(data.platformLink !== undefined ? { platformLink: data.platformLink || null } : {}),
-    ...(data.seobraLink !== undefined ? { seobraLink: data.seobraLink || null } : {}),
+    ...(data.seobraLinks !== undefined
+      ? {
+          seobraLinks: normalizedSeobraLinks ?? [],
+          seobraLink: normalizedSeobraLinks?.[0] || null
+        }
+      : data.seobraLink !== undefined
+        ? { seobraLink: data.seobraLink || null }
+        : {}),
     ...(requiresGuaranteeOnePercent !== undefined
       ? {
           guaranteeType: requiresGuaranteeOnePercent ? GuaranteeType.PROPOSTA_INICIAL : GuaranteeType.NAO_EXIGIDA,
@@ -225,16 +234,23 @@ const classifyWorkflowMessage = (message: {
   const resourceTerms = [
     'manifestar intencao de recurso',
     'manifestacao de intencao de recurso',
+    'manifestacao de recurso',
     'intencao de recorrer',
     'intencao de interpor recurso',
+    'intencao recursal',
     'prazo para recurso',
     'prazo recursal',
+    'fase recursal',
     'recurso administrativo',
     'apresentacao de recurso',
     'interposicao de recurso',
     'impugnacao ao edital',
+    'impugnacao do edital',
+    'impugnacao de edital',
     'pedido de impugnacao',
     'apresentar contrarrazoes',
+    'apresentacao de contrarrazoes',
+    'contrarrazoes ao recurso',
     'prazo para contrarrazoes'
   ];
 

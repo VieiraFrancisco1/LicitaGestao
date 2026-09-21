@@ -150,7 +150,7 @@ export function CompanyDetailsPage() {
           <CompanyStat icon={<Building2 />} label="Usuários da empresa" value={company._count?.users ?? 0} />
           <CompanyStat
             icon={<Building2 />}
-            label="Funcionários responsáveis"
+            label="Usuários responsáveis"
             value={company._count?.staffLinks ?? 0}
           />
           <section className="detail-panel full-width">

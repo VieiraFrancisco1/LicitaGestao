@@ -3,6 +3,7 @@ import {
   addPriority,
   createAgendaItem,
   deleteAgendaItem,
+  deleteOrganizationChatMessage,
   listAgenda,
   listCompanyChat,
   listOrganizationChat,
@@ -84,4 +85,9 @@ export const organizationChatIndex = async (req: Request, res: Response) => {
 export const organizationChatCreate = async (req: Request, res: Response) => {
   const data = await sendOrganizationChatMessage(req.body, req.auth!);
   res.status(201).json({ success: true, message: 'Mensagem enviada', data });
+};
+
+export const organizationChatDelete = async (req: Request, res: Response) => {
+  const data = await deleteOrganizationChatMessage(req.params.messageId as string, req.auth!);
+  res.json({ success: true, message: 'Mensagem excluída', data });
 };

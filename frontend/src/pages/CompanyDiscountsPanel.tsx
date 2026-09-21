@@ -101,7 +101,7 @@ export function CompanyDiscountsPanel({ companyId }: { companyId: string }) {
       {error && <div className="alert alert-error">{error}</div>}
       <div className="discount-add-row">
         <select value={selectedTenderId} onChange={(event) => setSelectedTenderId(event.target.value)}>
-          <option value="">Selecione uma licitação do controle geral</option>
+          <option value="">Selecione uma licitação do seu controle</option>
           {tenders.map((tender) => (
             <option key={tender.id} value={tender.id}>
               {tender.municipality} · {formatDate(tender.sessionDate)} ·{' '}

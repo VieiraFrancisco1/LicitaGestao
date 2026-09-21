@@ -276,6 +276,7 @@ model Tender {
   platform                     Platform?             @relation(fields: [platformId], references: [id], onDelete: Restrict)
   platformLink                 String?               @map("platform_link") @db.VarChar(500)
   seobraLink                   String?               @map("seobra_link") @db.VarChar(500)
+  seobraLinks                  String[]              @default([]) @map("seobra_links")
   spreadsheetReady             Boolean               @default(false) @map("spreadsheet_ready")
   spreadsheetResponsibleUserId String?               @map("spreadsheet_responsible_user_id") @db.Uuid
   spreadsheetResponsibleUser   User?                 @relation("TenderSpreadsheetResponsible", fields: [spreadsheetResponsibleUserId], references: [id], onDelete: SetNull)

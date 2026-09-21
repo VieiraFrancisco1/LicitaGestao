@@ -96,6 +96,11 @@ export function BidDetailsPage() {
     user?.role === 'EMPRESA' ||
     user?.assignedCompanies.some((company) => company.id === bid.companyId)
   );
+  const seobraLinks = bid.tender.seobraLinks?.length
+    ? bid.tender.seobraLinks
+    : bid.tender.seobraLink
+      ? [bid.tender.seobraLink]
+      : [];
   const markAttached = async () => {
     setMarkingAttached(true);
     setError('');
@@ -131,11 +136,13 @@ export function BidDetailsPage() {
           <p>{bid.tender.object}</p>
         </div>
         <div className="details-actions bid-details-actions bid-detail-action-grid">
-          {bid.tender.seobraLink ? (
-            <a className="bid-detail-action-card" href={bid.tender.seobraLink} target="_blank" rel="noreferrer">
-              <ExternalLink size={16} />
-              <span><small>Consulta externa</small><strong>SEOBRA</strong></span>
-            </a>
+          {seobraLinks.length > 0 ? (
+            seobraLinks.map((url, index) => (
+              <a className="bid-detail-action-card" href={url} target="_blank" rel="noreferrer" key={url}>
+                <ExternalLink size={16} />
+                <span><small>SEOBRA</small><strong>Lote {index + 1}</strong></span>
+              </a>
+            ))
           ) : (
             <span className="bid-detail-action-card disabled">
               <ExternalLink size={16} />
@@ -220,7 +227,7 @@ export function BidDetailsPage() {
               <dd>{bid.tender.modality || '—'}</dd>
             </div>
             <div>
-              <dt>Número da licitação</dt>
+              <dt>Número do edital</dt>
               <dd>{bid.tender.noticeNumber || '—'}</dd>
             </div>
             <div>
@@ -233,7 +240,7 @@ export function BidDetailsPage() {
             </div>
             <div>
               <dt>Planilha</dt>
-              <dd>{bid.tender.spreadsheetReady ? 'Pronta' : 'Ainda não pronta'}</dd>
+              <dd>{bid.tender.spreadsheetReady ? 'Concluído' : 'Em andamento'}</dd>
             </div>
             <div>
               <dt>Lista geral</dt>
@@ -266,13 +273,13 @@ export function BidDetailsPage() {
             <div>
               <dt>Link do SEOBRA</dt>
               <dd>
-                {bid.tender.seobraLink ? (
-                  <a href={bid.tender.seobraLink} target="_blank" rel="noreferrer">
-                    Abrir SEOBRA
-                  </a>
-                ) : (
-                  '—'
-                )}
+                {seobraLinks.length > 0
+                  ? seobraLinks.map((url, index) => (
+                      <a href={url} target="_blank" rel="noreferrer" key={url}>
+                        Lote {index + 1}{index < seobraLinks.length - 1 ? ' · ' : ''}
+                      </a>
+                    ))
+                  : '—'}
               </dd>
             </div>
             <div className="full">

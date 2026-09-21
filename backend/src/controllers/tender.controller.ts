@@ -76,19 +76,20 @@ export const update = async (req: Request, res: Response) => {
 
 export const spreadsheetReady = async (req: Request, res: Response) => {
   const tender = await setSpreadsheetReady(req.params.id as string, req.body.ready, req.auth!);
-  await recordAudit(req.auth!, {
+  res.json({
+    success: true,
+    message: req.body.ready ? 'Planilha concluída' : 'Planilha em andamento',
+    data: tender
+  });
+
+  void recordAudit(req.auth!, {
     action: AuditActions.STATUS_CHANGE,
     entityType: 'TENDER',
     entityId: tender.id,
     entityLabel: tender.noticeNumber || tender.processNumber || tender.municipality,
-    description: req.body.ready ? 'Planilha marcada como pronta' : 'Planilha marcada como não pronta',
+    description: req.body.ready ? 'Planilha marcada como concluída' : 'Planilha marcada como em andamento',
     metadata: { spreadsheetReady: req.body.ready }
-  });
-  res.json({
-    success: true,
-    message: req.body.ready ? 'Planilha marcada como pronta' : 'Planilha marcada como não pronta',
-    data: tender
-  });
+  }).catch((error) => console.error('Falha ao registrar auditoria da planilha:', error));
 };
 
 export const listStatus = async (req: Request, res: Response) => {
@@ -120,19 +121,20 @@ export const remove = async (req: Request, res: Response) => {
 
 export const spreadsheetResponsibility = async (req: Request, res: Response) => {
   const tender = await setSpreadsheetResponsibility(req.params.id as string, req.body.responsible, req.auth!);
-  await recordAudit(req.auth!, {
+  res.json({
+    success: true,
+    message: req.body.responsible ? 'Você agora é o responsável pela planilha' : 'Responsabilidade liberada',
+    data: tender
+  });
+
+  void recordAudit(req.auth!, {
     action: AuditActions.STATUS_CHANGE,
     entityType: 'TENDER',
     entityId: tender.id,
     entityLabel: tender.noticeNumber || tender.processNumber || tender.municipality,
     description: req.body.responsible ? 'Usuário assumiu a responsabilidade pela planilha' : 'Responsabilidade pela planilha liberada',
     metadata: { spreadsheetResponsibleUserId: tender.spreadsheetResponsibleUserId }
-  });
-  res.json({
-    success: true,
-    message: req.body.responsible ? 'Você agora é o responsável pela planilha' : 'Responsabilidade liberada',
-    data: tender
-  });
+  }).catch((error) => console.error('Falha ao registrar auditoria da responsabilidade da planilha:', error));
 };
 
 export const spreadsheetNotes = async (req: Request, res: Response) => {

@@ -206,15 +206,23 @@ function priorityStatus(item: {
       [
         'manifestar intencao de recurso',
         'manifestacao de intencao de recurso',
+        'manifestacao de recurso',
         'intencao de recorrer',
         'intencao de interpor recurso',
+        'intencao recursal',
         'prazo para recurso',
         'prazo recursal',
+        'fase recursal',
         'recurso administrativo',
         'apresentacao de recurso',
         'interposicao de recurso',
         'impugnacao ao edital',
+        'impugnacao do edital',
+        'impugnacao de edital',
         'pedido de impugnacao',
+        'apresentar contrarrazoes',
+        'apresentacao de contrarrazoes',
+        'contrarrazoes ao recurso',
         'prazo para contrarrazoes'
       ].some((term) => text.includes(term))
     ) {
@@ -373,6 +381,22 @@ export async function sendOrganizationChatMessage(
   }
 
   return message;
+}
+
+export async function deleteOrganizationChatMessage(messageId: string, auth: AuthScope) {
+  const organizationId = requireOrganizationId(auth);
+  const message = await prisma.companyChatMessage.findFirst({
+    where: { id: messageId, organizationId },
+    select: { id: true, authorId: true }
+  });
+
+  if (!message) throw new AppError('Mensagem não encontrada', 404);
+  if (message.authorId !== auth.userId) {
+    throw new AppError('Você só pode excluir as suas próprias mensagens', 403);
+  }
+
+  await prisma.companyChatMessage.delete({ where: { id: message.id } });
+  return { id: message.id };
 }
 
 export async function listCompanyChat(companyId: string, auth: AuthScope) {

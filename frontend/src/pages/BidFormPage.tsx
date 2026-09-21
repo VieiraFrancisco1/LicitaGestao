@@ -1,4 +1,4 @@
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, Plus, Save, Trash2 } from 'lucide-react';
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api, errorMessage } from '../services/api';
@@ -18,7 +18,7 @@ type TenderForm = { // LICITAGESTAO_PREQUAL_ALL_EMAILS_V1_FORM
   requiresGuaranteeOnePercent: boolean;
   platformId: string;
   platformLink: string;
-  seobraLink: string;
+  seobraLinks: string[];
 };
 
 const emptyForm: TenderForm = {
@@ -35,7 +35,7 @@ const emptyForm: TenderForm = {
   requiresGuaranteeOnePercent: false,
   platformId: '',
   platformLink: '',
-  seobraLink: ''
+  seobraLinks: ['']
 };
 
 export function BidFormPage() {
@@ -75,7 +75,7 @@ export function BidFormPage() {
             tender.guaranteeType !== 'NAO_EXIGIDA' && Number(tender.guaranteePercentage) === 1,
           platformId: tender.platformId ?? '',
           platformLink: tender.platformLink ?? '',
-          seobraLink: tender.seobraLink ?? ''
+          seobraLinks: tender.seobraLinks?.length ? tender.seobraLinks : tender.seobraLink ? [tender.seobraLink] : ['']
         });
       })
       .catch((err) => setError(errorMessage(err)))
@@ -85,13 +85,35 @@ export function BidFormPage() {
   const field = (key: keyof TenderForm, value: string | boolean) =>
     setForm((current) => ({ ...current, [key]: value }));
 
+  const seobraLinkField = (index: number, value: string) =>
+    setForm((current) => ({
+      ...current,
+      seobraLinks: current.seobraLinks.map((link, itemIndex) => (itemIndex === index ? value : link))
+    }));
+
+  const addSeobraLink = () =>
+    setForm((current) => ({ ...current, seobraLinks: [...current.seobraLinks, ''] }));
+
+  const removeSeobraLink = (index: number) =>
+    setForm((current) => ({
+      ...current,
+      seobraLinks:
+        current.seobraLinks.length === 1
+          ? ['']
+          : current.seobraLinks.filter((_, itemIndex) => itemIndex !== index)
+    }));
+
   const save = async () => {
     setSaving(true);
     setError('');
     try {
+      const payload = {
+        ...form,
+        seobraLinks: form.seobraLinks.map((link) => link.trim()).filter(Boolean)
+      };
       const response = id
-        ? await api.put<ApiResponse<Tender>>(`/tenders/${id}`, form)
-        : await api.post<ApiResponse<Tender>>('/tenders', form);
+        ? await api.put<ApiResponse<Tender>>(`/tenders/${id}`, payload)
+        : await api.post<ApiResponse<Tender>>('/tenders', payload);
       navigate(`/licitacoes/${response.data.data.id}`);
     } catch (err) {
       setError(errorMessage(err));
@@ -160,7 +182,7 @@ export function BidFormPage() {
             </small>
           </label>
           <label>
-            Número da licitação
+            Número do edital
             <input
               placeholder="Ex.: 005/2026"
               value={form.noticeNumber}
@@ -226,9 +248,9 @@ export function BidFormPage() {
           <label>
             Valor global (R$)
             <input
-              type="number"
-              min="0.01"
-              step="0.01"
+              type="text"
+              inputMode="decimal"
+              placeholder="Ex.: 3.437.508,84 ou 3437508.84"
               value={form.estimatedValue}
               onChange={(event) => field('estimatedValue', event.target.value)}
               required
@@ -264,16 +286,42 @@ export function BidFormPage() {
             />
             <small className="field-help">Cole manualmente o link direto da licitação na plataforma.</small>
           </label>
-          <label>
-            Link do SEOBRA
-            <input
-              type="url"
-              placeholder="https://..."
-              value={form.seobraLink}
-              onChange={(event) => field('seobraLink', event.target.value)}
-            />
-            <small className="field-help">Cole manualmente o link usado para abrir a planilha desta licitação no SEOBRA.</small>
-          </label>
+          <div className="seobra-links-editor full">
+            <div className="seobra-links-heading">
+              <div>
+                <strong>Links do SEOBRA</strong>
+                <small className="field-help">Adicione um link para cada lote desta licitação.</small>
+              </div>
+              <button type="button" className="secondary-button compact" onClick={addSeobraLink}>
+                <Plus size={15} /> Adicionar link
+              </button>
+            </div>
+            <div className="seobra-links-list">
+              {form.seobraLinks.map((link, index) => (
+                <label key={index} className="seobra-link-row">
+                  <span>Lote {index + 1}</span>
+                  <div>
+                    <input
+                      type="url"
+                      placeholder="https://..."
+                      value={link}
+                      onChange={(event) => seobraLinkField(index, event.target.value)}
+                    />
+                    {form.seobraLinks.length > 1 && (
+                      <button
+                        type="button"
+                        className="danger-icon"
+                        title={`Remover Lote ${index + 1}`}
+                        onClick={() => removeSeobraLink(index)}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                  </div>
+                </label>
+              ))}
+            </div>
+          </div>
           <label className="full">
             Objeto
             <textarea

@@ -4,7 +4,6 @@ import {
   ChevronRight,
   LockKeyhole,
   Mail,
-  ShieldCheck,
   UserRound
 } from 'lucide-react';
 import { useMemo, useState, type FormEvent } from 'react';
@@ -20,7 +19,7 @@ import './access-flow.css';
 const roleLabels: Record<UserRole, string> = {
   SUPER_ADMIN: 'Super Admin',
   ADMIN: 'Administrador',
-  FUNCIONARIO: 'Funcionário',
+  FUNCIONARIO: 'Usuário',
   EMPRESA: 'Empresa'
 };
 
@@ -164,10 +163,6 @@ export function LoginPage() {
               {!submitting && <ChevronRight size={18} />}
             </button>
 
-            <div className="organization-login-security">
-              <ShieldCheck size={17} />
-              <span>Depois desta etapa, cada pessoa entra com sua própria senha.</span>
-            </div>
             <div className="register-login-link">
               Ainda não possui uma organização? <Link to="/criar-conta">Criar conta</Link>
             </div> {/* LICITAGESTAO_SAAS_RENTAL_V1_REGISTER_LINK */}
@@ -177,7 +172,7 @@ export function LoginPage() {
             <div className="member-access-header">
               <button type="button" className="member-back-button" onClick={restartOrganizationLogin}>
                 <ArrowLeft size={17} />
-                Trocar empresa
+                VOLTAR
               </button>
               <div className="member-organization-badge">
                 <Building2 size={17} />

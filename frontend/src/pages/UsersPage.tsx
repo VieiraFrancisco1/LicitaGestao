@@ -15,7 +15,7 @@ type UserForm = {
 };
 const roles: { value: UserRole; label: string }[] = [
   { value: 'ADMIN', label: 'Administrador' },
-  { value: 'FUNCIONARIO', label: 'Funcionário' },
+  { value: 'FUNCIONARIO', label: 'Usuário' },
   { value: 'EMPRESA', label: 'Empresa' }
 ];
 const roleLabel = (role: UserRole) =>
@@ -56,7 +56,7 @@ export function UsersPage() {
     const companyName = company.tradeName || company.legalName;
     if (
       !window.confirm(
-        `Desassociar ${item.name} da empresa ${companyName}? O usuário não será apagado e os outros vínculos serão mantidos.`
+        `Desvincular ${item.name} da empresa ${companyName}? O usuário não será apagado e os outros vínculos serão mantidos.`
       )
     )
       return;
@@ -65,7 +65,7 @@ export function UsersPage() {
     setError('');
     try {
       await api.delete(`/users/${item.id}/companies/${company.id}`);
-      notify(`${item.name} foi desassociado de ${companyName}.`);
+      notify(`${item.name} foi desvinculado de ${companyName}.`);
       await load();
     } catch (err) {
       setError(errorMessage(err));
@@ -172,8 +172,8 @@ export function UsersPage() {
                             >
                               <Unlink size={15} />
                               {unlinking === `${item.id}:${company.id}`
-                                ? 'Desassociando...'
-                                : `Desassociar ${company.tradeName || company.legalName}`}
+                                ? 'Desvinculando...'
+                                : `Desvincular ${company.tradeName || company.legalName}`}
                             </button>
                           ))}
                         {item.role === 'EMPRESA' && item.company && (
@@ -184,8 +184,8 @@ export function UsersPage() {
                           >
                             <Unlink size={15} />
                             {unlinking === `${item.id}:${item.company.id}`
-                              ? 'Desassociando...'
-                              : 'Desassociar'}
+                              ? 'Desvinculando...'
+                              : 'Desvincular'}
                           </button>
                         )}
                       </div>
@@ -322,7 +322,7 @@ function UserModal({
         {form.role === 'FUNCIONARIO' && (
           <fieldset className="company-checklist full">
             <legend>Empresas atendidas</legend>
-            <p>Marque as empresas que este funcionário poderá administrar.</p>
+            <p>Marque as empresas que este usuário poderá administrar.</p>
             <div>
               {companies.map((company) => (
                 <label key={company.id}>
