@@ -13,7 +13,11 @@ const companyMembers = async (companyId: string, organizationId: string) =>
     where: {
       organizationId,
       active: true,
-      OR: [{ companyId }, { companyLinks: { some: { companyId } } }]
+      OR: [
+        { role: { in: [UserRole.SUPER_ADMIN, UserRole.ADMIN] } },
+        { companyId },
+        { companyLinks: { some: { companyId } } }
+      ]
     },
     select: { id: true, name: true, email: true, role: true },
     orderBy: { name: 'asc' }
@@ -313,14 +317,14 @@ export async function listCompanyChat(companyId: string, auth: AuthScope) {
   await assertCompanyPortalAccess(companyId, auth);
   const organizationId = requireOrganizationId(auth);
   const members = await companyMembers(companyId, organizationId);
-  const employeeCount = members.filter((member) => member.role === UserRole.FUNCIONARIO).length;
+  const chatEnabled = members.length > 1;
   const messages = await prisma.companyChatMessage.findMany({
     where: { organizationId, companyId },
     include: { author: { select: { id: true, name: true, role: true } } },
     orderBy: { createdAt: 'desc' },
     take: 100
   });
-  return { enabled: employeeCount > 1, members, messages: messages.reverse() };
+  return { enabled: chatEnabled, members, messages: messages.reverse() };
 }
 
 export async function sendCompanyChatMessage(
@@ -331,8 +335,9 @@ export async function sendCompanyChatMessage(
   await assertCompanyWriteAccess(companyId, auth);
   const organizationId = requireOrganizationId(auth);
   const members = await companyMembers(companyId, organizationId);
-  const employeeCount = members.filter((member) => member.role === UserRole.FUNCIONARIO).length;
-  if (employeeCount <= 1) throw new AppError('O chat é liberado quando a empresa possui mais de um funcionário', 422);
+  if (members.length <= 1) {
+    throw new AppError('O chat é liberado quando a empresa possui mais de um usuário na equipe', 422);
+  }
 
   const allowedIds = new Set(members.map((member) => member.id));
   const mentionUserIds = Array.from(
