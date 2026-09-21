@@ -431,7 +431,7 @@ export function DashboardPage() {
         </article>
       </section>
 
-      {companyId && chat?.enabled && (
+      {companyId && chat && (
         <section className="dashboard-panel team-chat-card">
           <div className="dashboard-panel-heading">
             <div>
@@ -442,8 +442,13 @@ export function DashboardPage() {
             <MessageCircle size={20} />
           </div>
           <div className="team-chat-messages">
-            {!chat.messages.length && <div className="dashboard-empty">Nenhuma mensagem ainda.</div>}
-            {chat.messages.map((message) => (
+            {!chat.enabled && (
+              <div className="dashboard-empty">
+                O chat será liberado assim que houver pelo menos dois usuários na equipe desta empresa.
+              </div>
+            )}
+            {chat.enabled && !chat.messages.length && <div className="dashboard-empty">Nenhuma mensagem ainda.</div>}
+            {chat.enabled && chat.messages.map((message) => (
               <article key={message.id} className={message.authorId === user?.id ? 'mine' : ''}>
                 <div>
                   <strong>{message.author.name}</strong>
@@ -453,30 +458,32 @@ export function DashboardPage() {
               </article>
             ))}
           </div>
-          <form className="team-chat-form" onSubmit={(event) => void sendChat(event)}>
-            <div className="chat-input-wrap">
-              <textarea
-                rows={2}
-                value={chatText}
-                onChange={(event) => setChatText(event.target.value)}
-                placeholder="Escreva uma mensagem. Digite @ para marcar alguém."
-                maxLength={3000}
-              />
-              {mentionOptions.length > 0 && (
-                <div className="chat-mention-menu">
-                  {mentionOptions.map((member) => (
-                    <button type="button" key={member.id} onClick={() => insertMention(member.id, member.name)}>
-                      <span>{member.name.charAt(0).toUpperCase()}</span>
-                      <div><strong>{member.name}</strong><small>{member.role}</small></div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-            <button className="primary-button compact" disabled={!chatText.trim() || sendingChat}>
-              <Send size={15} /> {sendingChat ? 'Enviando...' : 'Enviar'}
-            </button>
-          </form>
+          {chat.enabled && (
+            <form className="team-chat-form" onSubmit={(event) => void sendChat(event)}>
+              <div className="chat-input-wrap">
+                <textarea
+                  rows={2}
+                  value={chatText}
+                  onChange={(event) => setChatText(event.target.value)}
+                  placeholder="Escreva uma mensagem. Digite @ para marcar alguém."
+                  maxLength={3000}
+                />
+                {mentionOptions.length > 0 && (
+                  <div className="chat-mention-menu">
+                    {mentionOptions.map((member) => (
+                      <button type="button" key={member.id} onClick={() => insertMention(member.id, member.name)}>
+                        <span>{member.name.charAt(0).toUpperCase()}</span>
+                        <div><strong>{member.name}</strong><small>{member.role}</small></div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <button className="primary-button compact" disabled={!chatText.trim() || sendingChat}>
+                <Send size={15} /> {sendingChat ? 'Enviando...' : 'Enviar'}
+              </button>
+            </form>
+          )}
         </section>
       )}
 
