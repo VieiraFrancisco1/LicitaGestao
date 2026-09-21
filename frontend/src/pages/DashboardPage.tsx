@@ -39,6 +39,13 @@ function relative(days?: number) {
   return `Em ${days} dias`;
 }
 
+const chatRoleLabel = {
+  SUPER_ADMIN: 'Super Admin',
+  ADMIN: 'Administrador',
+  FUNCIONARIO: 'Funcionário',
+  EMPRESA: 'Empresa'
+} as const;
+
 const priorityLabel: Record<TenderPriorityItem['status'], string> = {
   PENDENTE: 'Pendente',
   ANEXADA: 'Anexada',
@@ -96,23 +103,20 @@ export function DashboardPage() {
     if (!companyId) {
       setAgenda([]);
       setPriorities([]);
-      setChat(null);
       setCompanyTenders([]);
       return;
     }
     setWorkspaceLoading(true);
     try {
-      const [agendaResponse, priorityResponse, chatResponse, tendersResponse] = await Promise.all([
+      const [agendaResponse, priorityResponse, tendersResponse] = await Promise.all([
         api.get<ApiResponse<AgendaItem[]>>(`/workspace/${companyId}/agenda`),
         api.get<ApiResponse<TenderPriorityItem[]>>(`/workspace/${companyId}/priorities`),
-        api.get<ApiResponse<CompanyChatData>>(`/workspace/${companyId}/chat`),
         api.get<ApiResponse<Paginated<Tender>>>('/tenders', {
           params: { companyId, page: 1, pageSize: 100, sort: 'sessionDate', direction: 'asc' }
         })
       ]);
       setAgenda(agendaResponse.data.data);
       setPriorities(priorityResponse.data.data);
-      setChat(chatResponse.data.data);
       setCompanyTenders(tendersResponse.data.data.items);
     } catch (err) {
       setError(errorMessage(err));
@@ -120,6 +124,19 @@ export function DashboardPage() {
       setWorkspaceLoading(false);
     }
   }, [companyId]);
+
+  const loadChat = useCallback(async () => {
+    if (user?.role === 'EMPRESA') {
+      setChat(null);
+      return;
+    }
+    try {
+      const response = await api.get<ApiResponse<CompanyChatData>>('/workspace/chat');
+      setChat(response.data.data);
+    } catch (err) {
+      setError(errorMessage(err));
+    }
+  }, [user?.role]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => void load(), 0);
@@ -132,15 +149,16 @@ export function DashboardPage() {
   }, [loadWorkspace]);
 
   useEffect(() => {
-    if (!companyId) return;
+    const timer = window.setTimeout(() => void loadChat(), 0);
+    return () => window.clearTimeout(timer);
+  }, [loadChat]);
+
+  useEffect(() => {
     const timer = window.setInterval(() => {
-      void api
-        .get<ApiResponse<CompanyChatData>>(`/workspace/${companyId}/chat`)
-        .then((response) => setChat(response.data.data))
-        .catch(() => undefined);
+      void loadChat();
     }, 30_000);
     return () => window.clearInterval(timer);
-  }, [companyId]);
+  }, [loadChat]);
 
   const selectedName = useMemo(
     () =>
@@ -178,17 +196,16 @@ export function DashboardPage() {
 
   const sendChat = async (event: FormEvent) => {
     event.preventDefault();
-    if (!companyId || !chatText.trim() || sendingChat) return;
+    if (!chatText.trim() || sendingChat) return;
     setSendingChat(true);
     try {
-      await api.post(`/workspace/${companyId}/chat`, {
+      await api.post('/workspace/chat', {
         content: chatText.trim(),
         mentionUserIds: chatMentions
       });
       setChatText('');
       setChatMentions([]);
-      const response = await api.get<ApiResponse<CompanyChatData>>(`/workspace/${companyId}/chat`);
-      setChat(response.data.data);
+      await loadChat();
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -206,8 +223,7 @@ export function DashboardPage() {
       ? []
       : (chat?.members ?? [])
           .filter((member) => member.id !== user?.id)
-          .filter((member) => member.name.toLocaleLowerCase('pt-BR').includes(mentionQuery))
-          .slice(0, 6);
+          .filter((member) => member.name.toLocaleLowerCase('pt-BR').includes(mentionQuery));
 
   const insertMention = (memberId: string, name: string) => {
     setChatText((current) => current.replace(/(?:^|\s)@([^@\s]*)$/, (match) => {
@@ -252,7 +268,7 @@ export function DashboardPage() {
               </select>
             </label>
           )}
-          <button className="secondary-button compact" onClick={() => void Promise.all([load(), loadWorkspace()])} disabled={loading || workspaceLoading}>
+          <button className="secondary-button compact" onClick={() => void Promise.all([load(), loadWorkspace(), loadChat()])} disabled={loading || workspaceLoading}>
             <RefreshCw size={15} /> Atualizar
           </button>
         </div>
@@ -431,20 +447,20 @@ export function DashboardPage() {
         </article>
       </section>
 
-      {companyId && chat && (
-        <section className="dashboard-panel team-chat-card">
+      {chat && (
+        <section className="dashboard-panel team-chat-card" id="team-chat">
           <div className="dashboard-panel-heading">
             <div>
               <span className="eyebrow">Equipe</span>
-              <h3>Chat da empresa</h3>
-              <p>Converse com a equipe e use @nome para mencionar alguém.</p>
+              <h3>Chat da equipe</h3>
+              <p>Conversa única da organização. Trocar de empresa não altera o histórico. Use @nome para mencionar alguém.</p>
             </div>
             <MessageCircle size={20} />
           </div>
           <div className="team-chat-messages">
             {!chat.enabled && (
               <div className="dashboard-empty">
-                O chat será liberado assim que houver pelo menos dois usuários na equipe desta empresa.
+                O chat será liberado assim que houver pelo menos dois usuários ativos na equipe da organização.
               </div>
             )}
             {chat.enabled && !chat.messages.length && <div className="dashboard-empty">Nenhuma mensagem ainda.</div>}
@@ -473,7 +489,7 @@ export function DashboardPage() {
                     {mentionOptions.map((member) => (
                       <button type="button" key={member.id} onClick={() => insertMention(member.id, member.name)}>
                         <span>{member.name.charAt(0).toUpperCase()}</span>
-                        <div><strong>{member.name}</strong><small>{member.role}</small></div>
+                        <div><strong>{member.name}</strong><small>{chatRoleLabel[member.role]}</small></div>
                       </button>
                     ))}
                   </div>

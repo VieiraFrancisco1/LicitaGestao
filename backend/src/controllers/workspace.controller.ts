@@ -5,9 +5,11 @@ import {
   deleteAgendaItem,
   listAgenda,
   listCompanyChat,
+  listOrganizationChat,
   listPriorities,
   removePriority,
   sendCompanyChatMessage,
+  sendOrganizationChatMessage,
   updateAgendaItem
 } from '../services/workspace.service.js';
 
@@ -71,5 +73,15 @@ export const chatIndex = async (req: Request, res: Response) => {
 
 export const chatCreate = async (req: Request, res: Response) => {
   const data = await sendCompanyChatMessage(req.params.companyId as string, req.body, req.auth!);
+  res.status(201).json({ success: true, message: 'Mensagem enviada', data });
+};
+
+
+export const organizationChatIndex = async (req: Request, res: Response) => {
+  res.json({ success: true, data: await listOrganizationChat(req.auth!) });
+};
+
+export const organizationChatCreate = async (req: Request, res: Response) => {
+  const data = await sendOrganizationChatMessage(req.body, req.auth!);
   res.status(201).json({ success: true, message: 'Mensagem enviada', data });
 };

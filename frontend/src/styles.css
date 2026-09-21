@@ -7521,3 +7521,11 @@ button.bid-detail-action-card {
     justify-content: center;
   }
 }
+
+
+/* V25 — lista completa de usuários no @ do chat */
+.chat-mention-menu {
+  max-height: 310px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}

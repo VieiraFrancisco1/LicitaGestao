@@ -387,3 +387,173 @@
     bottom: 18px;
   }
 }
+
+
+/* V25 — acesso com imagem em tela cheia e card vertical */
+.auth-showcase-page {
+  position: relative;
+  display: block;
+  min-height: 100vh;
+  overflow: hidden;
+  background: #0b1e36;
+}
+
+.auth-showcase-page .auth-showcase-hero {
+  position: fixed;
+  z-index: 0;
+  inset: 0;
+  display: block;
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
+  background: #0b1e36;
+}
+
+.auth-showcase-page .auth-showcase-hero::after {
+  display: none;
+}
+
+.auth-showcase-page .login-promo-viewport {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  border-radius: 0;
+  background: #0b1e36;
+  box-shadow: none;
+}
+
+.auth-showcase-page .login-promo-viewport img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center;
+  opacity: 0;
+  transform: scale(1.012);
+  transition:
+    opacity 700ms ease,
+    transform 1200ms ease;
+}
+
+.auth-showcase-page .login-promo-viewport img.active {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.auth-showcase-page .login-panel {
+  position: relative;
+  z-index: 4;
+  display: flex;
+  min-height: 100vh;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 24px clamp(26px, 3.5vw, 64px);
+  background: linear-gradient(
+    90deg,
+    rgba(6, 19, 37, 0) 0%,
+    rgba(6, 19, 37, 0) 54%,
+    rgba(6, 19, 37, 0.12) 72%,
+    rgba(6, 19, 37, 0.24) 100%
+  );
+}
+
+.auth-showcase-page .organization-access-card,
+.auth-showcase-page .member-access-card {
+  width: min(455px, calc(100vw - 48px));
+  min-height: min(820px, calc(100vh - 48px));
+  max-height: calc(100vh - 32px);
+  align-content: center;
+  padding: clamp(28px, 3.5vh, 46px) 34px;
+  border: 1px solid rgba(214, 224, 238, 0.95);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.965);
+  box-shadow:
+    0 28px 70px rgba(7, 24, 48, 0.24),
+    0 4px 16px rgba(7, 24, 48, 0.08);
+  overflow-y: auto;
+  backdrop-filter: blur(12px);
+}
+
+.auth-showcase-page .register-card {
+  min-height: min(870px, calc(100vh - 36px));
+  align-content: start;
+  gap: 15px;
+  padding-top: clamp(25px, 3vh, 38px);
+  padding-bottom: clamp(25px, 3vh, 38px);
+}
+
+.auth-showcase-page .login-form-logo {
+  width: min(300px, 82%);
+  height: 78px;
+  margin-bottom: 0;
+}
+
+.auth-showcase-page .login-card h2 {
+  font-size: 30px;
+}
+
+.auth-showcase-page .auth-showcase-navigation {
+  position: absolute;
+  z-index: 5;
+  bottom: 26px;
+  left: clamp(24px, 31vw, 48%);
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  transform: translateX(-50%);
+}
+
+.auth-showcase-page .auth-showcase-navigation .login-carousel-arrow {
+  position: static;
+  width: 38px;
+  height: 38px;
+  transform: none;
+}
+
+.auth-showcase-page .auth-showcase-navigation .login-carousel-dots {
+  position: static;
+  display: flex;
+  padding: 7px 9px;
+  transform: none;
+}
+
+@media (max-width: 1100px) {
+  .auth-showcase-page .login-panel {
+    padding-right: 22px;
+  }
+
+  .auth-showcase-page .organization-access-card,
+  .auth-showcase-page .member-access-card {
+    width: min(430px, calc(100vw - 36px));
+  }
+}
+
+@media (max-width: 780px) {
+  .auth-showcase-page {
+    overflow: auto;
+    background: #f5f8fc;
+  }
+
+  .auth-showcase-page .auth-showcase-hero {
+    display: none;
+  }
+
+  .auth-showcase-page .login-panel {
+    min-height: 100vh;
+    justify-content: center;
+    padding: 20px 14px;
+    background: #f5f8fc;
+  }
+
+  .auth-showcase-page .organization-access-card,
+  .auth-showcase-page .member-access-card,
+  .auth-showcase-page .register-card {
+    width: min(500px, 100%);
+    min-height: auto;
+    max-height: none;
+    padding: 26px 22px;
+    border-radius: 16px;
+    overflow: visible;
+  }
+}

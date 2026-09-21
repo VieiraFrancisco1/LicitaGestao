@@ -546,8 +546,8 @@ model CompanyChatMessage {
   id             String       @id @default(uuid()) @db.Uuid
   organizationId String       @map("organization_id") @db.Uuid
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  companyId      String       @map("company_id") @db.Uuid
-  company        Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId      String?      @map("company_id") @db.Uuid
+  company        Company?     @relation(fields: [companyId], references: [id], onDelete: SetNull)
   authorId       String       @map("author_id") @db.Uuid
   author         User         @relation("CompanyChatAuthor", fields: [authorId], references: [id], onDelete: Cascade)
   content        String       @db.VarChar(3000)
@@ -555,6 +555,7 @@ model CompanyChatMessage {
   createdAt      DateTime     @default(now()) @map("created_at")
   updatedAt      DateTime     @updatedAt @map("updated_at")
 
+  @@index([organizationId, createdAt])
   @@index([organizationId, companyId, createdAt])
   @@index([authorId])
   @@map("company_chat_messages")

@@ -485,7 +485,7 @@ export type CompanyChatMember = {
 
 export type CompanyChatMessage = {
   id: string;
-  companyId: string;
+  companyId: string | null;
   authorId: string;
   content: string;
   mentionUserIds: string[];

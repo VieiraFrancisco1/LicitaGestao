@@ -63,3 +63,19 @@ export const chatCreateSchema = z.object({
   params: companyParams,
   query: z.object({})
 });
+
+
+export const organizationChatSchema = z.object({
+  body: z.object({}),
+  params: z.object({}),
+  query: z.object({})
+});
+
+export const organizationChatCreateSchema = z.object({
+  body: z.object({
+    content: z.string().trim().min(1).max(3000),
+    mentionUserIds: z.array(z.string().uuid()).max(100).optional()
+  }),
+  params: z.object({}),
+  query: z.object({})
+});
