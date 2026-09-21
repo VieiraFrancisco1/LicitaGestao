@@ -3769,12 +3769,23 @@ td small {
   color: #748198;
   font-size: 12px;
 }
-.dashboard-grid-main,
+.dashboard-top-layout,
 .dashboard-grid-secondary {
   display: grid;
-  grid-template-columns: 1.25fr 0.9fr;
   gap: 14px;
 }
+
+.dashboard-top-layout {
+  grid-template-columns: minmax(0, 1.12fr) minmax(360px, 0.88fr);
+  align-items: stretch;
+}
+
+.dashboard-right-rail {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+
 .dashboard-grid-secondary {
   grid-template-columns: 1.1fr 0.8fr;
 }
@@ -4060,7 +4071,7 @@ td small {
   .dashboard-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .dashboard-grid-main,
+  .dashboard-top-layout,
   .dashboard-grid-secondary {
     grid-template-columns: 1fr;
   }
@@ -7060,9 +7071,25 @@ button.bid-detail-action-card {
   align-items: center;
 }
 
+.dashboard-priority-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-priority-panel .priority-list,
+.dashboard-priority-panel .attention-list {
+  flex: 1;
+}
+
+.dashboard-agenda-panel {
+  align-self: start;
+}
+
+
 .priority-list {
   display: grid;
   gap: 8px;
+  align-content: start;
 }
 
 .priority-card {
@@ -7466,6 +7493,17 @@ button.bid-detail-action-card {
   font-weight: 750;
 }
 
+
+@media (max-width: 1100px) {
+  .dashboard-top-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-right-rail {
+    order: 2;
+  }
+}
+
 @media (max-width: 900px) {
   .dashboard-company-selector,
   .deadline-company-scope {
@@ -7565,13 +7603,14 @@ button.bid-detail-action-card {
 
 /* ===== V26: chat compacto, links por lote e refinamentos de formulário ===== */
 .team-chat-card {
-  grid-template-rows: auto 360px auto;
+  grid-template-rows: auto 280px auto;
   min-height: 0;
+  height: fit-content;
 }
 
 .team-chat-messages {
-  height: 360px;
-  max-height: 360px;
+  height: 280px;
+  max-height: 280px;
   min-height: 0;
   align-content: start;
   overflow-y: auto;
@@ -7698,13 +7737,18 @@ button.bid-detail-action-card {
 }
 
 @media (max-width: 680px) {
+  .dashboard-top-layout,
+  .dashboard-grid-secondary {
+    grid-template-columns: 1fr;
+  }
+
   .team-chat-card {
-    grid-template-rows: auto 320px auto;
+    grid-template-rows: auto 300px auto;
   }
 
   .team-chat-messages {
-    height: 320px;
-    max-height: 320px;
+    height: 300px;
+    max-height: 300px;
   }
 
   .team-chat-messages article {

@@ -369,7 +369,7 @@ export function TendersPage({
               setCity('');
             }}
           >
-            Geral
+            GERAL
           </button>
           {companies.map((company) => (
             <button

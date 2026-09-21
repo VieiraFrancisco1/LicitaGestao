@@ -231,3 +231,156 @@
     flex: 0 0 132px;
   }
 }
+
+
+/* V28 — cards visuais para filtros e lista de licitações */
+.tender-company-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow: visible;
+}
+
+.tender-company-tabs button {
+  min-height: 46px;
+  padding: 0 16px;
+  border: 1px solid #d9e3f0;
+  border-radius: 14px;
+  color: #4f5f78;
+  background: #fff;
+  box-shadow: 0 6px 16px rgba(15, 36, 69, 0.05);
+}
+
+.tender-company-tabs button:hover {
+  border-color: #c9d9f7;
+  background: #f8fbff;
+  color: #1f4fd1;
+}
+
+.tender-company-tabs button.active {
+  border-color: #c7d8f8;
+  color: #155bd7;
+  background: #eef4ff;
+  box-shadow: 0 10px 22px rgba(37, 99, 235, 0.10);
+}
+
+.tender-status-tabs {
+  gap: 10px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  overflow: visible;
+}
+
+.tender-status-tabs button {
+  min-height: 48px;
+  padding: 8px 14px;
+  border: 1px solid #d9e3f0;
+  border-radius: 14px;
+  color: #5d6d83;
+  background: #fff;
+  box-shadow: 0 6px 16px rgba(15, 36, 69, 0.05);
+}
+
+.tender-status-tabs button + button {
+  border-left: 1px solid #d9e3f0;
+}
+
+.tender-status-tabs button:first-child,
+.tender-status-tabs button:last-child {
+  border-radius: 14px;
+}
+
+.tender-status-tabs button.active {
+  border-color: #c7d8f8;
+  color: #155bd7;
+  background: #eef4ff;
+  box-shadow: 0 10px 22px rgba(37, 99, 235, 0.11);
+}
+
+.tender-control-card,
+.table-wrap {
+  overflow: visible;
+}
+
+.organized-tenders-table {
+  border-collapse: separate;
+  border-spacing: 0 14px;
+}
+
+.organized-tenders-table thead th {
+  border-top: 1px solid #dbe4f0;
+  border-bottom: 1px solid #dbe4f0;
+  background: #f8fbff;
+}
+
+.organized-tenders-table thead th:first-child {
+  border-left: 1px solid #dbe4f0;
+  border-top-left-radius: 14px;
+  border-bottom-left-radius: 14px;
+}
+
+.organized-tenders-table thead th:last-child {
+  border-right: 1px solid #dbe4f0;
+  border-top-right-radius: 14px;
+  border-bottom-right-radius: 14px;
+}
+
+.organized-tenders-table tbody tr td {
+  background: #fff;
+  border-top: 1px solid #dfe6f2 !important;
+  border-bottom: 1px solid #dfe6f2 !important;
+  box-shadow: 0 8px 22px rgba(15, 36, 69, 0.06);
+}
+
+.organized-tenders-table tbody tr td:first-child {
+  border-left: 1px solid #dfe6f2;
+  border-top-left-radius: 16px;
+  border-bottom-left-radius: 16px;
+}
+
+.organized-tenders-table tbody tr td:last-child {
+  border-right: 1px solid #dfe6f2;
+  border-top-right-radius: 16px;
+  border-bottom-right-radius: 16px;
+}
+
+.organized-tenders-table tbody tr td + td {
+  border-left: 1px solid #edf2f8;
+}
+
+.organized-tenders-table tbody tr:hover td {
+  background: #fbfdff;
+  box-shadow: 0 12px 26px rgba(15, 36, 69, 0.09);
+}
+
+.organized-tenders-table tbody tr:hover td:first-child {
+  border-left-color: #cfdaf0;
+}
+
+.table-card table tbody tr + tr td,
+.tenders-table tbody tr + tr td,
+.bids-table tbody tr + tr td,
+.table-card table tbody tr + tr:hover td,
+.tenders-table tbody tr + tr:hover td,
+.bids-table tbody tr + tr:hover td {
+  border-top-width: 1px !important;
+}
+
+@media (max-width: 900px) {
+  .tender-company-tabs,
+  .tender-status-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+
+  .tender-company-tabs button,
+  .tender-status-tabs button {
+    flex: 0 0 auto;
+  }
+}

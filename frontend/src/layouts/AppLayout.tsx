@@ -43,6 +43,14 @@ const titles: Record<string, string> = {
   '/super-admin': 'Super Admin'
 };
 
+
+const roleLabels = {
+  SUPER_ADMIN: 'Super Admin',
+  ADMIN: 'Administrador',
+  FUNCIONARIO: 'Usuário',
+  EMPRESA: 'Empresa'
+} as const;
+
 const resultTypeLabel: Record<GlobalSearchResult['type'], string> = {
   TENDER: 'Licitação',
   COMPANY: 'Empresa',
@@ -269,7 +277,7 @@ export function AppLayout() {
                 <span className="avatar">{user?.name.charAt(0).toUpperCase()}</span>
                 <span className="profile-copy">
                   <strong>{user?.name}</strong>
-                  <small>{user?.role}</small>
+                  <small>{user?.role ? roleLabels[user.role] : ''}</small>
                 </span>
                 <ChevronDown size={16} />
               </button>

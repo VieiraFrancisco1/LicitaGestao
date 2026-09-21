@@ -319,7 +319,7 @@ export function DashboardPage() {
         <Metric icon={<TriangleAlert />} label="Sessões críticas" value={data?.metrics.criticalDeadlines ?? 0} detail="sessões vencidas ou em até 3 dias" />
       </section>
 
-      <section className="dashboard-grid-main">
+      <section className="dashboard-top-layout">
         <article className="dashboard-panel dashboard-attention dashboard-priority-panel">
           <div className="dashboard-panel-heading">
             <div>
@@ -394,170 +394,172 @@ export function DashboardPage() {
           )}
         </article>
 
-        <article className="dashboard-panel dashboard-agenda-panel">
-          <div className="dashboard-panel-heading">
-            <div>
-              <span className="eyebrow">Agenda</span>
-              <h3>{companyId ? 'Agenda da empresa' : 'Próximas licitações'}</h3>
+        <div className="dashboard-right-rail">
+          <article className="dashboard-panel dashboard-agenda-panel">
+            <div className="dashboard-panel-heading">
+              <div>
+                <span className="eyebrow">Agenda</span>
+                <h3>{companyId ? 'Agenda da empresa' : 'Próximas licitações'}</h3>
+              </div>
+              {companyId ? (
+                <button
+                  className="secondary-button compact"
+                  onClick={() => {
+                    setEditingAgenda(null);
+                    setAgendaModalOpen(true);
+                  }}
+                >
+                  <Plus size={15} /> Adicionar
+                </button>
+              ) : (
+                <Link to="/licitacoes">Ver todas</Link>
+              )}
             </div>
+
             {companyId ? (
-              <button
-                className="secondary-button compact"
-                onClick={() => {
-                  setEditingAgenda(null);
-                  setAgendaModalOpen(true);
-                }}
-              >
-                <Plus size={15} /> Adicionar
-              </button>
+              <div className="dashboard-compact-list editable-agenda-list">
+                {!agenda.length && <div className="dashboard-empty">Agenda livre. Adicione uma licitação, tarefa ou lembrete.</div>}
+                {agenda.slice(0, 10).map((item) => (
+                  <article key={item.id} className="agenda-editable-row">
+                    <span className="dashboard-date-box">
+                      <strong>{new Date(item.eventDate).getDate().toString().padStart(2, '0')}</strong>
+                      <small>{new Intl.DateTimeFormat('pt-BR', { month: 'short' }).format(new Date(item.eventDate)).replace('.', '')}</small>
+                    </span>
+                    <div>
+                      <strong>{item.title}</strong>
+                      <small>
+                        {new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(item.eventDate))}
+                        {item.tender ? ` · ${item.tender.municipality}${item.tender.noticeNumber ? ` · ${item.tender.noticeNumber}` : ''}` : ''}
+                      </small>
+                      {item.notes && <p>{item.notes}</p>}
+                    </div>
+                    <div className="agenda-row-actions">
+                      <button
+                        title="Editar"
+                        onClick={() => {
+                          setEditingAgenda(item);
+                          setAgendaModalOpen(true);
+                        }}
+                      >
+                        <Edit3 size={15} />
+                      </button>
+                      <button
+                        title="Excluir"
+                        onClick={() => {
+                          if (!window.confirm('Excluir este item da agenda?')) return;
+                          void api
+                            .delete(`/workspace/${companyId}/agenda/${item.id}`)
+                            .then(() => loadWorkspace())
+                            .catch((err) => setError(errorMessage(err)));
+                        }}
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
             ) : (
-              <Link to="/licitacoes">Ver todas</Link>
-            )}
-          </div>
-
-          {companyId ? (
-            <div className="dashboard-compact-list editable-agenda-list">
-              {!agenda.length && <div className="dashboard-empty">Agenda livre. Adicione uma licitação, tarefa ou lembrete.</div>}
-              {agenda.slice(0, 10).map((item) => (
-                <article key={item.id} className="agenda-editable-row">
-                  <span className="dashboard-date-box">
-                    <strong>{new Date(item.eventDate).getDate().toString().padStart(2, '0')}</strong>
-                    <small>{new Intl.DateTimeFormat('pt-BR', { month: 'short' }).format(new Date(item.eventDate)).replace('.', '')}</small>
-                  </span>
-                  <div>
-                    <strong>{item.title}</strong>
-                    <small>
-                      {new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(item.eventDate))}
-                      {item.tender ? ` · ${item.tender.municipality}${item.tender.noticeNumber ? ` · ${item.tender.noticeNumber}` : ''}` : ''}
-                    </small>
-                    {item.notes && <p>{item.notes}</p>}
-                  </div>
-                  <div className="agenda-row-actions">
-                    <button
-                      title="Editar"
-                      onClick={() => {
-                        setEditingAgenda(item);
-                        setAgendaModalOpen(true);
-                      }}
-                    >
-                      <Edit3 size={15} />
-                    </button>
-                    <button
-                      title="Excluir"
-                      onClick={() => {
-                        if (!window.confirm('Excluir este item da agenda?')) return;
-                        void api
-                          .delete(`/workspace/${companyId}/agenda/${item.id}`)
-                          .then(() => loadWorkspace())
-                          .catch((err) => setError(errorMessage(err)));
-                      }}
-                    >
-                      <Trash2 size={15} />
-                    </button>
-                  </div>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <div className="dashboard-compact-list">
-              {!data?.upcomingBids.length && <div className="dashboard-empty">Nenhuma sessão futura cadastrada.</div>}
-              {data?.upcomingBids.map((bid) => (
-                <Link key={bid.id} to={`/participacoes/${bid.id}`}>
-                  <span className="dashboard-date-box">
-                    <strong>{bid.sessionDate.slice(8, 10)}</strong>
-                    <small>
-                      {new Intl.DateTimeFormat('pt-BR', { month: 'short', timeZone: 'UTC' })
-                        .format(new Date(`${bid.sessionDate}T00:00:00Z`))
-                        .replace('.', '')}
-                    </small>
-                  </span>
-                  <span>
-                    <strong>{bid.municipality}{bid.noticeNumber ? ` · ${bid.noticeNumber}` : ''}</strong>
-                    <small>{bid.companyName} · {bid.platformName || 'Sem plataforma'}</small>
-                  </span>
-                  <em>{optionLabel(progressOptions, bid.progress)}</em>
-                </Link>
-              ))}
-            </div>
-          )}
-        </article>
-      </section>
-
-      {chat && (
-        <section className="dashboard-panel team-chat-card" id="team-chat">
-          <div className="dashboard-panel-heading">
-            <div>
-              <span className="eyebrow">Equipe</span>
-              <h3>Chat da equipe</h3>
-              <p>Conversa única da organização. Trocar de empresa não altera o histórico. Use @nome para mencionar alguém.</p>
-            </div>
-            <MessageCircle size={20} />
-          </div>
-          <div className="team-chat-messages" ref={chatMessagesRef}>
-            {!chat.enabled && (
-              <div className="dashboard-empty">
-                O chat será liberado assim que houver pelo menos dois usuários ativos na equipe da organização.
+              <div className="dashboard-compact-list">
+                {!data?.upcomingBids.length && <div className="dashboard-empty">Nenhuma sessão futura cadastrada.</div>}
+                {data?.upcomingBids.map((bid) => (
+                  <Link key={bid.id} to={`/participacoes/${bid.id}`}>
+                    <span className="dashboard-date-box">
+                      <strong>{bid.sessionDate.slice(8, 10)}</strong>
+                      <small>
+                        {new Intl.DateTimeFormat('pt-BR', { month: 'short', timeZone: 'UTC' })
+                          .format(new Date(`${bid.sessionDate}T00:00:00Z`))
+                          .replace('.', '')}
+                      </small>
+                    </span>
+                    <span>
+                      <strong>{bid.municipality}{bid.noticeNumber ? ` · ${bid.noticeNumber}` : ''}</strong>
+                      <small>{bid.companyName} · {bid.platformName || 'Sem plataforma'}</small>
+                    </span>
+                    <em>{optionLabel(progressOptions, bid.progress)}</em>
+                  </Link>
+                ))}
               </div>
             )}
-            {chat.enabled && !chat.messages.length && <div className="dashboard-empty">Nenhuma mensagem ainda.</div>}
-            {chat.enabled && chat.messages.map((message) => (
-              <article key={message.id} className={message.authorId === user?.id ? 'mine' : ''}>
-                <div className="chat-message-heading">
-                  <strong>{message.author.name}</strong>
-                  <span className="chat-message-meta">
-                    <small>{new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(message.createdAt))}</small>
-                    {message.authorId === user?.id && (
-                      <button
-                        type="button"
-                        className="chat-delete-message"
-                        title="Excluir minha mensagem"
-                        aria-label="Excluir minha mensagem"
-                        disabled={deletingChatId === message.id}
-                        onClick={() => void deleteChatMessage(message.id)}
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    )}
-                  </span>
+          </article>
+
+          {chat && (
+            <section className="dashboard-panel team-chat-card" id="team-chat">
+              <div className="dashboard-panel-heading">
+                <div>
+                  <span className="eyebrow">Equipe</span>
+                  <h3>Chat da equipe</h3>
+                  <p>Conversa única da organização. Trocar de empresa não altera o histórico. Use @nome para mencionar alguém.</p>
                 </div>
-                <p>{message.content}</p>
-              </article>
-            ))}
-          </div>
-          {chat.enabled && (
-            <form className="team-chat-form" onSubmit={(event) => void sendChat(event)}>
-              <div className="chat-input-wrap">
-                <textarea
-                  rows={2}
-                  value={chatText}
-                  onChange={(event) => setChatText(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' && !event.shiftKey) {
-                      event.preventDefault();
-                      if (chatText.trim() && !sendingChat) event.currentTarget.form?.requestSubmit();
-                    }
-                  }}
-                  placeholder="Escreva uma mensagem. Digite @ para marcar alguém."
-                  maxLength={3000}
-                />
-                {mentionOptions.length > 0 && (
-                  <div className="chat-mention-menu">
-                    {mentionOptions.map((member) => (
-                      <button type="button" key={member.id} onClick={() => insertMention(member.id, member.name)}>
-                        <span>{member.name.charAt(0).toUpperCase()}</span>
-                        <div><strong>{member.name}</strong><small>{chatRoleLabel[member.role]}</small></div>
-                      </button>
-                    ))}
+                <MessageCircle size={20} />
+              </div>
+              <div className="team-chat-messages" ref={chatMessagesRef}>
+                {!chat.enabled && (
+                  <div className="dashboard-empty">
+                    O chat será liberado assim que houver pelo menos dois usuários ativos na equipe da organização.
                   </div>
                 )}
+                {chat.enabled && !chat.messages.length && <div className="dashboard-empty">Nenhuma mensagem ainda.</div>}
+                {chat.enabled && chat.messages.map((message) => (
+                  <article key={message.id} className={message.authorId === user?.id ? 'mine' : ''}>
+                    <div className="chat-message-heading">
+                      <strong>{message.author.name}</strong>
+                      <span className="chat-message-meta">
+                        <small>{new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(message.createdAt))}</small>
+                        {message.authorId === user?.id && (
+                          <button
+                            type="button"
+                            className="chat-delete-message"
+                            title="Excluir minha mensagem"
+                            aria-label="Excluir minha mensagem"
+                            disabled={deletingChatId === message.id}
+                            onClick={() => void deleteChatMessage(message.id)}
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        )}
+                      </span>
+                    </div>
+                    <p>{message.content}</p>
+                  </article>
+                ))}
               </div>
-              <button className="primary-button compact" disabled={!chatText.trim() || sendingChat}>
-                <Send size={15} /> {sendingChat ? 'Enviando...' : 'Enviar'}
-              </button>
-            </form>
+              {chat.enabled && (
+                <form className="team-chat-form" onSubmit={(event) => void sendChat(event)}>
+                  <div className="chat-input-wrap">
+                    <textarea
+                      rows={2}
+                      value={chatText}
+                      onChange={(event) => setChatText(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' && !event.shiftKey) {
+                          event.preventDefault();
+                          if (chatText.trim() && !sendingChat) event.currentTarget.form?.requestSubmit();
+                        }
+                      }}
+                      placeholder="Escreva uma mensagem. Digite @ para marcar alguém."
+                      maxLength={3000}
+                    />
+                    {mentionOptions.length > 0 && (
+                      <div className="chat-mention-menu">
+                        {mentionOptions.map((member) => (
+                          <button type="button" key={member.id} onClick={() => insertMention(member.id, member.name)}>
+                            <span>{member.name.charAt(0).toUpperCase()}</span>
+                            <div><strong>{member.name}</strong><small>{chatRoleLabel[member.role]}</small></div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <button className="primary-button compact" disabled={!chatText.trim() || sendingChat}>
+                    <Send size={15} /> {sendingChat ? 'Enviando...' : 'Enviar'}
+                  </button>
+                </form>
+              )}
+            </section>
           )}
-        </section>
-      )}
+        </div>
+      </section>
 
       <section className="dashboard-grid-secondary">
         <article className="dashboard-panel">
