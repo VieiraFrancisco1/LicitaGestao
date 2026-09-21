@@ -13,7 +13,6 @@ import {
   Search,
   Settings,
   Shield,
-  CircleHelp,
   Headphones,
   Users,
   X
@@ -88,20 +87,19 @@ export function AppLayout() {
           icon: Building2
         },
         { to: '/convocacoes', label: 'E-mails', icon: Bell },
-        { to: '/prazos', label: 'Prazos', icon: CalendarClock },
-        { to: '/relatorios', label: 'Relatórios', icon: FileBarChart },
-        { to: '/configuracoes', label: 'Configurações', icon: Settings }
+        { to: '/prazos', label: 'Prazos', icon: CalendarClock }
       ]
     },
     {
       label: 'Administração',
       items: [
         { to: '/plataformas', label: 'Plataformas', icon: Gavel },
+        { to: '/relatorios', label: 'Relatórios', icon: FileBarChart },
+        { to: '/configuracoes', label: 'Configurações', icon: Settings },
         { to: '/usuarios', label: 'Usuários', icon: Users, adminOnly: true },
         { to: '/auditoria', label: 'Auditoria', icon: History, adminOnly: true },
         { to: '/backups', label: 'Backup', icon: DatabaseBackup, superAdminOnly: true },
         { to: '/saude-sistema', label: 'Saúde do sistema', icon: Activity, superAdminOnly: true },
-        { to: '/ajuda', label: 'Ajuda', icon: CircleHelp },
         { to: '/super-admin', label: 'Super Admin', icon: Shield, superAdminOnly: true }
       ]
     }

@@ -6,6 +6,7 @@ import { CompanyDiscountsPanel } from './CompanyDiscountsPanel';
 import { GmailIntegrationPanel } from '../components/GmailIntegrationPanel';
 import { OutlookIntegrationPanel } from '../components/OutlookIntegrationPanel';
 import { CompanyConvocationsPanel } from '../components/CompanyConvocationsPanel';
+import { CompanyBrandMark, getCompanyShortLabel } from '../components/CompanyBrand';
 import { api, errorMessage } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import type { ApiResponse, BidProgress, Company } from '../types';
@@ -103,7 +104,8 @@ export function CompanyDetailsPage() {
               to={`/empresas/${item.id}`}
               onClick={() => setActiveCompanyId(item.id)}
             >
-              {item.tradeName || item.legalName}
+              <CompanyBrandMark companyName={item.tradeName || item.legalName} size={18} />
+              <span>{getCompanyShortLabel(item.tradeName || item.legalName)}</span>
             </Link>
           ))}
         </div>

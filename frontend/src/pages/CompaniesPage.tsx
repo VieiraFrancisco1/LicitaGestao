@@ -1,10 +1,11 @@
-import { Building2, Edit3, FolderOpen, Plus, Search } from 'lucide-react';
+import { Building2, Edit3, FolderOpen, Link2, Plus, Search, Unlink } from 'lucide-react';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { CompanyBrandMark } from '../components/CompanyBrand';
 import { Modal } from '../components/Modal';
 import { useAuth } from '../contexts/AuthContext';
 import { api, errorMessage } from '../services/api';
-import type { ApiResponse, Company, Paginated } from '../types';
+import type { ApiResponse, Company, Paginated, User } from '../types';
 
 type CompanyForm = {
   legalName: string;
@@ -163,9 +164,11 @@ export function CompaniesPage() {
               {data?.items.map((company) => (
                 <article className="company-admin-card" key={company.id}>
                   <div className="company-admin-card-heading">
-                    <span className="company-admin-card-icon">
-                      <Building2 size={20} />
-                    </span>
+                    <CompanyBrandMark
+                      className="company-admin-card-icon company-admin-card-logo"
+                      companyName={company.tradeName || company.legalName}
+                      size={40}
+                    />
                     <div>
                       <strong>{company.tradeName || company.legalName}</strong>
                       <small>{company.tradeName ? company.legalName : 'Empresa cliente'}</small>
@@ -264,6 +267,29 @@ function CompanyModal({
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [users, setUsers] = useState<User[]>([]);
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [usersLoading, setUsersLoading] = useState(Boolean(company));
+
+  useEffect(() => {
+    if (!company) return;
+    void api
+      .get<ApiResponse<Paginated<User>>>('/users', {
+        params: { role: 'FUNCIONARIO', pageSize: 100 }
+      })
+      .then((response) => {
+        const items = response.data.data.items;
+        setUsers(items);
+        setSelectedUserIds(
+          items
+            .filter((item) => item.assignedCompanies.some((assigned) => assigned.id === company.id))
+            .map((item) => item.id)
+        );
+      })
+      .catch(() => setError('Não foi possível carregar os usuários disponíveis.'))
+      .finally(() => setUsersLoading(false));
+  }, [company]);
+
   const field = (key: keyof CompanyForm, value: string | boolean) =>
     setForm((current) => ({ ...current, [key]: value }));
   const submit = async (event: FormEvent) => {
@@ -271,9 +297,28 @@ function CompanyModal({
     setSaving(true);
     setError('');
     try {
-      if (company) await api.put(`/companies/${company.id}`, form);
-      else await api.post('/companies', form);
-      onSaved(company ? 'Empresa atualizada com sucesso.' : 'Empresa cadastrada com sucesso.');
+      if (company) {
+        await api.put(`/companies/${company.id}`, form);
+
+        const changedUsers = users.filter((item) => {
+          const wasLinked = item.assignedCompanies.some((assigned) => assigned.id === company.id);
+          const shouldBeLinked = selectedUserIds.includes(item.id);
+          return wasLinked !== shouldBeLinked;
+        });
+
+        await Promise.all(
+          changedUsers.map((item) => {
+            const currentIds = item.assignedCompanies.map((assigned) => assigned.id);
+            const nextIds = selectedUserIds.includes(item.id)
+              ? [...new Set([...currentIds, company.id])]
+              : currentIds.filter((id) => id !== company.id);
+            return api.put(`/users/${item.id}`, { companyIds: nextIds });
+          })
+        );
+      } else {
+        await api.post('/companies', form);
+      }
+      onSaved(company ? 'Empresa e vínculos atualizados com sucesso.' : 'Empresa cadastrada com sucesso.');
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -321,6 +366,39 @@ function CompanyModal({
             onChange={(e) => field('observations', e.target.value)}
           />
         </label>
+        {company && (
+          <fieldset className="company-checklist company-link-manager full">
+            <legend>Usuários vinculados</legend>
+            <p>Associe ou remova usuários desta empresa diretamente por aqui.</p>
+            <div className="company-link-list">
+              {usersLoading && <span>Carregando usuários...</span>}
+              {!usersLoading && users.length === 0 && <span>Nenhum usuário disponível.</span>}
+              {!usersLoading && users.map((item) => {
+                const linked = selectedUserIds.includes(item.id);
+                return (
+                  <div className={`company-link-row ${linked ? 'linked' : ''}`} key={item.id}>
+                    <span>
+                      <strong>{item.name}</strong>
+                      <small>{item.email}</small>
+                    </span>
+                    <button
+                      type="button"
+                      className={`company-link-toggle ${linked ? 'linked' : ''}`}
+                      onClick={() =>
+                        setSelectedUserIds((current) =>
+                          linked ? current.filter((id) => id !== item.id) : [...current, item.id]
+                        )
+                      }
+                    >
+                      {linked ? <Unlink size={14} /> : <Link2 size={14} />}
+                      {linked ? 'Desvincular' : 'Vincular'}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </fieldset>
+        )}
         {company && (
           <label className="check-field full">
             <input

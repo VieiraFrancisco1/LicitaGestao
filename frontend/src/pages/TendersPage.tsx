@@ -1,6 +1,5 @@
 import {
   Building2,
-  ChevronDown,
   CheckCircle2,
   ClipboardCheck,
   ExternalLink,
@@ -17,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
+import { CompanyBrandMark, getCompanyShortLabel } from '../components/CompanyBrand';
 import { Modal } from '../components/Modal';
 import { useAuth } from '../contexts/AuthContext';
 import { api, errorMessage } from '../services/api';
@@ -39,6 +39,7 @@ import iconIniciadas from '../assets/status-iniciadas.png';
 import iconSuspensas from '../assets/status-suspensas.png';
 import iconConvocadas from '../assets/status-convocadas.png';
 import iconRecursos from '../assets/status-recursos.png';
+import dashboardHeroBg from '../assets/dashboard-hero-bg.png';
 
 const monthOptions = [
   { value: '1', label: 'Janeiro' },
@@ -97,7 +98,6 @@ export function TendersPage({
   const [data, setData] = useState<Paginated<Tender> | null>(null);
   const [companies, setCompanies] = useState<CompanySummary[]>([]);
   const [companyScopeId, setCompanyScopeId] = useState(fixedCompanyId ?? '');
-  const [companyPickerOpen, setCompanyPickerOpen] = useState(false);
   const [companyStaffCount, setCompanyStaffCount] = useState<number | null>(null);
   const [search, setSearch] = useState('');
   const [workflowStatus, setWorkflowStatus] = useState<TenderWorkflowStatus>('PENDENTE');
@@ -332,17 +332,58 @@ export function TendersPage({
   return (
     <div className={embedded ? 'page-stack embedded-tenders-page' : 'page-stack'}>
       {!embedded && (
-        <div className="page-heading">
-          <div>
-            <p>Controle geral compartilhado</p>
-            <h2>Licitações</h2>
-            <span>Veja o controle geral ou filtre diretamente pelas empresas às quais você tem acesso.</span>
+        <>
+          <section
+            className="tenders-hero"
+            style={{
+              backgroundImage: `linear-gradient(90deg, rgba(8, 45, 119, 0.95), rgba(10, 70, 178, 0.88)), url(${dashboardHeroBg})`
+            }}
+          >
+            <div className="tenders-hero-copy">
+              <span className="tenders-hero-line" />
+              <h3>
+                Mais controle para suas <span>licitações</span>
+              </h3>
+              <p>Organize, acompanhe e gerencie todas as oportunidades em um só lugar.</p>
+            </div>
+
+            <div className="tenders-hero-aside">
+              <div className="tenders-hero-sheet">
+                <strong>Licitações</strong>
+                <span />
+                <span />
+                <span />
+                <span />
+              </div>
+              <ul className="tenders-hero-highlights">
+                <li>
+                  <ClipboardCheck size={18} />
+                  <span>Mais organização</span>
+                </li>
+                <li>
+                  <CheckCircle2 size={18} />
+                  <span>Mais segurança</span>
+                </li>
+                <li>
+                  <Building2 size={18} />
+                  <span>Mais resultados</span>
+                </li>
+              </ul>
+            </div>
+          </section>
+
+          <div className="page-heading">
+            <div>
+              <p>Controle geral compartilhado</p>
+              <h2>Licitações</h2>
+              <span>Veja o controle geral ou filtre diretamente pelas empresas às quais você tem acesso.</span>
+            </div>
+            <Link className="primary-button" to="/licitacoes/nova">
+              <Plus size={18} />
+              Nova licitação
+            </Link>
           </div>
-          <Link className="primary-button" to="/licitacoes/nova">
-            <Plus size={18} />
-            Nova licitação
-          </Link>
-        </div>
+        </>
       )}
 
       {!fixedCompanyId && (
@@ -352,7 +393,6 @@ export function TendersPage({
               className={!companyScopeId ? 'active' : ''}
               onClick={() => {
                 setCompanyScopeId('');
-                setCompanyPickerOpen(false);
                 setPage(1);
                 setCity('');
               }}
@@ -360,69 +400,27 @@ export function TendersPage({
               GERAL
             </button>
 
-            {user?.role === 'FUNCIONARIO' ? (
-              employeeCompanies.map((company) => (
-                <button
-                  key={company.id}
-                  className={companyScopeId === company.id ? 'active' : ''}
-                  onClick={() => {
-                    setCompanyScopeId(company.id);
-                    setCompanyPickerOpen(false);
-                    setPage(1);
-                    setCity('');
-                  }}
-                >
-                  {companyName(company)}
-                </button>
-              ))
-            ) : (
+            {(user?.role === 'FUNCIONARIO' ? employeeCompanies : companies).map((company) => (
               <button
-                className={companyPickerOpen ? 'active company-picker-trigger' : 'company-picker-trigger'}
-                onClick={() => setCompanyPickerOpen((current) => !current)}
-                aria-expanded={companyPickerOpen}
+                key={company.id}
+                className={companyScopeId === company.id ? 'active' : ''}
+                onClick={() => {
+                  setCompanyScopeId(company.id);
+                  setPage(1);
+                  setCity('');
+                }}
               >
-                <span>EMPRESAS</span>
-                <ChevronDown size={15} className={companyPickerOpen ? 'rotated' : ''} />
+                <CompanyBrandMark companyName={companyName(company)} size={18} />
+                <span>{getCompanyShortLabel(companyName(company))}</span>
               </button>
-            )}
+            ))}
           </nav>
-
-          {user?.role !== 'FUNCIONARIO' && companyPickerOpen && (
-            <div className="tender-company-picker">
-              <div className="tender-company-picker-heading">
-                <div>
-                  <strong>Selecione uma empresa</strong>
-                  <small>Abra somente as licitações vinculadas à empresa escolhida.</small>
-                </div>
-              </div>
-              <div className="tender-company-picker-grid">
-                {companies.map((company) => (
-                  <button
-                    key={company.id}
-                    className={companyScopeId === company.id ? 'selected' : ''}
-                    onClick={() => {
-                      setCompanyScopeId(company.id);
-                      setCompanyPickerOpen(false);
-                      setPage(1);
-                      setCity('');
-                    }}
-                  >
-                    <Building2 size={17} />
-                    <span>
-                      <strong>{companyName(company)}</strong>
-                      <small>{companyScopeId === company.id ? 'Empresa selecionada' : 'Abrir licitações'}</small>
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       )}
 
       {companyMode && !embedded && selectedCompany && (
         <div className="company-scope-banner">
-          <Building2 size={18} />
+          <CompanyBrandMark companyName={companyName(selectedCompany)} size={26} />
           <div>
             <small>Licitações da empresa</small>
             <strong>{companyName(selectedCompany)}</strong>
@@ -610,7 +608,7 @@ export function TendersPage({
                             <small className="tender-workflow-note convoked">Convocada por aviso recebido</small>
                           )}
                           {tender.workflowStatus === 'SUSPENSA' && (
-                            <small className="tender-workflow-note suspended">Suspensa por aviso recebido</small>
+                            <small className="tender-workflow-note suspended">Suspensa</small>
                           )}
                           {tender.workflowStatus === 'RECURSO' && (
                             <small className="tender-workflow-note resource">Recurso / manifestação identificada</small>
@@ -812,7 +810,7 @@ function TenderCompaniesModal({ tender, onClose }: { tender: Tender; onClose: ()
           {attachedBids.length === 0 && <div className="table-message">Nenhuma empresa anexou esta licitação.</div>}
           {attachedBids.map((bid) => (
             <article key={bid.id}>
-              <span className="tender-company-check"><CheckCircle2 size={17} /></span>
+              <span className="tender-company-check"><CompanyBrandMark companyName={bid.company.tradeName || bid.company.legalName} size={22} /></span>
               <div>
                 <strong>{bid.company.tradeName || bid.company.legalName}</strong>
                 <small>Situação atual da participação</small>

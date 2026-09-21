@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { CompanyBrandMark, getCompanyShortLabel } from '../components/CompanyBrand';
 import { useAuth } from '../contexts/AuthContext';
 import { api, errorMessage } from '../services/api';
 import type { ApiResponse, CompanySummary, GmailConvocationAlert, GmailConvocationAlertData } from '../types';
@@ -183,7 +184,6 @@ export function ConvocationsPage() {
         <div>
           <span className="eyebrow">Visão geral</span>
           <h2>E-mails</h2>
-          <h3>E-mails recebidos</h3>
           <p>
             Todos os e-mails das contas conectadas aparecem aqui, com associação automática à licitação quando
             houver correspondência segura.
@@ -210,8 +210,8 @@ export function ConvocationsPage() {
                 className={selectedCompanyId === company.id ? 'active' : ''}
                 onClick={() => selectCompany(company.id)}
               >
-                <Building2 size={16} />
-                <span>{company.tradeName || company.legalName}</span>
+                <CompanyBrandMark companyName={company.tradeName || company.legalName} size={18} />
+                <span>{getCompanyShortLabel(company.tradeName || company.legalName)}</span>
                 {unread > 0 && (
                   <strong className="company-alert-badge">{unread > 99 ? '99+' : unread}</strong>
                 )}
@@ -323,6 +323,15 @@ export function ConvocationsPage() {
         <section className="convocation-list global-convocation-list emails-convocation-list">
           {filteredItems.map((item) => (
             <article key={item.messageId} className={`convocation-card-with-actions ${item.read ? 'read' : 'unread'}`}>
+              <button
+                className="convocation-delete-button"
+                disabled={removingId === item.messageId}
+                title="Apagar notificação"
+                onClick={() => void dismiss(item)}
+              >
+                <Trash2 size={16} />
+                <span>{removingId === item.messageId ? 'Apagando...' : 'Apagar'}</span>
+              </button>
               <button className="convocation-card-open" onClick={() => void open(item)}>
                 <span className="emails-message-icon">
                   <Mail size={18} />
@@ -355,15 +364,6 @@ export function ConvocationsPage() {
                   <time>{formatDateTime(item.receivedAt)}</time>
                   <small>{relativeTime(item.receivedAt)}</small>
                 </div>
-              </button>
-              <button
-                className="convocation-delete-button"
-                disabled={removingId === item.messageId}
-                title="Apagar notificação"
-                onClick={() => void dismiss(item)}
-              >
-                <Trash2 size={16} />
-                {removingId === item.messageId ? 'Apagando...' : 'Apagar'}
               </button>
             </article>
           ))}

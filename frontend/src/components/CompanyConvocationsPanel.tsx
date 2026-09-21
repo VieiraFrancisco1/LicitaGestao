@@ -140,12 +140,22 @@ export function CompanyConvocationsPanel({
           </small>
         </div>
       ) : (
-        <div className="convocation-list">
+        <div className="convocation-list company-convocation-list">
           {items.map((item) => {
             const linkedBid = item.bidId ? bidMap.get(item.bidId) : undefined;
             const match = matchLabel(item);
             return (
-              <article key={item.id} className={`convocation-card ${item.bidId ? 'matched' : 'unmatched'}`}>
+              <article key={item.id} className={`convocation-card company-convocation-card ${item.bidId ? 'matched' : 'unmatched'}`}>
+                <button
+                  type="button"
+                  className="company-convocation-delete"
+                  disabled={savingId === item.id}
+                  onClick={() => void dismissMessage(item)}
+                  title="Apagar notificação"
+                >
+                  <Trash2 size={14} />
+                  <span>{savingId === item.id ? 'Apagando...' : 'Apagar'}</span>
+                </button>
                 <span className="convocation-icon">
                   <AlertTriangle size={20} />
                 </span>
@@ -227,15 +237,6 @@ export function CompanyConvocationsPanel({
                     </details>
                   )}
                   {linkedBid && !item.tender && <small>{bidLabel(linkedBid)}</small>}
-                  <button
-                    type="button"
-                    className="text-action danger convocation-dismiss-action"
-                    disabled={savingId === item.id}
-                    onClick={() => void dismissMessage(item)}
-                  >
-                    <Trash2 size={14} />
-                    {savingId === item.id ? 'Apagando...' : 'Apagar notificação'}
-                  </button>
                 </div>
               </article>
             );
