@@ -136,17 +136,16 @@ export function ConvocationsPage() {
   const linkedCount = companyItems.filter((item) => Boolean(item.tender)).length;
   const unlinkedCount = companyItems.filter((item) => !item.tender).length;
 
-  const filteredItems = useMemo(() => {
-    const term = search.trim().toLocaleLowerCase('pt-BR');
-    return (emailFilter === 'IMPORTANTES' ? companyItems.filter((item) => item.priority) : companyItems).filter(
-      (item) => {
-        if (!term) return true;
-        return [item.subject, item.sender, item.snippet, item.companyName, item.tender?.municipality]
-          .filter(Boolean)
-          .some((value) => String(value).toLocaleLowerCase('pt-BR').includes(term));
-      }
-    );
-  }, [companyItems, emailFilter, search]);
+  const searchTerm = search.trim().toLocaleLowerCase('pt-BR');
+  const filteredItems = (emailFilter === 'IMPORTANTES'
+    ? companyItems.filter((item) => item.priority)
+    : companyItems
+  ).filter((item) => {
+    if (!searchTerm) return true;
+    return [item.subject, item.sender, item.snippet, item.companyName, item.tender?.municipality]
+      .filter(Boolean)
+      .some((value) => String(value).toLocaleLowerCase('pt-BR').includes(searchTerm));
+  });
 
   const selectedUnread = filteredItems.filter((item) => !item.read).length;
 
