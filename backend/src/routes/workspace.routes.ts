@@ -8,6 +8,8 @@ import {
   agendaDeleteSchema,
   agendaUpdateSchema,
   chatCreateSchema,
+  organizationChatCreateSchema,
+  organizationChatSchema,
   priorityCreateSchema,
   priorityDeleteSchema,
   workspaceCompanySchema
@@ -15,6 +17,9 @@ import {
 
 export const workspaceRouter = Router();
 workspaceRouter.use(authenticate);
+
+workspaceRouter.get('/chat', validate(organizationChatSchema), asyncHandler(controller.organizationChatIndex));
+workspaceRouter.post('/chat', validate(organizationChatCreateSchema), asyncHandler(controller.organizationChatCreate));
 
 workspaceRouter.get('/:companyId/agenda', validate(workspaceCompanySchema), asyncHandler(controller.agendaIndex));
 workspaceRouter.post('/:companyId/agenda', validate(agendaCreateSchema), asyncHandler(controller.agendaCreate));
