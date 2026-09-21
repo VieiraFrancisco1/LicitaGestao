@@ -39,6 +39,13 @@ function relative(days?: number) {
   return `Em ${days} dias`;
 }
 
+const chatRoleLabel = {
+  SUPER_ADMIN: 'Super Admin',
+  ADMIN: 'Administrador',
+  FUNCIONARIO: 'Funcionário',
+  EMPRESA: 'Empresa'
+} as const;
+
 const priorityLabel: Record<TenderPriorityItem['status'], string> = {
   PENDENTE: 'Pendente',
   ANEXADA: 'Anexada',
@@ -478,7 +485,7 @@ export function DashboardPage() {
                     {mentionOptions.map((member) => (
                       <button type="button" key={member.id} onClick={() => insertMention(member.id, member.name)}>
                         <span>{member.name.charAt(0).toUpperCase()}</span>
-                        <div><strong>{member.name}</strong><small>{member.role}</small></div>
+                        <div><strong>{member.name}</strong><small>{chatRoleLabel[member.role]}</small></div>
                       </button>
                     ))}
                   </div>
