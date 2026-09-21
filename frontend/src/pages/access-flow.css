@@ -223,3 +223,167 @@
   font-size: 13px;
   font-weight: 650;
 }
+
+
+/* V24 - carrossel promocional do login */
+.organization-login-page {
+  grid-template-columns: minmax(0, 1.18fr) minmax(420px, 0.82fr);
+}
+
+.login-promo-carousel {
+  position: relative;
+  min-width: 0;
+  padding: 22px;
+  overflow: hidden;
+  background: #eef5ff;
+}
+
+.login-promo-viewport {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 560px;
+  border-radius: 22px;
+  overflow: hidden;
+  background: #edf4ff;
+  box-shadow: 0 20px 55px rgba(20, 53, 101, 0.13);
+}
+
+.login-promo-viewport img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  opacity: 0;
+  transform: scale(1.008);
+  transition: opacity 650ms ease, transform 850ms ease;
+  pointer-events: none;
+}
+
+.login-promo-viewport img.active {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.login-carousel-arrow {
+  position: absolute;
+  z-index: 3;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(21, 78, 176, 0.14);
+  border-radius: 50%;
+  color: #164fbd;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 8px 24px rgba(20, 53, 101, 0.13);
+  transform: translateY(-50%);
+  backdrop-filter: blur(8px);
+}
+
+.login-carousel-arrow:hover {
+  background: #fff;
+}
+
+.login-carousel-arrow.previous {
+  left: 34px;
+}
+
+.login-carousel-arrow.next {
+  right: 34px;
+}
+
+.login-carousel-dots {
+  position: absolute;
+  z-index: 3;
+  bottom: 38px;
+  left: 50%;
+  display: flex;
+  gap: 7px;
+  padding: 7px 9px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.82);
+  transform: translateX(-50%);
+  backdrop-filter: blur(8px);
+}
+
+.login-carousel-dots button {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #cbd8ed;
+}
+
+.login-carousel-dots button.active {
+  width: 22px;
+  border-radius: 999px;
+  background: #1d67ef;
+}
+
+.organization-login-page .login-panel {
+  padding-inline: clamp(24px, 4vw, 60px);
+}
+
+.organization-login-page .organization-access-card,
+.organization-login-page .member-access-card {
+  width: min(480px, 100%);
+}
+
+@media (max-width: 980px) {
+  .organization-login-page {
+    grid-template-columns: 1fr;
+  }
+
+  .login-promo-carousel {
+    min-height: auto;
+    padding: 14px;
+  }
+
+  .login-promo-viewport {
+    min-height: 0;
+    aspect-ratio: 1 / 1;
+  }
+
+  .login-carousel-arrow.previous {
+    left: 22px;
+  }
+
+  .login-carousel-arrow.next {
+    right: 22px;
+  }
+
+  .login-carousel-dots {
+    bottom: 24px;
+  }
+
+  .organization-login-page .login-panel {
+    padding: 28px 18px 38px;
+  }
+}
+
+@media (max-width: 600px) {
+  .login-promo-carousel {
+    padding: 10px;
+  }
+
+  .login-carousel-arrow {
+    width: 36px;
+    height: 36px;
+  }
+
+  .login-carousel-arrow.previous {
+    left: 16px;
+  }
+
+  .login-carousel-arrow.next {
+    right: 16px;
+  }
+
+  .login-carousel-dots {
+    bottom: 18px;
+  }
+}

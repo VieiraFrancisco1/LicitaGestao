@@ -2,31 +2,22 @@ import {
   ArrowLeft,
   CalendarClock,
   CheckCircle2,
-  Download,
   ExternalLink,
-  File as FileIcon,
-  FilePlus2,
   Percent,
   Pencil,
-  Trash2,
-  Unlink
 } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useCallback, useEffect, useState } from 'react';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { CompanyConvocationsPanel } from '../components/CompanyConvocationsPanel';
 import { api, errorMessage } from '../services/api';
 import type {
   ApiResponse,
   Bid,
-  BidDocument,
   DeadlineAlert,
-  DiscountCalculation,
-  DocumentCategory
+  DiscountCalculation
 } from '../types';
 import {
-  documentCategoryOptions,
-  formatBytes,
   formatCurrency,
   formatDate,
   guaranteeOptions,
@@ -34,24 +25,21 @@ import {
   progressOptions,
   situationLabel
 } from '../utils/bid';
-import { DOCUMENT_UPLOAD_ACCEPT, validateDocumentUpload } from '../utils/upload';
 
-type Tab = 'summary' | 'data' | 'discount' | 'documents' | 'convocations' | 'deadlines' | 'history';
+type Tab = 'summary' | 'data' | 'discount' | 'convocations' | 'deadlines';
 
 export function BidDetailsPage() {
   const { id } = useParams();
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const [bid, setBid] = useState<Bid | null>(null);
-  const [documents, setDocuments] = useState<BidDocument[]>([]);
   const [deadlines, setDeadlines] = useState<DeadlineAlert[]>([]);
   const [deadlineLoading, setDeadlineLoading] = useState(false);
   const [deadlineError, setDeadlineError] = useState('');
   const requestedTab = searchParams.get('tab');
   const [tab, setTab] = useState<Tab>(
     requestedTab &&
-      ['summary', 'data', 'discount', 'documents', 'convocations', 'deadlines', 'history'].includes(
+      ['summary', 'data', 'discount', 'convocations', 'deadlines'].includes(
         requestedTab
       )
       ? (requestedTab as Tab)
@@ -59,7 +47,6 @@ export function BidDetailsPage() {
   );
   const [loading, setLoading] = useState(true);
   const [markingAttached, setMarkingAttached] = useState(false);
-  const [removingAssociation, setRemovingAssociation] = useState(false);
   const [error, setError] = useState('');
 
   const loadBid = useCallback(async () => {
@@ -70,14 +57,6 @@ export function BidDetailsPage() {
       setError(errorMessage(err));
     } finally {
       setLoading(false);
-    }
-  }, [id]);
-  const loadDocuments = useCallback(async () => {
-    try {
-      const response = await api.get<ApiResponse<BidDocument[]>>(`/bids/${id}/documents`);
-      setDocuments(response.data.data);
-    } catch (err) {
-      setError(errorMessage(err));
     }
   }, [id]);
   const loadDeadlines = useCallback(async (tenderId: string) => {
@@ -96,12 +75,6 @@ export function BidDetailsPage() {
     const timer = window.setTimeout(() => void loadBid(), 0);
     return () => window.clearTimeout(timer);
   }, [loadBid]);
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      if (tab === 'documents') void loadDocuments();
-    }, 0);
-    return () => window.clearTimeout(timer);
-  }, [tab, loadDocuments]);
   useEffect(() => {
     const timer = window.setTimeout(() => {
       if (tab === 'deadlines' && bid) void loadDeadlines(bid.tenderId);
@@ -123,7 +96,6 @@ export function BidDetailsPage() {
     user?.role === 'EMPRESA' ||
     user?.assignedCompanies.some((company) => company.id === bid.companyId)
   );
-  const canRemoveAssociation = canEdit && user?.role !== 'EMPRESA';
   const markAttached = async () => {
     setMarkingAttached(true);
     setError('');
@@ -134,24 +106,6 @@ export function BidDetailsPage() {
       setError(errorMessage(err));
     } finally {
       setMarkingAttached(false);
-    }
-  };
-
-  const removeAssociation = async () => {
-    if (
-      !window.confirm(
-        'Desassociar esta licitação da empresa? A licitação geral continuará cadastrada, mas esta participação, sua baixa e os vínculos de documentos desta participação serão removidos.'
-      )
-    )
-      return;
-    setRemovingAssociation(true);
-    setError('');
-    try {
-      await api.delete(`/bids/${bid.id}`);
-      navigate(`/empresas/${bid.companyId}?tab=bids`);
-    } catch (err) {
-      setError(errorMessage(err));
-      setRemovingAssociation(false);
     }
   };
 
@@ -176,62 +130,51 @@ export function BidDetailsPage() {
           )}
           <p>{bid.tender.object}</p>
         </div>
-        <div className="details-actions bid-details-actions">
-          <div className="external-action-group">
-            {bid.tender.seobraLink && (
-              <a
-                className="secondary-button compact-header-action"
-                href={bid.tender.seobraLink}
-                target="_blank"
-                rel="noreferrer"
-              >
-                <ExternalLink size={15} />
-                SEOBRA
-              </a>
-            )}
-            {bid.tender.platformLink && (
-              <a
-                className="secondary-button compact-header-action"
-                href={bid.tender.platformLink}
-                target="_blank"
-                rel="noreferrer"
-              >
-                <ExternalLink size={15} />
-                Plataforma
-              </a>
-            )}
-          </div>
-          <div className="workflow-action-group">
-            <span className="status-pill active">
-              {situationLabel(bid.situation, bid.tender.isPreQualification)}
+        <div className="details-actions bid-details-actions bid-detail-action-grid">
+          {bid.tender.seobraLink ? (
+            <a className="bid-detail-action-card" href={bid.tender.seobraLink} target="_blank" rel="noreferrer">
+              <ExternalLink size={16} />
+              <span><small>Consulta externa</small><strong>SEOBRA</strong></span>
+            </a>
+          ) : (
+            <span className="bid-detail-action-card disabled">
+              <ExternalLink size={16} />
+              <span><small>Link não informado</small><strong>SEOBRA</strong></span>
             </span>
-            {canEdit && bid.situation === 'PENDENTE' && (
-              <button
-                className="secondary-button compact-header-action"
-                disabled={markingAttached}
-                onClick={() => void markAttached()}
-              >
-                <CheckCircle2 size={16} />
-                {markingAttached ? 'Marcando...' : 'Marcar como anexada'}
-              </button>
-            )}
-            {canRemoveAssociation && (
-              <button
-                className="secondary-button compact-header-action danger-outline"
-                disabled={removingAssociation}
-                onClick={() => void removeAssociation()}
-              >
-                <Unlink size={15} />
-                {removingAssociation ? 'Desassociando...' : 'Desassociar'}
-              </button>
-            )}
-            {canEdit && (
-              <Link className="primary-button compact-header-action" to={`/participacoes/${bid.id}/editar`}>
-                <Pencil size={15} />
-                Editar
-              </Link>
-            )}
-          </div>
+          )}
+          {bid.tender.platformLink ? (
+            <a className="bid-detail-action-card" href={bid.tender.platformLink} target="_blank" rel="noreferrer">
+              <ExternalLink size={16} />
+              <span><small>{bid.tender.platform?.name || 'Plataforma'}</small><strong>Plataforma</strong></span>
+            </a>
+          ) : (
+            <span className="bid-detail-action-card disabled">
+              <ExternalLink size={16} />
+              <span><small>Link não informado</small><strong>Plataforma</strong></span>
+            </span>
+          )}
+          {canEdit && bid.situation === 'PENDENTE' ? (
+            <button className="bid-detail-action-card status-action" disabled={markingAttached} onClick={() => void markAttached()}>
+              <CheckCircle2 size={16} />
+              <span><small>Situação</small><strong>{markingAttached ? 'Marcando...' : 'Marcar anexada'}</strong></span>
+            </button>
+          ) : (
+            <span className="bid-detail-action-card status-action attached">
+              <CheckCircle2 size={16} />
+              <span><small>Situação</small><strong>{situationLabel(bid.situation, bid.tender.isPreQualification)}</strong></span>
+            </span>
+          )}
+          {canEdit ? (
+            <Link className="bid-detail-action-card primary" to={`/participacoes/${bid.id}/editar`}>
+              <Pencil size={16} />
+              <span><small>Dados da empresa</small><strong>Editar</strong></span>
+            </Link>
+          ) : (
+            <span className="bid-detail-action-card disabled">
+              <Pencil size={16} />
+              <span><small>Sem permissão</small><strong>Editar</strong></span>
+            </span>
+          )}
         </div>
       </div>
       {error && <div className="alert alert-error">{error}</div>}
@@ -241,10 +184,8 @@ export function BidDetailsPage() {
             ['summary', 'Resumo'],
             ['data', 'Dados'],
             ['discount', 'Baixa'],
-            ['documents', `Documentos (${bid._count?.documents ?? documents.length})`],
             ['convocations', 'Avisos por e-mail'],
             ['deadlines', 'Prazos'],
-            ['history', 'Histórico']
           ] as Array<[Tab, string]>
         ).map(([value, label]) => (
           <button key={value} className={tab === value ? 'active' : ''} onClick={() => setTab(value)}>
@@ -342,26 +283,13 @@ export function BidDetailsPage() {
         </section>
       )}
       {tab === 'discount' && <DiscountPanel bid={bid} canEdit={canEdit} />}
-      {tab === 'documents' && (
-        <DocumentsPanel
-          bidId={bid.id}
-          documents={documents}
-          canEdit={canEdit}
-          onChanged={() => {
-            void loadDocuments();
-            void loadBid();
-          }}
-        />
-      )}
       {tab === 'convocations' && (
         <CompanyConvocationsPanel companyId={bid.companyId} bidId={bid.id} showHeading={false} />
       )}
       {tab === 'deadlines' && (
         <DeadlinesPanel deadlines={deadlines} loading={deadlineLoading} error={deadlineError} />
       )}
-      {tab === 'history' && (
-        <FuturePanel text="O histórico completo será registrado pelo módulo de auditoria." />
-      )}
+
     </div>
   );
 }
@@ -568,141 +496,3 @@ function InfoCard({ label, value }: { label: string; value: string }) {
   );
 }
 
-function FuturePanel({ text }: { text: string }) {
-  return (
-    <section className="empty-state compact">
-      <p>{text}</p>
-    </section>
-  );
-}
-
-function DocumentsPanel({
-  bidId,
-  documents,
-  canEdit,
-  onChanged
-}: {
-  bidId: string;
-  documents: BidDocument[];
-  canEdit: boolean;
-  onChanged: () => void;
-}) {
-  const [file, setFile] = useState<File | null>(null);
-  const [category, setCategory] = useState<DocumentCategory>('OUTRO');
-  const [sending, setSending] = useState(false);
-  const [error, setError] = useState('');
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const upload = async (event: FormEvent) => {
-    event.preventDefault();
-    if (!file) return;
-    const form = new FormData();
-    form.append('file', file);
-    form.append('category', category);
-    setSending(true);
-    setError('');
-    try {
-      await api.post(`/bids/${bidId}/documents`, form);
-      setFile(null);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-      onChanged();
-    } catch (err) {
-      setError(errorMessage(err));
-    } finally {
-      setSending(false);
-    }
-  };
-  const download = async (document: BidDocument) => {
-    try {
-      const response = await api.get(`/documents/${document.id}/download`, { responseType: 'blob' });
-      const url = URL.createObjectURL(response.data as Blob);
-      const link = window.document.createElement('a');
-      link.href = url;
-      link.download = document.originalName;
-      link.click();
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      setError(errorMessage(err));
-    }
-  };
-  const remove = async (document: BidDocument) => {
-    if (!window.confirm(`Excluir o documento “${document.originalName}”?`)) return;
-    try {
-      await api.delete(`/documents/${document.id}`);
-      onChanged();
-    } catch (err) {
-      setError(errorMessage(err));
-    }
-  };
-
-  return (
-    <section className="detail-panel documents-panel">
-      {canEdit && (
-        <form className="upload-box" onSubmit={upload}>
-          <div>
-            <FilePlus2 size={24} />
-            <strong>Anexar documento</strong>
-            <small>
-              O arquivo será armazenado no MEGA — PDF, Word, Excel, imagem, CSV ou ZIP — até 25 MB
-            </small>
-          </div>
-          <select value={category} onChange={(event) => setCategory(event.target.value as DocumentCategory)}>
-            {documentCategoryOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept={DOCUMENT_UPLOAD_ACCEPT}
-            required
-            onChange={(event) => {
-              const selected = event.target.files?.[0] ?? null;
-              const validationError = selected ? validateDocumentUpload(selected) : null;
-              setError(validationError ?? '');
-              setFile(validationError ? null : selected);
-              if (validationError) event.target.value = '';
-            }}
-          />
-          <button className="primary-button" disabled={sending || !file}>
-            {sending ? 'Enviando...' : 'Fazer upload'}
-          </button>
-        </form>
-      )}
-      {error && <div className="alert alert-error">{error}</div>}
-      <div className="document-list">
-        {documents.length === 0 && (
-          <div className="table-message">
-            <FileIcon size={27} />
-            Nenhum documento anexado.
-          </div>
-        )}
-        {documents.map((document) => (
-          <article key={document.id}>
-            <span className="file-icon">
-              <FileIcon size={20} />
-            </span>
-            <div>
-              <strong>{document.originalName}</strong>
-              <small>
-                {optionLabel(documentCategoryOptions, document.category)} · {formatBytes(document.size)} ·{' '}
-                {document.uploadedBy.name} · {formatDate(document.createdAt)}
-              </small>
-            </div>
-            <button className="action-button" onClick={() => void download(document)}>
-              <Download size={16} />
-              Baixar
-            </button>
-            {canEdit && (
-              <button className="danger-icon" onClick={() => void remove(document)} title="Excluir">
-                <Trash2 size={16} />
-              </button>
-            )}
-          </article>
-        ))}
-      </div>
-    </section>
-  );
-}

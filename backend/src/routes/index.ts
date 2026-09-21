@@ -3,12 +3,11 @@ import { prisma } from '../config/database.js';
 import { authRouter } from './auth.routes.js';
 import { companyRouter } from './company.routes.js';
 import { userRouter } from './user.routes.js';
-import { bidRouter, documentRouter } from './bid.routes.js';
+import { bidRouter } from './bid.routes.js';
 import { platformRouter } from './platform.routes.js';
 import { tenderRouter } from './tender.routes.js';
 import { deadlineRouter } from './deadline.routes.js';
 import { auditRouter } from './audit.routes.js';
-import { megaRouter } from './mega.routes.js';
 import { gmailRouter } from './gmail.routes.js';
 import { outlookRouter } from './outlook.routes.js';
 import { emailSyncRouter } from './email-sync.routes.js';
@@ -20,6 +19,8 @@ import { platformAdminRouter } from './platform-admin.routes.js';
 import { notificationRouter } from './notification.routes.js';
 import { supportRouter } from './support.routes.js';
 import { billingRouter } from './billing.routes.js';
+import { workspaceRouter } from './workspace.routes.js';
+import { searchRouter } from './search.routes.js';
 
 export const apiRouter = Router();
 
@@ -38,10 +39,8 @@ apiRouter.use('/users', userRouter);
 apiRouter.use('/platforms', platformRouter);
 apiRouter.use('/tenders', tenderRouter);
 apiRouter.use('/bids', bidRouter);
-apiRouter.use('/documents', documentRouter);
 apiRouter.use('/deadlines', deadlineRouter);
 apiRouter.use('/audit', auditRouter);
-apiRouter.use('/mega', megaRouter);
 apiRouter.use('/integrations/gmail', gmailRouter);
 apiRouter.use('/integrations/outlook', outlookRouter);
 apiRouter.use('/integrations/email', emailSyncRouter);
@@ -50,6 +49,8 @@ apiRouter.use('/dashboard', dashboardRouter);
 apiRouter.use('/backups', backupRouter);
 apiRouter.use('/system', systemRouter);
 apiRouter.use('/reports', reportRouter);
+apiRouter.use('/workspace', workspaceRouter);
+apiRouter.use('/search', searchRouter);
 
 // LICITAGESTAO_SAAS_RENTAL_V1_ROUTES
 apiRouter.use('/platform-admin', platformAdminRouter);

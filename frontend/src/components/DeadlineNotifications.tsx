@@ -102,8 +102,35 @@ export function DeadlineNotifications() { // LICITAGESTAO_PRIORITY_FIRST_PLACE_V
     return Notification.permission;
   });
   const emailSyncRunning = useRef(false);
+  const popoverRef = useRef<HTMLDivElement | null>(null);
   const location = useLocation();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const closeNotifications = () => setOpen(false);
+    const onPointer = (event: MouseEvent) => {
+      if (open && popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
+        setOpen(false);
+        setSelectionMode(false);
+        setSelectedAlerts(new Set<SelectedAlertKey>());
+      }
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setOpen(false);
+        setSelectionMode(false);
+        setSelectedAlerts(new Set<SelectedAlertKey>());
+      }
+    };
+    window.addEventListener('licitagestao:close-notifications', closeNotifications);
+    document.addEventListener('mousedown', onPointer);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('licitagestao:close-notifications', closeNotifications);
+      document.removeEventListener('mousedown', onPointer);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
 
   const showDesktopDeadlineAlerts = useCallback(
     (deadlineData: DeadlineData, permission: DesktopPermission = desktopPermission) => {
@@ -460,12 +487,17 @@ export function DeadlineNotifications() { // LICITAGESTAO_PRIORITY_FIRST_PLACE_V
   );
 
   const togglePopover = () => {
-    if (open) cancelSelection();
-    setOpen((value) => !value);
+    if (open) {
+      cancelSelection();
+      setOpen(false);
+      return;
+    }
+    window.dispatchEvent(new CustomEvent('licitagestao:close-profile'));
+    setOpen(true);
   };
 
   return (
-    <div className="notification-area">
+    <div className="notification-area" ref={popoverRef}>
       <button
         className={`notification-button ${unread ? 'has-unread' : ''}`}
         aria-label="Notificações"

@@ -11,7 +11,6 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { ChangePasswordModal } from '../components/ChangePasswordModal';
-import { MegaAccountPanel } from '../components/MegaAccountPanel';
 import { useAuth } from '../contexts/AuthContext';
 import './settings.css';
 
@@ -207,8 +206,6 @@ export function SettingsPage() {
           </p>
         </section>
 
-        <MegaAccountPanel />
-
         <section className="settings-card">
           <div className="settings-card-header">
             <span>
@@ -222,7 +219,7 @@ export function SettingsPage() {
 
           <div className="settings-copy-list">
             <p>
-              O sistema utiliza dados de conta, empresas, licitações, documentos, prazos e mensagens
+              O sistema utiliza dados de conta, empresas, licitações, prazos e mensagens
               relacionadas ao trabalho para executar suas funcionalidades de gestão.
             </p>
             <p>
@@ -230,7 +227,7 @@ export function SettingsPage() {
               quais ele está associado.
             </p>
             <p>
-              Integrações externas, como armazenamento de documentos e contas de e-mail, são utilizadas apenas
+              Integrações externas, como contas de e-mail, são utilizadas apenas
               quando configuradas para as funções do sistema.
             </p>
           </div>
