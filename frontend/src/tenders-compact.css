@@ -1,0 +1,84 @@
+/* Ajuste pontual: compacta a coluna Planilha e dá mais espaço para Ações. */
+
+.organized-tenders-table {
+  min-width: 1180px;
+  table-layout: fixed;
+}
+
+.organized-tenders-table th:nth-child(1) { width: 10%; }
+.organized-tenders-table th:nth-child(2) { width: 7%; }
+.organized-tenders-table th:nth-child(3) { width: 22%; }
+.organized-tenders-table th:nth-child(4) { width: 7%; }
+.organized-tenders-table th:nth-child(5) { width: 11%; }
+.organized-tenders-table th:nth-child(6) { width: 11%; }
+.organized-tenders-table th:nth-child(7) { width: 14%; }
+.organized-tenders-table th:nth-child(8) { width: 18%; }
+
+.spreadsheet-control-cell {
+  min-width: 0;
+}
+
+.spreadsheet-inline-layout {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+}
+
+.spreadsheet-inline-info {
+  gap: 5px;
+}
+
+.spreadsheet-inline-owner small {
+  margin-bottom: 2px;
+  font-size: 9px;
+}
+
+.spreadsheet-inline-owner strong {
+  overflow: hidden;
+  font-size: 11px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.spreadsheet-status-pill {
+  width: fit-content;
+  max-width: 100%;
+  padding: 3px 7px;
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.spreadsheet-inline-actions {
+  grid-template-columns: 1fr;
+  gap: 4px;
+}
+
+.spreadsheet-inline-actions .mini-action-button,
+.spreadsheet-inline-actions .spreadsheet-ready-button {
+  min-height: 29px;
+  padding: 5px 6px;
+  font-size: 10px;
+}
+
+.organized-actions-cell {
+  min-width: 0;
+}
+
+.company-action-grid {
+  width: 100%;
+  min-width: 0;
+  gap: 6px !important;
+}
+
+.company-action-grid .compact-action-button,
+.paired-row-actions .compact-action-button {
+  min-height: 31px;
+  padding: 5px 6px;
+  font-size: 10px;
+}
+
+@media (max-width: 1400px) {
+  .organized-tenders-table {
+    min-width: 1140px;
+  }
+}
