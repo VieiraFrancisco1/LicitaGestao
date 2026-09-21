@@ -1,6 +1,7 @@
 import { Building2, LockKeyhole, Mail, UserRound } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { AccessShowcaseCarousel } from '../components/AccessShowcaseCarousel';
 import { useAuth } from '../contexts/AuthContext';
 import { errorMessage, rawApi } from '../services/api';
 import licitaGestaoLogo from '../assets/licitagestao-logo.png';
@@ -41,18 +42,8 @@ export function RegisterPage() {
   };
 
   return (
-    <div className="login-page organization-login-page">
-      <section className="login-hero">
-        <div className="hero-copy">
-          <div className="login-brand-logo login-brand-hero">
-            <img src={licitaGestaoLogo} alt="LicitaGestão" />
-          </div>
-          <span className="hero-kicker">LicitaGestão</span>
-          <h1>Crie seu ambiente de trabalho.</h1>
-          <p>Sua organização fica separada das demais, com empresas, usuários, licitações e integrações próprias.</p>
-        </div>
-        <small>Ambiente isolado por organização</small>
-      </section>
+    <div className="login-page organization-login-page auth-showcase-page">
+      <AccessShowcaseCarousel />
 
       <section className="login-panel">
         <form className="login-card organization-access-card register-card" onSubmit={submit}>
