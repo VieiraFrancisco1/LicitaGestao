@@ -126,13 +126,17 @@ export function DashboardPage() {
   }, [companyId]);
 
   const loadChat = useCallback(async () => {
+    if (user?.role === 'EMPRESA') {
+      setChat(null);
+      return;
+    }
     try {
       const response = await api.get<ApiResponse<CompanyChatData>>('/workspace/chat');
       setChat(response.data.data);
     } catch (err) {
       setError(errorMessage(err));
     }
-  }, []);
+  }, [user?.role]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => void load(), 0);
