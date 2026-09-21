@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
+import dashboardHeroBg from '../assets/dashboard-hero-bg.png';
 import { Modal } from '../components/Modal';
 import { useAuth } from '../contexts/AuthContext';
 import { api, errorMessage } from '../services/api';
@@ -84,6 +85,7 @@ export function DashboardPage() {
   const [deletingChatId, setDeletingChatId] = useState('');
   const chatMessagesRef = useRef<HTMLDivElement | null>(null);
   const [sendingChat, setSendingChat] = useState(false);
+  const [savingPriorityIds, setSavingPriorityIds] = useState<string[]>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -184,21 +186,53 @@ export function DashboardPage() {
 
   const addPriority = async (tenderId: string) => {
     if (!companyId) return;
+    const tender = companyTenders.find((item) => item.id === tenderId);
+    if (!tender) return;
+    const optimisticItem: TenderPriorityItem = {
+      id: `temp-${tenderId}`,
+      tenderId,
+      createdAt: new Date().toISOString(),
+      status: tender.workflowStatus ?? 'PENDENTE',
+      tender: {
+        id: tender.id,
+        municipality: tender.municipality,
+        noticeNumber: tender.noticeNumber,
+        processNumber: tender.processNumber,
+        object: tender.object,
+        sessionDate: tender.sessionDate,
+        sessionTime: tender.sessionTime,
+        bids: tender.bids.map((bid) => ({ id: bid.id, situation: bid.situation, progress: bid.progress })),
+        emailMessages: []
+      }
+    };
+
+    setSavingPriorityIds((current) => [...current, tenderId]);
+    setPriorities((current) => (current.some((item) => item.tenderId === tenderId) ? current : [optimisticItem, ...current]));
+
     try {
       await api.post(`/workspace/${companyId}/priorities`, { tenderId });
-      await loadWorkspace();
+      const response = await api.get<ApiResponse<TenderPriorityItem[]>>(`/workspace/${companyId}/priorities`);
+      setPriorities(response.data.data);
     } catch (err) {
+      setPriorities((current) => current.filter((item) => item.tenderId !== tenderId));
       setError(errorMessage(err));
+    } finally {
+      setSavingPriorityIds((current) => current.filter((id) => id !== tenderId));
     }
   };
 
   const removePriority = async (tenderId: string) => {
     if (!companyId) return;
+    const previous = priorities;
+    setSavingPriorityIds((current) => [...current, tenderId]);
+    setPriorities((current) => current.filter((item) => item.tenderId !== tenderId));
     try {
       await api.delete(`/workspace/${companyId}/priorities/${tenderId}`);
-      await loadWorkspace();
     } catch (err) {
+      setPriorities(previous);
       setError(errorMessage(err));
+    } finally {
+      setSavingPriorityIds((current) => current.filter((id) => id !== tenderId));
     }
   };
 
@@ -280,7 +314,7 @@ export function DashboardPage() {
 
   return (
     <div className="page-stack dashboard-page">
-      <section className="dashboard-hero">
+      <section className="dashboard-hero" style={{ backgroundImage: `linear-gradient(90deg, rgba(7, 47, 129, 0.92), rgba(9, 58, 157, 0.86)), url(${dashboardHeroBg})` }}>
         <div>
           <span className="eyebrow">Área de trabalho</span>
           <h2>Bom trabalho, {user?.name.split(' ')[0]}.</h2>
@@ -293,9 +327,9 @@ export function DashboardPage() {
         <div className="dashboard-scope-control dashboard-company-selector">
           {user?.role !== 'EMPRESA' && (
             <label>
-              <span>Empresa</span>
+              <span>Empresa atual</span>
               <select value={companyId ?? ''} onChange={(event) => selectCompany(event.target.value)}>
-                {(user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && <option value="">Visão geral</option>}
+                {(user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && <option value="">Todas as empresas</option>}
                 {(data?.companies ?? user?.assignedCompanies ?? []).map((company) => (
                   <option key={company.id} value={company.id}>
                     {company.tradeName || company.legalName}
@@ -362,7 +396,7 @@ export function DashboardPage() {
                       {priorityLabel[item.status]}
                     </span>
                   </Link>
-                  <button title="Retirar prioridade" onClick={() => void removePriority(item.tenderId)}>
+                  <button title="Retirar prioridade" disabled={savingPriorityIds.includes(item.tenderId)} onClick={() => void removePriority(item.tenderId)}>
                     <X size={15} />
                   </button>
                 </article>
@@ -638,13 +672,14 @@ export function DashboardPage() {
                   type="button"
                   key={tender.id}
                   className={selected ? 'selected' : ''}
+                  disabled={savingPriorityIds.includes(tender.id)}
                   onClick={() => void (selected ? removePriority(tender.id) : addPriority(tender.id))}
                 >
                   <span>
                     <strong>{tender.municipality}{tender.noticeNumber ? ` · ${tender.noticeNumber}` : ''}</strong>
                     <small>{tender.object}</small>
                   </span>
-                  {selected ? <Check size={18} /> : <Star size={18} />}
+                  {savingPriorityIds.includes(tender.id) ? <RefreshCw size={18} className="spin-icon" /> : selected ? <Check size={18} /> : <Star size={18} />}
                 </button>
               );
             })}

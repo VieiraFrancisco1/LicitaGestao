@@ -14,6 +14,7 @@ import {
   Settings,
   Shield,
   CircleHelp,
+  Headphones,
   Users,
   X
 } from 'lucide-react';
@@ -42,7 +43,6 @@ const titles: Record<string, string> = {
   '/ajuda': 'Ajuda',
   '/super-admin': 'Super Admin'
 };
-
 
 const roleLabels = {
   SUPER_ADMIN: 'Super Admin',
@@ -77,10 +77,10 @@ export function AppLayout() {
     user?.role === 'EMPRESA' && user.companyId ? `/empresas/${user.companyId}` : '/empresas';
 
   const sections = [
-    { label: 'Início', items: [{ to: '/', label: 'Dashboard', icon: LayoutDashboard }] },
     {
-      label: 'Gestão',
+      label: 'Navegação',
       items: [
+        { to: '/', label: 'Dashboard', icon: LayoutDashboard },
         { to: '/licitacoes', label: 'Licitações', icon: Gavel },
         {
           to: companyPath,
@@ -88,7 +88,9 @@ export function AppLayout() {
           icon: Building2
         },
         { to: '/convocacoes', label: 'E-mails', icon: Bell },
-        { to: '/prazos', label: 'Prazos', icon: CalendarClock }
+        { to: '/prazos', label: 'Prazos', icon: CalendarClock },
+        { to: '/relatorios', label: 'Relatórios', icon: FileBarChart },
+        { to: '/configuracoes', label: 'Configurações', icon: Settings }
       ]
     },
     {
@@ -99,8 +101,6 @@ export function AppLayout() {
         { to: '/auditoria', label: 'Auditoria', icon: History, adminOnly: true },
         { to: '/backups', label: 'Backup', icon: DatabaseBackup, superAdminOnly: true },
         { to: '/saude-sistema', label: 'Saúde do sistema', icon: Activity, superAdminOnly: true },
-        { to: '/relatorios', label: 'Relatórios', icon: FileBarChart },
-        { to: '/configuracoes', label: 'Configurações', icon: Settings },
         { to: '/ajuda', label: 'Ajuda', icon: CircleHelp },
         { to: '/super-admin', label: 'Super Admin', icon: Shield, superAdminOnly: true }
       ]
@@ -209,6 +209,22 @@ export function AppLayout() {
             </div>
           ))}
         </nav>
+
+        <div className="sidebar-help-card">
+          <span className="sidebar-help-icon">
+            <Headphones size={20} />
+          </span>
+          <strong>Precisa de ajuda?</strong>
+          <p>Nossa equipe está pronta para te atender.</p>
+          <button type="button" onClick={() => navigate('/ajuda')}>
+            Falar com suporte
+          </button>
+        </div>
+
+        <div className="sidebar-version-block">
+          <span>Versão 1.0.0</span>
+          <small>© 2024 RB Licitações</small>
+        </div>
       </aside>
 
       <div className="app-main">
@@ -228,7 +244,7 @@ export function AppLayout() {
               <Search size={18} />
               <input
                 aria-label="Busca"
-                placeholder="Buscar no sistema"
+                placeholder="Buscar no sistema..."
                 value={searchQuery}
                 onChange={(event) => {
                   setSearchQuery(event.target.value);

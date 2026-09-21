@@ -33,6 +33,12 @@ import type {
   TenderWorkflowStatus
 } from '../types';
 import { availableSituationOptions, formatCurrency, formatDate, progressOptions } from '../utils/bid';
+import iconPendentes from '../assets/status-pendentes.png';
+import iconAnexadas from '../assets/status-anexadas.png';
+import iconIniciadas from '../assets/status-iniciadas.png';
+import iconSuspensas from '../assets/status-suspensas.png';
+import iconConvocadas from '../assets/status-convocadas.png';
+import iconRecursos from '../assets/status-recursos.png';
 
 const monthOptions = [
   { value: '1', label: 'Janeiro' },
@@ -49,13 +55,13 @@ const monthOptions = [
   { value: '12', label: 'Dezembro' }
 ];
 
-const workflowTabs: Array<[TenderWorkflowStatus, string]> = [
-  ['PENDENTE', 'Pendentes'],
-  ['ANEXADA', 'Já anexadas'],
-  ['INICIADA', 'Iniciadas'],
-  ['SUSPENSA', 'Suspensas'],
-  ['CONVOCADA', 'Convocadas'],
-  ['RECURSO', 'Recursos']
+const workflowTabs: Array<{ status: TenderWorkflowStatus; label: string; icon: string }> = [
+  { status: 'PENDENTE', label: 'Pendentes', icon: iconPendentes },
+  { status: 'ANEXADA', label: 'Anexadas', icon: iconAnexadas },
+  { status: 'INICIADA', label: 'Iniciadas', icon: iconIniciadas },
+  { status: 'SUSPENSA', label: 'Suspensas', icon: iconSuspensas },
+  { status: 'CONVOCADA', label: 'Convocadas', icon: iconConvocadas },
+  { status: 'RECURSO', label: 'Recursos', icon: iconRecursos }
 ];
 
 function dateRange(year: number, month: string, day: string) {
@@ -111,6 +117,11 @@ export function TendersPage({
   const selectedCompanyId = fixedCompanyId ?? (companyScopeId || undefined);
   const selectedCompany = companies.find((company) => company.id === selectedCompanyId) ?? null;
   const companyMode = Boolean(selectedCompanyId);
+  const employeeCompanies = useMemo(() => {
+    if (user?.role !== 'FUNCIONARIO') return companies;
+    const assignedIds = new Set((user.assignedCompanies ?? []).map((company) => company.id));
+    return companies.filter((company) => assignedIds.has(company.id));
+  }, [companies, user]);
 
   const yearOptions = Array.from({ length: 8 }, (_, index) => currentYear - 5 + index);
   const daysInSelectedMonth = month === 'all' ? 31 : new Date(year, Number(month), 0).getDate();
@@ -348,17 +359,35 @@ export function TendersPage({
             >
               GERAL
             </button>
-            <button
-              className={companyMode ? 'active company-picker-trigger' : 'company-picker-trigger'}
-              onClick={() => setCompanyPickerOpen((current) => !current)}
-              aria-expanded={companyPickerOpen}
-            >
-              <span>EMPRESAS</span>
-              <ChevronDown size={15} className={companyPickerOpen ? 'rotated' : ''} />
-            </button>
+
+            {user?.role === 'FUNCIONARIO' ? (
+              employeeCompanies.map((company) => (
+                <button
+                  key={company.id}
+                  className={companyScopeId === company.id ? 'active' : ''}
+                  onClick={() => {
+                    setCompanyScopeId(company.id);
+                    setCompanyPickerOpen(false);
+                    setPage(1);
+                    setCity('');
+                  }}
+                >
+                  {companyName(company)}
+                </button>
+              ))
+            ) : (
+              <button
+                className={companyPickerOpen ? 'active company-picker-trigger' : 'company-picker-trigger'}
+                onClick={() => setCompanyPickerOpen((current) => !current)}
+                aria-expanded={companyPickerOpen}
+              >
+                <span>EMPRESAS</span>
+                <ChevronDown size={15} className={companyPickerOpen ? 'rotated' : ''} />
+              </button>
+            )}
           </nav>
 
-          {companyPickerOpen && (
+          {user?.role !== 'FUNCIONARIO' && companyPickerOpen && (
             <div className="tender-company-picker">
               <div className="tender-company-picker-heading">
                 <div>
@@ -404,17 +433,18 @@ export function TendersPage({
       {error && <div className="alert alert-error">{error}</div>}
 
       <div className="tender-status-tabs">
-        {workflowTabs.map(([status, label]) => (
+        {workflowTabs.map((tab) => (
           <button
-            key={status}
-            className={workflowStatus === status ? 'active' : ''}
+            key={tab.status}
+            className={workflowStatus === tab.status ? 'active' : ''}
             onClick={() => {
-              setWorkflowStatus(status);
+              setWorkflowStatus(tab.status);
               setCity('');
               setPage(1);
             }}
           >
-            {label}
+            <img src={tab.icon} alt="" aria-hidden="true" />
+            <span>{tab.label}</span>
           </button>
         ))}
       </div>

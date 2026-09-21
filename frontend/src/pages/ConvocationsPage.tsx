@@ -1,4 +1,15 @@
-import { Building2, CheckCheck, MailWarning, RefreshCw, Trash2 } from 'lucide-react';
+import {
+  Building2,
+  CheckCheck,
+  Filter,
+  Link2,
+  Mail,
+  MailWarning,
+  RefreshCw,
+  Search,
+  Trash2,
+  Unlink2
+} from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -13,13 +24,25 @@ function formatDateTime(value: string) {
   }).format(new Date(value));
 }
 
+function relativeTime(value: string) {
+  const diff = Date.now() - new Date(value).getTime();
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  if (hours < 1) {
+    const minutes = Math.max(1, Math.floor(diff / (1000 * 60)));
+    return `há ${minutes} min`;
+  }
+  if (hours < 24) return `há ${hours} hora${hours === 1 ? '' : 's'}`;
+  const days = Math.floor(hours / 24);
+  return `há ${days} dia${days === 1 ? '' : 's'}`;
+}
+
 export function ConvocationsPage() {
-  // LICITAGESTAO_PRIORITY_FIRST_PLACE_V1 // LICITAGESTAO_PREQUAL_ALL_EMAILS_V1_EMAIL_PAGE
   const { user, activeCompanyId, setActiveCompanyId } = useAuth();
   const [data, setData] = useState<GmailConvocationAlertData>({ items: [], unread: 0 });
   const [companies, setCompanies] = useState<CompanySummary[]>([]);
   const [selectedCompanyId, setSelectedCompanyId] = useState('');
-  const [emailFilter, setEmailFilter] = useState<'IMPORTANTES' | 'TODOS'>('IMPORTANTES'); // LICITAGESTAO_EMAIL_PRIORITY_V1_PAGE
+  const [emailFilter, setEmailFilter] = useState<'IMPORTANTES' | 'TODOS'>('IMPORTANTES');
+  const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [removingId, setRemovingId] = useState('');
@@ -83,12 +106,7 @@ export function ConvocationsPage() {
   };
 
   const markAll = async () => {
-    const unreadItems = data.items.filter(
-      (item) =>
-        (!selectedCompanyId || item.companyId === selectedCompanyId) &&
-        (emailFilter === 'TODOS' || item.priority) &&
-        !item.read
-    );
+    const unreadItems = filteredItems.filter((item) => !item.read);
     if (unreadItems.length === 0) return;
     await Promise.all(
       unreadItems.map((item) => api.post('/integrations/gmail/alerts/read', { messageId: item.messageId }))
@@ -110,16 +128,28 @@ export function ConvocationsPage() {
   }, [data.items]);
 
   const companyItems = useMemo(
-    () =>
-      selectedCompanyId ? data.items.filter((item) => item.companyId === selectedCompanyId) : data.items,
+    () => (selectedCompanyId ? data.items.filter((item) => item.companyId === selectedCompanyId) : data.items),
     [data.items, selectedCompanyId]
   );
+
   const importantCount = companyItems.filter((item) => item.priority).length;
-  const visibleItems = useMemo(
-    () => (emailFilter === 'IMPORTANTES' ? companyItems.filter((item) => item.priority) : companyItems),
-    [companyItems, emailFilter]
-  );
-  const selectedUnread = visibleItems.filter((item) => !item.read).length;
+  const linkedCount = companyItems.filter((item) => Boolean(item.tender)).length;
+  const unlinkedCount = companyItems.filter((item) => !item.tender).length;
+
+  const filteredItems = useMemo(() => {
+    const term = search.trim().toLocaleLowerCase('pt-BR');
+    return (emailFilter === 'IMPORTANTES' ? companyItems.filter((item) => item.priority) : companyItems).filter(
+      (item) => {
+        if (!term) return true;
+        return [item.subject, item.sender, item.snippet, item.companyName, item.tender?.municipality]
+          .filter(Boolean)
+          .some((value) => String(value).toLocaleLowerCase('pt-BR').includes(term));
+      }
+    );
+  }, [companyItems, emailFilter, search]);
+
+  const selectedUnread = filteredItems.filter((item) => !item.read).length;
+
   const selectedCompany = companies.find((company) => company.id === selectedCompanyId);
 
   const selectCompany = (companyId: string | null) => {
@@ -149,31 +179,21 @@ export function ConvocationsPage() {
   };
 
   return (
-    <div className="page-stack">
-      <div className="page-heading">
+    <div className="page-stack emails-page-stack">
+      <div className="emails-header-block">
         <div>
-          <span className="eyebrow">E-mail</span>
-          <h2>E-mails recebidos</h2>
+          <span className="eyebrow">Visão geral</span>
+          <h2>E-mails</h2>
+          <h3>E-mails recebidos</h3>
           <p>
             Todos os e-mails das contas conectadas aparecem aqui, com associação automática à licitação quando
             houver correspondência segura.
           </p>
         </div>
-        <div className="page-heading-actions">
-          {!!selectedUnread && (
-            <button className="secondary-button" onClick={() => void markAll()}>
-              <CheckCheck size={16} />{' '}
-              {selectedCompanyId ? 'Marcar empresa como lida' : 'Marcar todos como lidos'}
-            </button>
-          )}
-          <button className="secondary-button" onClick={() => void load()} disabled={loading}>
-            <RefreshCw size={16} className={loading ? 'spin-icon' : ''} /> Atualizar
-          </button>
-        </div>
       </div>
 
       {companies.length > 0 && (
-        <nav className="company-alert-tabs" aria-label="Avisos separados por empresa">
+        <nav className="company-alert-tabs emails-company-tabs" aria-label="Avisos separados por empresa">
           {(user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && (
             <button className={selectedCompanyId === '' ? 'active' : ''} onClick={() => selectCompany(null)}>
               <Building2 size={16} />
@@ -202,87 +222,128 @@ export function ConvocationsPage() {
         </nav>
       )}
 
-      <nav className="tender-status-tabs" aria-label="Filtrar e-mails por prioridade">
-        <button
-          className={emailFilter === 'IMPORTANTES' ? 'active' : ''}
-          onClick={() => setEmailFilter('IMPORTANTES')}
-        >
-          Importantes ({importantCount})
-        </button>
-        <button className={emailFilter === 'TODOS' ? 'active' : ''} onClick={() => setEmailFilter('TODOS')}>
-          Todos ({companyItems.length})
-        </button>
-      </nav>
-
-      <div className="convocation-summary-card">
-        <MailWarning size={22} />
-        <div>
-          <small>
-            Não lidos · {selectedCompany?.tradeName || selectedCompany?.legalName || 'Todas as empresas'}
-          </small>
-          <strong>{selectedUnread}</strong>
+      <section className="emails-toolbar-card">
+        <div className="emails-toolbar-left">
+          <button
+            className={`emails-filter-pill ${emailFilter === 'IMPORTANTES' ? 'active' : ''}`}
+            onClick={() => setEmailFilter('IMPORTANTES')}
+          >
+            <Mail size={16} /> Importantes ({importantCount})
+          </button>
+          <button
+            className={`emails-filter-pill ${emailFilter === 'TODOS' ? 'active' : ''}`}
+            onClick={() => setEmailFilter('TODOS')}
+          >
+            <CheckCheck size={16} /> Todos ({companyItems.length})
+          </button>
         </div>
-      </div>
+
+        <label className="emails-search-field">
+          <Search size={17} />
+          <input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Buscar por assunto, remetente ou conteúdo..."
+          />
+        </label>
+
+        <div className="emails-toolbar-actions">
+          <button className="secondary-button emails-mini-filter" type="button">
+            <Filter size={16} /> Filtros
+          </button>
+          {!!selectedUnread && (
+            <button className="secondary-button" onClick={() => void markAll()}>
+              <CheckCheck size={16} /> Marcar como lidos
+            </button>
+          )}
+          <button className="secondary-button" onClick={() => void load()} disabled={loading}>
+            <RefreshCw size={16} className={loading ? 'spin-icon' : ''} /> Atualizar
+          </button>
+        </div>
+      </section>
+
+      <section className="emails-summary-grid">
+        <article className="email-stat-card">
+          <span className="email-stat-icon blue">
+            <Mail size={20} />
+          </span>
+          <div>
+            <small>Não lidos</small>
+            <strong>{companyItems.filter((item) => !item.read).length}</strong>
+            <p>E-mails não lidos na caixa</p>
+          </div>
+        </article>
+        <article className="email-stat-card">
+          <span className="email-stat-icon amber">
+            <MailWarning size={20} />
+          </span>
+          <div>
+            <small>Prioridade</small>
+            <strong>{importantCount}</strong>
+            <p>E-mails marcados como prioridade</p>
+          </div>
+        </article>
+        <article className="email-stat-card">
+          <span className="email-stat-icon green">
+            <Link2 size={20} />
+          </span>
+          <div>
+            <small>Vinculados</small>
+            <strong>{linkedCount}</strong>
+            <p>E-mails vinculados a licitações</p>
+          </div>
+        </article>
+        <article className="email-stat-card">
+          <span className="email-stat-icon gold">
+            <Unlink2 size={20} />
+          </span>
+          <div>
+            <small>Não vinculados</small>
+            <strong>{unlinkedCount}</strong>
+            <p>E-mails que precisam de vínculo</p>
+          </div>
+        </article>
+      </section>
 
       {error && <div className="alert alert-error">{error}</div>}
+
       {loading ? (
         <div className="app-loader">
           <span className="spinner" />
           Carregando avisos...
         </div>
-      ) : visibleItems.length === 0 ? (
+      ) : filteredItems.length === 0 ? (
         <section className="empty-state">
           <MailWarning size={36} />
           <h2>Nenhum aviso encontrado para este escopo</h2>
           <p>
-            Quando o Gmail ou Outlook receber qualquer e-mail dentro do escopo selecionado, ele aparecerá
-            aqui.
+            Quando o Gmail ou Outlook receber qualquer e-mail dentro do escopo selecionado, ele aparecerá aqui.
           </p>
         </section>
       ) : (
-        <section className="convocation-list global-convocation-list">
-          {visibleItems.map((item) => (
-            <article
-              key={item.messageId}
-              className={`convocation-card convocation-card-with-actions ${item.read ? 'read' : 'unread'}`}
-            >
+        <section className="convocation-list global-convocation-list emails-convocation-list">
+          {filteredItems.map((item) => (
+            <article key={item.messageId} className={`convocation-card-with-actions ${item.read ? 'read' : 'unread'}`}>
               <button className="convocation-card-open" onClick={() => void open(item)}>
-                <span className="convocation-icon">
-                  <MailWarning size={20} />
+                <span className="emails-message-icon">
+                  <Mail size={18} />
                 </span>
                 <div className="convocation-content">
                   <div className="convocation-title-row">
                     <strong>{item.subject || 'E-mail sem assunto'}</strong>
                     {item.priority && (
-                      <span
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          padding: '3px 7px',
-                          borderRadius: 999,
-                          background: '#fff4e5',
-                          color: '#9a6700',
-                          fontSize: 10,
-                          fontWeight: 800,
-                          letterSpacing: '0.04em',
-                          textTransform: 'uppercase'
-                        }}
-                      >
+                      <span className="email-priority-badge">
                         {item.priorityKind === 'PRIMEIRO_COLOCADO' ? 'Primeiro colocado' : 'Prioridade'}
                       </span>
                     )}
-                    <time>{formatDateTime(item.receivedAt)}</time>
                   </div>
                   <small>
-                    {item.provider === 'OUTLOOK' ? 'Outlook' : 'Gmail'} · {item.companyName} · De:{' '}
-                    {item.sender}
+                    {item.provider === 'OUTLOOK' ? 'Outlook' : 'Gmail'} · {item.companyName} · {item.sender}
                   </small>
                   {item.tender ? (
                     <div className="convocation-inline-match matched">
-                      Vinculada:{' '}
-                      {[item.tender.modality, item.tender.noticeNumber].filter(Boolean).join(' ') ||
-                        'Licitação'}{' '}
-                      · {item.tender.municipality}
+                      Vinculado: {[item.tender.modality, item.tender.noticeNumber].filter(Boolean).join(' ') || 'Licitação'} ·{' '}
+                      {item.tender.municipality}
                     </div>
                   ) : (
                     <div className="convocation-inline-match pending">
@@ -290,6 +351,10 @@ export function ConvocationsPage() {
                     </div>
                   )}
                   {item.snippet && <p>{item.snippet}</p>}
+                </div>
+                <div className="emails-message-meta">
+                  <time>{formatDateTime(item.receivedAt)}</time>
+                  <small>{relativeTime(item.receivedAt)}</small>
                 </div>
               </button>
               <button
@@ -305,6 +370,10 @@ export function ConvocationsPage() {
           ))}
         </section>
       )}
+
+      <div className="emails-scope-caption">
+        Exibindo: {selectedCompany?.tradeName || selectedCompany?.legalName || 'Todas as empresas'}
+      </div>
     </div>
   );
 }

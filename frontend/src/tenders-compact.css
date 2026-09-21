@@ -630,3 +630,110 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* V32 - licitações mais compactas e com ícones */
+
+.tender-company-tabs.tender-company-tabs-compact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+}
+
+.tender-company-tabs.tender-company-tabs-compact > button {
+  min-width: 160px;
+  min-height: 44px;
+  border-radius: 14px;
+  border: 1px solid #cdddf6;
+  background: #fff;
+  color: #2852a2;
+  font-weight: 800;
+  box-shadow: 0 8px 20px rgba(27, 68, 132, 0.06);
+}
+
+.tender-company-tabs.tender-company-tabs-compact > button.active {
+  background: #eaf1ff;
+  color: #1d59da;
+  border-color: #bfd3f7;
+}
+
+.tender-status-tabs {
+  padding: 8px;
+  gap: 8px;
+  border: 1px solid #cdddf6;
+  border-radius: 18px;
+  background: #fff;
+}
+
+.tender-status-tabs button {
+  min-height: 58px;
+  border-radius: 14px !important;
+  border: 1px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  white-space: nowrap;
+}
+
+.tender-status-tabs button + button {
+  border-left: 0;
+}
+
+.tender-status-tabs button img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.tender-status-tabs button span {
+  display: inline-block;
+}
+
+.tender-status-tabs button.active {
+  background: #eef4ff;
+  color: #1d59da;
+  border-color: #c8d9fa;
+  box-shadow: none;
+}
+
+.organized-tenders-table thead th,
+.organized-tenders-table tbody tr td {
+  border-color: #bfd3f7;
+}
+
+.organized-tenders-table tbody tr td {
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+.organized-tenders-table tbody tr td:first-child,
+.organized-tenders-table tbody tr td:last-child,
+.organized-tenders-table tbody tr td + td {
+  border-color: #bfd3f7;
+}
+
+.organized-tenders-table tbody tr:hover td {
+  background: #f7fbff;
+}
+
+.tender-guarantee-note {
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.company-action-grid .compact-action-button,
+.paired-row-actions .compact-action-button,
+.spreadsheet-inline-actions .mini-action-button,
+.spreadsheet-inline-actions .spreadsheet-ready-button {
+  min-height: 34px;
+  border-radius: 10px;
+}
+
+@media (max-width: 1100px) {
+  .tender-status-tabs {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
