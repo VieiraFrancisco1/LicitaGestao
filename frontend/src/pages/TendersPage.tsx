@@ -390,25 +390,25 @@ export function TendersPage({
 
       {error && <div className="alert alert-error">{error}</div>}
 
-      <div className="tender-status-tabs">
-        {workflowTabs.map((tab) => (
-          <button
-            key={tab.status}
-            className={workflowStatus === tab.status ? 'active' : ''}
-            onClick={() => {
-              setWorkflowStatus(tab.status);
-              setCity('');
-              setPage(1);
-            }}
-          >
-            <img src={tab.icon} alt="" aria-hidden="true" />
-            <span>{tab.label}</span>
-          </button>
-        ))}
-      </div>
-
       <section className="table-card tender-control-card">
-        <div className="tender-date-filter-bar">
+        <div className="tender-date-filter-bar tender-status-filter-row">
+          <div className="tender-status-tabs">
+            {workflowTabs.map((tab) => (
+              <button
+                key={tab.status}
+                className={workflowStatus === tab.status ? 'active' : ''}
+                onClick={() => {
+                  setWorkflowStatus(tab.status);
+                  setCity('');
+                  setPage(1);
+                }}
+              >
+                <img src={tab.icon} alt="" aria-hidden="true" />
+                <span>{tab.label}</span>
+              </button>
+            ))}
+          </div>
+
           <div className="tender-date-selectors">
             <label>
               <span>Dia</span>

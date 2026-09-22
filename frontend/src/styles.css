@@ -10271,3 +10271,115 @@ button.bid-detail-action-card {
     font-size: 26px !important;
   }
 }
+/* ===== V44: status e filtros na mesma linha ===== */
+.tender-date-filter-bar.tender-status-filter-row {
+  display: flex !important;
+  align-items: flex-end !important;
+  justify-content: space-between !important;
+  flex-wrap: nowrap !important;
+  gap: 10px !important;
+  padding: 8px 10px !important;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.tender-status-filter-row > .tender-status-tabs {
+  flex: 1 1 auto !important;
+  width: auto !important;
+  min-width: 520px;
+  max-width: none !important;
+  display: flex !important;
+  grid-template-columns: none !important;
+  align-items: center !important;
+  align-self: flex-end !important;
+  flex-wrap: nowrap !important;
+  gap: 4px !important;
+  padding: 3px !important;
+  border-radius: 9px !important;
+  overflow: visible !important;
+}
+
+.tender-status-filter-row > .tender-status-tabs button {
+  flex: 1 1 0 !important;
+  width: auto !important;
+  min-width: 74px !important;
+  height: 34px !important;
+  min-height: 34px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 4px !important;
+  padding: 0 7px !important;
+  border-radius: 7px !important;
+  font-size: 10px !important;
+  line-height: 1 !important;
+  font-weight: 800 !important;
+  white-space: nowrap !important;
+}
+
+.tender-status-filter-row > .tender-status-tabs button img {
+  width: 14px !important;
+  height: 14px !important;
+  object-fit: contain;
+  flex: 0 0 14px;
+}
+
+.tender-status-filter-row > .tender-date-selectors {
+  flex: 0 0 auto !important;
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  align-items: flex-end !important;
+  gap: 6px !important;
+}
+
+.tender-status-filter-row > .tender-date-selectors label {
+  gap: 3px !important;
+  font-size: 8px !important;
+  letter-spacing: 0.4px !important;
+}
+
+.tender-status-filter-row > .tender-date-selectors select {
+  height: 34px !important;
+  min-width: 72px !important;
+  padding: 0 24px 0 8px !important;
+  border-radius: 7px !important;
+  font-size: 10px !important;
+}
+
+.tender-status-filter-row > .tender-date-selectors .tender-city-filter select {
+  min-width: 122px !important;
+}
+
+.tender-status-filter-row > .tender-date-selectors label:nth-child(3) select {
+  min-width: 112px !important;
+}
+
+.tender-status-filter-row > .tender-date-selectors label:nth-child(4) select {
+  min-width: 78px !important;
+}
+
+@media (max-width: 1180px) {
+  .tender-date-filter-bar.tender-status-filter-row {
+    scrollbar-width: thin;
+  }
+
+  .tender-status-filter-row > .tender-status-tabs {
+    min-width: 500px;
+  }
+
+  .tender-status-filter-row > .tender-status-tabs button {
+    min-width: 70px !important;
+    font-size: 9px !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .tender-date-filter-bar.tender-status-filter-row {
+    align-items: flex-end !important;
+    flex-direction: row !important;
+  }
+
+  .tender-status-filter-row > .tender-status-tabs {
+    min-width: 500px;
+  }
+}
