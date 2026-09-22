@@ -9430,3 +9430,32 @@ button.bid-detail-action-card {
   }
 }
 
+
+/* ===== V41: marcas d'agua das empresas mais visiveis ===== */
+.company-header.dashboard-hero {
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.company-header.dashboard-hero::before {
+  background-position: right 22px center !important;
+  background-size: auto 66% !important;
+  opacity: 0.2 !important;
+  filter: brightness(1.12) contrast(1.04) saturate(0.96) !important;
+}
+
+@media (max-width: 980px) {
+  .company-header.dashboard-hero::before {
+    background-position: right 18px center !important;
+    background-size: auto 58% !important;
+    opacity: 0.17 !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .company-header.dashboard-hero::before {
+    background-position: right 12px center !important;
+    background-size: auto 48% !important;
+    opacity: 0.14 !important;
+  }
+}

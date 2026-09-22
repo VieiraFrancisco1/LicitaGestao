@@ -12,11 +12,26 @@ import { useAuth } from '../contexts/AuthContext';
 import type { ApiResponse, BidProgress, Company } from '../types';
 import { formatDate, optionLabel, progressOptions } from '../utils/bid';
 import dashboardHeroBg from '../assets/dashboard-hero-bg.png';
+import logoEgrBanner from '../assets/company-logos/egr.png';
+import logoEqvBanner from '../assets/company-logos/eqv.png';
+import logoIcvBanner from '../assets/company-logos/icv.png';
+import logoRecantoBanner from '../assets/company-logos/recanto.png';
 
 type Tab = 'overview' | 'bids' | 'platforms' | 'discounts' | 'integrations' | 'convocations';
 
 type CompanyHeaderStyle = CSSProperties & {
   '--company-watermark-logo'?: string;
+};
+const resolveCompanyBannerLogo = (name?: string | null) => {
+  const normalized = (name ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+
+  if (!normalized) return undefined;
+  if (normalized.includes('EG&R') || normalized.includes('EGR') || normalized.includes('EG R')) return logoEgrBanner;
+  if (normalized.includes('ICV')) return logoIcvBanner;
+  if (normalized.includes('RECANTO')) return logoRecantoBanner;
+  if (normalized.includes('EQV')) return logoEqvBanner;
+
+  return getCompanyLogo(name);
 };
 
 type PlatformGroup = {
@@ -98,7 +113,7 @@ export function CompanyDetailsPage() {
   const employeeCompanies =
     user?.role === 'FUNCIONARIO' ? user.assignedCompanies.filter((item) => item.active) : [];
   const displayName = company.tradeName || company.legalName;
-  const companyLogo = getCompanyLogo(displayName);
+  const companyLogo = resolveCompanyBannerLogo(displayName);
   const headerStyle: CompanyHeaderStyle = {
     backgroundImage: `linear-gradient(110deg, rgba(19, 70, 166, 0.82), rgba(34, 88, 190, 0.72)), url(${dashboardHeroBg})`,
     ...(companyLogo ? { '--company-watermark-logo': `url(${companyLogo})` } : {})
