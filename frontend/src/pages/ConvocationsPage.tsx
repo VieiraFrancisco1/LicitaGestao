@@ -1,6 +1,7 @@
 import {
-  Building2,
   CheckCheck,
+  ChevronDown,
+  ChevronUp,
   Filter,
   Link2,
   Mail,
@@ -12,10 +13,10 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CompanyBrandMark, getCompanyShortLabel } from '../components/CompanyBrand';
+import { CompanyBrandMark } from '../components/CompanyBrand';
 import { useAuth } from '../contexts/AuthContext';
 import { api, errorMessage } from '../services/api';
-import type { ApiResponse, CompanySummary, GmailConvocationAlert, GmailConvocationAlertData } from '../types';
+import type { ApiResponse, CompanySummary, EmailMessage, GmailConvocationAlert, GmailConvocationAlertData } from '../types';
 
 function formatDateTime(value: string) {
   return new Intl.DateTimeFormat('pt-BR', {
@@ -47,6 +48,9 @@ export function ConvocationsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [removingId, setRemovingId] = useState('');
+  const [expandedMessageId, setExpandedMessageId] = useState('');
+  const [loadingContentId, setLoadingContentId] = useState('');
+  const [messageContents, setMessageContents] = useState<Record<string, string>>({});
   const navigate = useNavigate();
 
   const load = useCallback(async () => {
@@ -86,17 +90,20 @@ export function ConvocationsPage() {
     return () => window.clearTimeout(timer);
   }, [load]);
 
+  const markAsRead = async (item: GmailConvocationAlert) => {
+    if (item.read) return;
+    setData((current) => ({
+      ...current,
+      unread: Math.max(0, current.unread - 1),
+      items: current.items.map((currentItem) =>
+        currentItem.messageId === item.messageId ? { ...currentItem, read: true } : currentItem
+      )
+    }));
+    await api.post('/integrations/gmail/alerts/read', { messageId: item.messageId }).catch(() => undefined);
+  };
+
   const open = async (item: GmailConvocationAlert) => {
-    if (!item.read) {
-      setData((current) => ({
-        ...current,
-        unread: Math.max(0, current.unread - 1),
-        items: current.items.map((currentItem) =>
-          currentItem.messageId === item.messageId ? { ...currentItem, read: true } : currentItem
-        )
-      }));
-      await api.post('/integrations/gmail/alerts/read', { messageId: item.messageId }).catch(() => undefined);
-    }
+    await markAsRead(item);
     navigate(
       item.bidId
         ? `/participacoes/${item.bidId}?tab=convocations&message=${item.messageId}`
@@ -104,6 +111,39 @@ export function ConvocationsPage() {
           ? `/licitacoes/${item.tenderId}`
           : `/empresas/${item.companyId}?tab=convocations&message=${item.messageId}`
     );
+  };
+
+  const toggleContent = async (item: GmailConvocationAlert) => {
+    if (expandedMessageId === item.messageId) {
+      setExpandedMessageId('');
+      return;
+    }
+
+    setExpandedMessageId(item.messageId);
+    await markAsRead(item);
+
+    if (messageContents[item.messageId]) return;
+
+    setLoadingContentId(item.messageId);
+    setError('');
+    try {
+      const response = await api.get<ApiResponse<EmailMessage[]>>(
+        `/integrations/gmail/${item.companyId}/messages`,
+        { params: { limit: 100, convocationsOnly: false } }
+      );
+      const message = response.data.data.find((entry) => entry.id === item.messageId);
+      const completeContent =
+        message?.textContent?.trim() ||
+        message?.snippet?.trim() ||
+        item.snippet?.trim() ||
+        'Este e-mail não possui conteúdo textual disponível.';
+
+      setMessageContents((current) => ({ ...current, [item.messageId]: completeContent }));
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setLoadingContentId('');
+    }
   };
 
   const markAll = async () => {
@@ -180,23 +220,12 @@ export function ConvocationsPage() {
 
   return (
     <div className="page-stack emails-page-stack">
-      <div className="emails-header-block">
-        <div>
-          <span className="eyebrow">Visão geral</span>
-          <h2>E-mails</h2>
-          <p>
-            Todos os e-mails das contas conectadas aparecem aqui, com associação automática à licitação quando
-            houver correspondência segura.
-          </p>
-        </div>
-      </div>
 
       {companies.length > 0 && (
-        <nav className="company-alert-tabs emails-company-tabs" aria-label="Avisos separados por empresa">
+        <nav className="company-alert-tabs tender-company-tabs emails-company-tabs" aria-label="Avisos separados por empresa">
           {(user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && (
             <button className={selectedCompanyId === '' ? 'active' : ''} onClick={() => selectCompany(null)}>
-              <Building2 size={16} />
-              <span>Todas as empresas</span>
+              <span>GERAL</span>
               {data.unread > 0 && (
                 <strong className="company-alert-badge">{data.unread > 99 ? '99+' : data.unread}</strong>
               )}
@@ -210,8 +239,8 @@ export function ConvocationsPage() {
                 className={selectedCompanyId === company.id ? 'active' : ''}
                 onClick={() => selectCompany(company.id)}
               >
-                <CompanyBrandMark companyName={company.tradeName || company.legalName} size={18} />
-                <span>{getCompanyShortLabel(company.tradeName || company.legalName)}</span>
+                <CompanyBrandMark companyName={company.tradeName || company.legalName} size={34} />
+                <span>{(company.tradeName || company.legalName).toLocaleUpperCase('pt-BR')}</span>
                 {unread > 0 && (
                   <strong className="company-alert-badge">{unread > 99 ? '99+' : unread}</strong>
                 )}
@@ -365,6 +394,36 @@ export function ConvocationsPage() {
                   <small>{relativeTime(item.receivedAt)}</small>
                 </div>
               </button>
+
+              <div className="email-card-actions">
+                <button
+                  type="button"
+                  className="email-content-toggle"
+                  disabled={loadingContentId === item.messageId}
+                  onClick={() => void toggleContent(item)}
+                >
+                  {expandedMessageId === item.messageId ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+                  {loadingContentId === item.messageId
+                    ? 'Carregando...'
+                    : expandedMessageId === item.messageId
+                      ? 'Fechar conteúdo'
+                      : 'Ver conteúdo'}
+                </button>
+              </div>
+
+              {expandedMessageId === item.messageId && (
+                <div className="email-full-content">
+                  <div className="email-full-content-heading">
+                    <strong>Conteúdo completo do e-mail</strong>
+                    <small>{item.sender}</small>
+                  </div>
+                  <p>
+                    {loadingContentId === item.messageId
+                      ? 'Carregando conteúdo...'
+                      : messageContents[item.messageId] || item.snippet || 'Conteúdo não disponível.'}
+                  </p>
+                </div>
+              )}
             </article>
           ))}
         </section>

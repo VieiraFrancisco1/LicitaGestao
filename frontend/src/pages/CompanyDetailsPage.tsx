@@ -1,4 +1,4 @@
-import { ArrowLeft, Building2, Gavel, Percent, RadioTower } from 'lucide-react';
+import { Building2, Gavel, Percent, RadioTower } from 'lucide-react';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { TendersPage } from './TendersPage';
@@ -6,7 +6,7 @@ import { CompanyDiscountsPanel } from './CompanyDiscountsPanel';
 import { GmailIntegrationPanel } from '../components/GmailIntegrationPanel';
 import { OutlookIntegrationPanel } from '../components/OutlookIntegrationPanel';
 import { CompanyConvocationsPanel } from '../components/CompanyConvocationsPanel';
-import { CompanyBrandMark, getCompanyShortLabel } from '../components/CompanyBrand';
+import { CompanyBrandMark } from '../components/CompanyBrand';
 import { api, errorMessage } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import type { ApiResponse, BidProgress, Company } from '../types';
@@ -97,7 +97,7 @@ export function CompanyDetailsPage() {
   return (
     <div className="page-stack">
       {employeeCompanies.length > 1 && (
-        <div className="employee-company-switcher" aria-label="Empresas vinculadas">
+        <div className="employee-company-switcher tender-company-tabs" aria-label="Empresas vinculadas">
           {employeeCompanies.map((item) => (
             <Link
               key={item.id}
@@ -105,8 +105,8 @@ export function CompanyDetailsPage() {
               to={`/empresas/${item.id}`}
               onClick={() => setActiveCompanyId(item.id)}
             >
-              <CompanyBrandMark companyName={item.tradeName || item.legalName} size={18} />
-              <span>{getCompanyShortLabel(item.tradeName || item.legalName)}</span>
+              <CompanyBrandMark companyName={item.tradeName || item.legalName} size={34} />
+              <span>{(item.tradeName || item.legalName).toLocaleUpperCase('pt-BR')}</span>
             </Link>
           ))}
         </div>
@@ -119,10 +119,7 @@ export function CompanyDetailsPage() {
         }}
       >
         <div>
-          <Link className="back-link" to="/empresas">
-            <ArrowLeft size={16} />
-            Empresas
-          </Link>
+
           <span className="eyebrow">Área da empresa</span>
           <h2>{company.tradeName || company.legalName}</h2>
           <p>{company.legalName} · {formatCnpj(company.cnpj)}</p>
