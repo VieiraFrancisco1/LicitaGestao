@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
-import { CompanyBrandMark, getCompanyShortLabel } from '../components/CompanyBrand';
+import { CompanyBrandMark } from '../components/CompanyBrand';
 import { Modal } from '../components/Modal';
 import { useAuth } from '../contexts/AuthContext';
 import { api, errorMessage } from '../services/api';
@@ -39,7 +39,6 @@ import iconIniciadas from '../assets/status-iniciadas.png';
 import iconSuspensas from '../assets/status-suspensas.png';
 import iconConvocadas from '../assets/status-convocadas.png';
 import iconRecursos from '../assets/status-recursos.png';
-import dashboardHeroBg from '../assets/dashboard-hero-bg.png';
 
 const monthOptions = [
   { value: '1', label: 'Janeiro' },
@@ -333,45 +332,6 @@ export function TendersPage({
     <div className={embedded ? 'page-stack embedded-tenders-page' : 'page-stack'}>
       {!embedded && (
         <>
-          <section
-            className="tenders-hero"
-            style={{
-              backgroundImage: `linear-gradient(90deg, rgba(8, 45, 119, 0.95), rgba(10, 70, 178, 0.88)), url(${dashboardHeroBg})`
-            }}
-          >
-            <div className="tenders-hero-copy">
-              <span className="tenders-hero-line" />
-              <h3>
-                Mais controle para suas <span>licitações</span>
-              </h3>
-              <p>Organize, acompanhe e gerencie todas as oportunidades em um só lugar.</p>
-            </div>
-
-            <div className="tenders-hero-aside">
-              <div className="tenders-hero-sheet">
-                <strong>Licitações</strong>
-                <span />
-                <span />
-                <span />
-                <span />
-              </div>
-              <ul className="tenders-hero-highlights">
-                <li>
-                  <ClipboardCheck size={18} />
-                  <span>Mais organização</span>
-                </li>
-                <li>
-                  <CheckCircle2 size={18} />
-                  <span>Mais segurança</span>
-                </li>
-                <li>
-                  <Building2 size={18} />
-                  <span>Mais resultados</span>
-                </li>
-              </ul>
-            </div>
-          </section>
-
           <div className="page-heading">
             <div>
               <p>Controle geral compartilhado</p>
@@ -410,8 +370,8 @@ export function TendersPage({
                   setCity('');
                 }}
               >
-                <CompanyBrandMark companyName={companyName(company)} size={18} />
-                <span>{getCompanyShortLabel(companyName(company))}</span>
+                <CompanyBrandMark companyName={companyName(company)} size={34} />
+                <span>{companyName(company).toLocaleUpperCase('pt-BR')}</span>
               </button>
             ))}
           </nav>

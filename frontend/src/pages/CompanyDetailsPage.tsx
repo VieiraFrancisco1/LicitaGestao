@@ -11,6 +11,7 @@ import { api, errorMessage } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import type { ApiResponse, BidProgress, Company } from '../types';
 import { formatDate, optionLabel, progressOptions } from '../utils/bid';
+import dashboardHeroBg from '../assets/dashboard-hero-bg.png';
 
 type Tab = 'overview' | 'bids' | 'platforms' | 'discounts' | 'integrations' | 'convocations';
 
@@ -111,7 +112,12 @@ export function CompanyDetailsPage() {
         </div>
       )}
 
-      <div className="details-header company-header">
+      <div
+        className="details-header company-header dashboard-hero"
+        style={{
+          backgroundImage: `linear-gradient(90deg, rgba(7, 47, 129, 0.92), rgba(9, 58, 157, 0.86)), url(${dashboardHeroBg})`
+        }}
+      >
         <div>
           <Link className="back-link" to="/empresas">
             <ArrowLeft size={16} />

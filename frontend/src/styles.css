@@ -9331,3 +9331,70 @@ button.bid-detail-action-card {
     width: 100%;
   }
 }
+
+/* ===== V34: ajustes finais de licitações, chat e banner da empresa ===== */
+.company-header.dashboard-hero {
+  width: 100%;
+  min-height: 170px;
+  background-size: cover;
+  background-position: center;
+}
+
+.company-header.dashboard-hero .back-link {
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.company-header.dashboard-hero .status-pill {
+  position: relative;
+  z-index: 2;
+}
+
+.team-chat-card {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.team-chat-messages {
+  width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.team-chat-messages article {
+  box-sizing: border-box;
+  width: fit-content;
+  max-width: min(70%, 560px);
+  min-width: 0;
+  overflow: hidden;
+}
+
+.team-chat-messages article > .chat-message-heading {
+  min-width: 0;
+  max-width: 100%;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.team-chat-messages article > .chat-message-heading > strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.chat-message-meta {
+  margin-left: auto;
+}
+
+.team-chat-messages p {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+@media (max-width: 760px) {
+  .team-chat-messages article {
+    max-width: 92%;
+  }
+}
+
