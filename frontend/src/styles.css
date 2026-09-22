@@ -10383,3 +10383,51 @@ button.bid-detail-action-card {
     min-width: 500px;
   }
 }
+/* ===== V45: status menores e letras maiores ===== */
+.tender-status-filter-row > .tender-status-tabs {
+  flex: 0 1 auto !important;
+  width: auto !important;
+  min-width: 0 !important;
+  gap: 3px !important;
+  padding: 2px !important;
+}
+
+.tender-status-filter-row > .tender-status-tabs button {
+  flex: 0 0 auto !important;
+  width: auto !important;
+  min-width: 0 !important;
+  height: 28px !important;
+  min-height: 28px !important;
+  padding: 0 7px !important;
+  gap: 4px !important;
+  border-radius: 6px !important;
+  font-size: 13px !important;
+  line-height: 1 !important;
+  font-weight: 900 !important;
+  letter-spacing: -0.15px !important;
+}
+
+.tender-status-filter-row > .tender-status-tabs button img {
+  width: 12px !important;
+  height: 12px !important;
+  flex: 0 0 12px !important;
+}
+
+@media (max-width: 1180px) {
+  .tender-status-filter-row > .tender-status-tabs {
+    min-width: 0 !important;
+  }
+
+  .tender-status-filter-row > .tender-status-tabs button {
+    min-width: 0 !important;
+    font-size: 12px !important;
+    padding-left: 6px !important;
+    padding-right: 6px !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .tender-status-filter-row > .tender-status-tabs {
+    min-width: 460px !important;
+  }
+}
