@@ -15,6 +15,10 @@ import dashboardHeroBg from '../assets/dashboard-hero-bg.png';
 
 type Tab = 'overview' | 'bids' | 'platforms' | 'discounts' | 'integrations' | 'convocations';
 
+type CompanyHeaderStyle = CSSProperties & {
+  '--company-watermark-logo'?: string;
+};
+
 type PlatformGroup = {
   id: string;
   name: string;
@@ -95,9 +99,9 @@ export function CompanyDetailsPage() {
     user?.role === 'FUNCIONARIO' ? user.assignedCompanies.filter((item) => item.active) : [];
   const displayName = company.tradeName || company.legalName;
   const companyLogo = getCompanyLogo(displayName);
-  const headerStyle: CSSProperties = {
+  const headerStyle: CompanyHeaderStyle = {
     backgroundImage: `linear-gradient(110deg, rgba(19, 70, 166, 0.82), rgba(34, 88, 190, 0.72)), url(${dashboardHeroBg})`,
-    ...(companyLogo ? { ['--company-watermark-logo' as '--company-watermark-logo']: `url(${companyLogo})` } : {})
+    ...(companyLogo ? { '--company-watermark-logo': `url(${companyLogo})` } : {})
   };
 
   return (
