@@ -233,7 +233,7 @@ export function AppLayout() {
             </button>
             <div>
               <span className="eyebrow">Visão geral</span>
-              <h1>{pageTitle}</h1>
+              <h1 className={location.pathname === '/convocacoes' ? 'emails-page-title' : undefined}>{pageTitle}</h1>
             </div>
           </div>
 

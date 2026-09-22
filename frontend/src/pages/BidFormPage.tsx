@@ -332,17 +332,17 @@ export function BidFormPage() {
             />
           </label>
         </div>
-      </section>
 
-      <div className="sticky-actions">
-        <Link className="secondary-button" to="/licitacoes">
-          Cancelar
-        </Link>
-        <button className="primary-button" disabled={saving}>
-          <Save size={17} />
-          {saving ? 'Salvando...' : 'Salvar licitação'}
-        </button>
-      </div>
+        <div className="sticky-actions tender-form-actions">
+          <Link className="secondary-button" to="/licitacoes">
+            Cancelar
+          </Link>
+          <button className="primary-button" disabled={saving}>
+            <Save size={17} />
+            {saving ? 'Salvando...' : 'Salvar licitação'}
+          </button>
+        </div>
+      </section>
     </form>
   );
 }

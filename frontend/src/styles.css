@@ -10115,3 +10115,104 @@ button.bid-detail-action-card {
 .sidebar-version-block {
   margin-top: 2px !important;
 }
+/* ===== V38: cards consistentes e formulario integrado ===== */
+
+/* GERAL acompanha apenas o conteúdo e não cresce como empresa */
+.tender-company-tabs > button.general-company-tab {
+  flex: 0 0 auto !important;
+  width: max-content !important;
+  min-width: 72px !important;
+  max-width: max-content !important;
+  padding-left: 12px !important;
+  padding-right: 12px !important;
+}
+
+/* Cards de empresa: mesmo tamanho visual em Licitações, E-mails e página Empresa */
+.tender-company-tabs > button,
+.emails-company-tabs > button,
+.employee-company-switcher.tender-company-tabs > a {
+  flex: 0 0 auto !important;
+  width: max-content !important;
+  min-width: 0 !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  box-sizing: border-box;
+  padding: 0 11px !important;
+  border: 1px solid #d5e1f1 !important;
+  border-radius: 10px !important;
+  background: #ffffff !important;
+  box-shadow: 0 2px 6px rgba(32, 70, 128, 0.04) !important;
+  white-space: nowrap;
+}
+
+.tender-company-tabs > button .company-brand-mark,
+.emails-company-tabs > button .company-brand-mark,
+.employee-company-switcher.tender-company-tabs > a .company-brand-mark {
+  width: 28px !important;
+  height: 28px !important;
+  flex: 0 0 28px;
+  border-radius: 8px !important;
+}
+
+/* Estado ativo continua suave */
+.tender-company-tabs > button.active,
+.emails-company-tabs > button.active,
+.employee-company-switcher.tender-company-tabs > a.active {
+  border-color: #bdd0ec !important;
+  background: #f4f7fc !important;
+  color: #315d96 !important;
+  box-shadow: 0 2px 7px rgba(42, 83, 142, 0.06) !important;
+}
+
+/* Página Empresa: os links agora aparecem realmente como cards */
+.employee-company-switcher.tender-company-tabs {
+  align-items: center;
+}
+
+.employee-company-switcher.tender-company-tabs > a {
+  text-decoration: none;
+}
+
+/* E-mails usa exatamente a mesma altura/padding dos cards de Licitações */
+.emails-company-tabs > button {
+  justify-content: flex-start;
+}
+
+.emails-company-tabs .company-alert-badge {
+  flex: 0 0 auto;
+}
+
+/* Título E-mails menor sem alterar os outros títulos do sistema */
+.topbar-title h1.emails-page-title {
+  font-size: 30px !important;
+  line-height: 1.05;
+}
+
+/* Formulário de licitação: salvar/cancelar deixam de parecer uma aba solta */
+.simplified-tender-form {
+  overflow: hidden;
+}
+
+.simplified-tender-form .tender-form-actions {
+  position: static !important;
+  bottom: auto !important;
+  z-index: auto !important;
+  margin: 0 !important;
+  padding: 12px 14px !important;
+  border: 0 !important;
+  border-top: 1px solid #dde5ef !important;
+  border-radius: 0 !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+@media (max-width: 640px) {
+  .simplified-tender-form .tender-form-actions {
+    padding: 12px !important;
+  }
+
+  .topbar-title h1.emails-page-title {
+    font-size: 26px !important;
+  }
+}

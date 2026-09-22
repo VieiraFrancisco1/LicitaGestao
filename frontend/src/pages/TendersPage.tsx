@@ -350,7 +350,7 @@ export function TendersPage({
         <div className="tender-scope-switcher">
           <nav className="tender-company-tabs tender-company-tabs-compact" aria-label="Licitações por empresa">
             <button
-              className={!companyScopeId ? 'active' : ''}
+              className={`general-company-tab ${!companyScopeId ? 'active' : ''}`.trim()}
               onClick={() => {
                 setCompanyScopeId('');
                 setPage(1);
