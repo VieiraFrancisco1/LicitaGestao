@@ -4,7 +4,6 @@ import logoAmaro from '../assets/company-logos/amaro.png';
 import logoEgr from '../assets/company-logos/egr.png';
 import logoIcv from '../assets/company-logos/icv.png';
 import logoLm from '../assets/company-logos/lm.png';
-import logoRecanto from '../assets/company-logos/recanto.png';
 import logoSecon from '../assets/company-logos/secon.png';
 import logoSerfi from '../assets/company-logos/serfi.png';
 import logoVertical from '../assets/company-logos/vertical.png';
@@ -39,7 +38,7 @@ const BRAND_CONFIGS: BrandConfig[] = [
     key: 'egr',
     shortLabel: 'EG&R',
     logo: logoEgr,
-    aliases: ['EG&R', 'EGR', 'EG R', 'EG&R CONSTRUCOES', 'EG & R CONSTRUCOES']
+    aliases: ['EG&R', 'EGR']
   },
   {
     key: 'agf',
@@ -57,7 +56,7 @@ const BRAND_CONFIGS: BrandConfig[] = [
     key: 'icv',
     shortLabel: 'ICV',
     logo: logoIcv,
-    aliases: ['ICV', 'I C V', 'ICV CONSTRUCOES', 'ICV CONSTRUCAO CIVIL']
+    aliases: ['ICV']
   },
   {
     key: 'lm',
@@ -70,12 +69,6 @@ const BRAND_CONFIGS: BrandConfig[] = [
     shortLabel: 'Secon',
     logo: logoSecon,
     aliases: ['SECON']
-  },
-  {
-    key: 'recanto',
-    shortLabel: 'Recanto',
-    logo: logoRecanto,
-    aliases: ['RECANTO', 'CONSTRUTORA RECANTO', 'RECANTO CONSTRUTORA']
   },
   {
     key: 'whipec',
@@ -120,10 +113,6 @@ export function getCompanyBrand(name?: string | null) {
 
 export function getCompanyShortLabel(name?: string | null) {
   return getCompanyBrand(name)?.shortLabel ?? name ?? 'Empresa';
-}
-
-export function getCompanyLogo(name?: string | null) {
-  return getCompanyBrand(name)?.logo;
 }
 
 export function CompanyBrandMark({
