@@ -104,13 +104,93 @@ export function BidFormPage() {
     }));
 
   const save = async () => {
-    setSaving(true);
     setError('');
+
+    const normalizeUrl = (value: string) => {
+      const trimmed = value.trim();
+      if (!trimmed) return '';
+      return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+    };
+
+    const parseMoney = (raw: string) => {
+      let value = raw.trim().replace(/\s/g, '').replace(/^R\$/i, '');
+      if (!value || !/^[0-9.,]+$/.test(value)) return Number.NaN;
+
+      const lastDot = value.lastIndexOf('.');
+      const lastComma = value.lastIndexOf(',');
+      const separatorIndex = Math.max(lastDot, lastComma);
+
+      if (lastDot >= 0 && lastComma >= 0) {
+        const decimalSeparator = lastDot > lastComma ? '.' : ',';
+        const thousandsSeparator = decimalSeparator === '.' ? ',' : '.';
+        value = value.split(thousandsSeparator).join('');
+        value = value.replace(decimalSeparator, '.');
+      } else if (separatorIndex >= 0) {
+        const separator = value[separatorIndex]!;
+        const parts = value.split(separator);
+        const fraction = parts.at(-1) ?? '';
+        const hasMultipleSeparators = parts.length > 2;
+        const looksLikeThousands =
+          fraction.length === 3 && (hasMultipleSeparators || parts[0]!.length <= 3);
+
+        if (looksLikeThousands) value = parts.join('');
+        else if (hasMultipleSeparators) value = `${parts.slice(0, -1).join('')}.${fraction}`;
+        else value = value.replace(separator, '.');
+      }
+
+      return Number(value);
+    };
+
+    const municipality = form.municipality.trim();
+    const object = form.object.trim();
+    const proposalValidityDays = Number(form.proposalValidityDays);
+    const estimatedValue = parseMoney(form.estimatedValue);
+    const platformId = form.platformId.trim();
+
+    if (!form.sessionDate) {
+      setError('Informe a data da licitação.');
+      return;
+    }
+    if (!municipality) {
+      setError('Informe a cidade da licitação.');
+      return;
+    }
+    if (!object) {
+      setError('Informe o objeto da licitação.');
+      return;
+    }
+    if (!Number.isInteger(proposalValidityDays) || proposalValidityDays < 1 || proposalValidityDays > 3650) {
+      setError('Informe uma validade da carta-proposta entre 1 e 3650 dias.');
+      return;
+    }
+    if (!Number.isFinite(estimatedValue) || estimatedValue <= 0) {
+      setError('Informe um valor global válido.');
+      return;
+    }
+    if (!platformId) {
+      setError('Selecione a plataforma da licitação.');
+      return;
+    }
+
+    const payload = {
+      modality: form.modality.trim(),
+      noticeNumber: form.noticeNumber.trim(),
+      processNumber: form.processNumber.trim(),
+      executionTerm: form.executionTerm.trim(),
+      isPreQualification: form.isPreQualification,
+      municipality,
+      sessionDate: form.sessionDate,
+      object,
+      proposalValidityDays,
+      estimatedValue,
+      requiresGuaranteeOnePercent: form.requiresGuaranteeOnePercent,
+      platformId,
+      platformLink: normalizeUrl(form.platformLink),
+      seobraLinks: form.seobraLinks.map(normalizeUrl).filter(Boolean)
+    };
+
+    setSaving(true);
     try {
-      const payload = {
-        ...form,
-        seobraLinks: form.seobraLinks.map((link) => link.trim()).filter(Boolean)
-      };
       const response = id
         ? await api.put<ApiResponse<Tender>>(`/tenders/${id}`, payload)
         : await api.post<ApiResponse<Tender>>('/tenders', payload);

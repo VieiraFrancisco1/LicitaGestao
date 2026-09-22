@@ -53,13 +53,13 @@ export const tenderBody = z.object({
   processNumber: z.string().trim().max(120).optional(),
   executionTerm: z.string().trim().max(120).optional(),
   isPreQualification: z.boolean().optional(), // LICITAGESTAO_PREQUAL_ALL_EMAILS_V1_VALIDATOR
-  municipality: z.string().trim().min(2).max(120),
+  municipality: z.string().trim().min(1, 'Informe a cidade').max(120),
   sessionDate: date,
-  object: z.string().trim().min(5).max(10000),
+  object: z.string().trim().min(1, 'Informe o objeto').max(10000),
   proposalValidityDays: z.coerce.number().int().min(1).max(3650),
   estimatedValue: flexibleMoney,
   requiresGuaranteeOnePercent: z.boolean(),
-  platformId: z.string().uuid(),
+  platformId: z.string().trim().uuid('Selecione uma plataforma válida'),
   platformLink: optionalHttpUrl,
   seobraLink: optionalHttpUrl,
   seobraLinks: z.array(optionalHttpUrl.unwrap()).max(20).optional()

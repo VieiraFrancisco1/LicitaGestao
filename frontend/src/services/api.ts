@@ -55,10 +55,21 @@ api.interceptors.response.use(
 
 export const errorMessage = (error: unknown) => {
   if (axios.isAxiosError(error)) {
-    return (
-      (error.response?.data as { message?: string } | undefined)?.message ??
-      'Não foi possível concluir a operação'
-    );
+    const data = error.response?.data as
+      | { message?: string; errors?: Record<string, string[] | undefined> }
+      | undefined;
+
+    const details = data?.errors
+      ? Object.values(data.errors)
+          .flatMap((messages) => messages ?? [])
+          .filter(Boolean)
+      : [];
+
+    if (data?.message === 'Dados inválidos' && details.length > 0) {
+      return `${data.message}: ${details.join(' · ')}`;
+    }
+
+    return data?.message ?? 'Não foi possível concluir a operação';
   }
   return 'Ocorreu um erro inesperado';
 };
