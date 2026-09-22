@@ -1,4 +1,4 @@
-import { Building2, Check, Mail, RefreshCw, Shield, Trash2, X } from 'lucide-react';
+import { Building2, Check, CircleDollarSign, Mail, RefreshCw, Shield, Trash2, UserX, X } from 'lucide-react';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { api, errorMessage } from '../services/api';
@@ -15,6 +15,9 @@ const formatDate = (value: string) =>
 
 const subscriptionLabel = (status: PlatformOverview['organizations'][number]['subscriptionStatus']) =>
   status === 'ACTIVE' ? 'Ativa' : status === 'EXPIRED' ? 'Vencida' : status === 'SUSPENDED' ? 'Suspensa' : 'Aguardando pagamento'; // LICITAGESTAO_BILLING_ORDERS_API_V2_SUPERADMIN
+
+const subscriptionPlanLabel = (plan: PlatformOverview['organizations'][number]['subscriptionPlan']) =>
+  plan === 'MONTHLY' ? 'Mensal' : plan === 'QUARTERLY' ? '3 meses' : plan === 'SEMIANNUAL' ? '6 meses' : 'Sem plano';
 
 export function SuperAdminPage() {
   const { user } = useAuth();
@@ -127,8 +130,15 @@ export function SuperAdminPage() {
     }
   };
 
+  const suspendedOrganizations =
+    overview?.organizations.filter((organization) => !organization.active).length ?? 0;
+  const expiredSubscriptions =
+    overview?.organizations.filter(
+      (organization) => !organization.billingExempt && organization.subscriptionStatus === 'EXPIRED'
+    ).length ?? 0;
+
   return (
-    <div className="page-stack">
+    <div className="page-stack super-admin-page">
       <div className="page-heading">
         <div>
           <p>Proprietário da plataforma</p>
@@ -143,13 +153,36 @@ export function SuperAdminPage() {
       {error && <div className="alert alert-error">{error}</div>}
       {success && <div className="alert alert-success">{success}</div>}
 
-      <div className="super-admin-summary">
-        <article><Building2 /><small>Organizações</small><strong>{overview?.totals.organizations ?? 0}</strong></article>
-        <article><Shield /><small>Ativas</small><strong>{overview?.totals.activeOrganizations ?? 0}</strong></article>
-        <article><Mail /><small>Gmail pendentes</small><strong>{overview?.totals.pendingGmailRequests ?? 0}</strong></article>
+      <div className="super-admin-summary super-admin-summary-expanded">
+        <article>
+          <span className="super-admin-summary-icon"><Building2 /></span>
+          <div><small>Organizações</small><strong>{overview?.totals.organizations ?? 0}</strong></div>
+        </article>
+        <article>
+          <span className="super-admin-summary-icon"><Shield /></span>
+          <div><small>Contas ativas</small><strong>{overview?.totals.activeOrganizations ?? 0}</strong></div>
+        </article>
+        <article>
+          <span className="super-admin-summary-icon danger"><UserX /></span>
+          <div><small>Contas suspensas</small><strong>{suspendedOrganizations}</strong></div>
+        </article>
+        <article>
+          <span className="super-admin-summary-icon warning"><Mail /></span>
+          <div><small>Gmail pendentes</small><strong>{overview?.totals.pendingGmailRequests ?? 0}</strong></div>
+        </article>
+        <article>
+          <span className="super-admin-summary-icon warning"><CircleDollarSign /></span>
+          <div><small>Assinaturas vencidas</small><strong>{expiredSubscriptions}</strong></div>
+        </article>
       </div>
 
-      <section className="table-card super-admin-organizations-card">
+      <nav className="super-admin-quick-nav" aria-label="Seções do Super Admin">
+        <a href="#super-admin-clientes">Clientes</a>
+        <a href="#super-admin-gmail">Solicitações Gmail</a>
+        <a href="#super-admin-suporte">Suporte</a>
+      </nav>
+
+      <section id="super-admin-clientes" className="table-card super-admin-organizations-card">
         <div className="panel-heading super-admin-section-heading">
           <div>
             <span className="eyebrow">Clientes</span>
@@ -181,9 +214,19 @@ export function SuperAdminPage() {
                   <td>{organization._count.companies}</td>
                   <td>{organization._count.tenders}</td>
                   <td>
-                    {organization.billingExempt ? <span className="status-pill active">Isenta</span> : (
-                      <><span className={`status-pill ${organization.subscriptionStatus === 'ACTIVE' ? 'active' : 'inactive'}`}>{subscriptionLabel(organization.subscriptionStatus)}</span>{organization.subscriptionExpiresAt && <small>até {new Intl.DateTimeFormat('pt-BR').format(new Date(organization.subscriptionExpiresAt))}</small>}</>
-                    )}
+                    <div className="super-admin-subscription-cell">
+                      {organization.billingExempt ? (
+                        <span className="status-pill active">Isenta</span>
+                      ) : (
+                        <span className={`status-pill ${organization.subscriptionStatus === 'ACTIVE' ? 'active' : 'inactive'}`}>
+                          {subscriptionLabel(organization.subscriptionStatus)}
+                        </span>
+                      )}
+                      <small>{organization.billingExempt ? 'Sem cobrança' : subscriptionPlanLabel(organization.subscriptionPlan)}</small>
+                      {organization.subscriptionExpiresAt && (
+                        <small>até {new Intl.DateTimeFormat('pt-BR').format(new Date(organization.subscriptionExpiresAt))}</small>
+                      )}
+                    </div>
                   </td>
                   <td><span className={`status-pill ${organization.active ? 'active' : 'inactive'}`}>{organization.active ? 'Ativa' : 'Suspensa'}</span></td>
                   <td>
@@ -220,7 +263,7 @@ export function SuperAdminPage() {
         </div>
       </section>
 
-      <section className="table-card super-admin-gmail-card">
+      <section id="super-admin-gmail" className="table-card super-admin-gmail-card">
         <div className="panel-heading super-admin-request-heading">
           <div>
             <span className="eyebrow">Google OAuth em teste</span>
@@ -261,7 +304,7 @@ export function SuperAdminPage() {
         </div>
       </section>
 
-      <section className="detail-panel super-admin-support-card">
+      <section id="super-admin-suporte" className="detail-panel super-admin-support-card">
         <div className="panel-heading super-admin-section-heading">
           <div><span className="eyebrow">Ajuda</span><h3>Contato de suporte</h3><p>Este contato aparece na aba Ajuda de todos os clientes.</p></div>
         </div>

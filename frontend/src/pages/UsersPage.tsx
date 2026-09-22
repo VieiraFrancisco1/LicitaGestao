@@ -1,4 +1,4 @@
-import { Edit3, Plus, Search, Unlink, UserRound } from 'lucide-react';
+import { Building2, Edit3, Plus, Search, UserRound } from 'lucide-react';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { Modal } from '../components/Modal';
 import { api, errorMessage } from '../services/api';
@@ -29,7 +29,6 @@ export function UsersPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [editing, setEditing] = useState<User | null | undefined>(undefined);
-  const [unlinking, setUnlinking] = useState('');
   const load = useCallback(async () => {
     setLoading(true);
     setError('');
@@ -52,27 +51,7 @@ export function UsersPage() {
     setSuccess(message);
     setTimeout(() => setSuccess(''), 3500);
   };
-  const unlinkCompany = async (item: User, company: CompanySummary) => {
-    const companyName = company.tradeName || company.legalName;
-    if (
-      !window.confirm(
-        `Desvincular ${item.name} da empresa ${companyName}? O usuário não será apagado e os outros vínculos serão mantidos.`
-      )
-    )
-      return;
-    const key = `${item.id}:${company.id}`;
-    setUnlinking(key);
-    setError('');
-    try {
-      await api.delete(`/users/${item.id}/companies/${company.id}`);
-      notify(`${item.name} foi desvinculado de ${companyName}.`);
-      await load();
-    } catch (err) {
-      setError(errorMessage(err));
-    } finally {
-      setUnlinking('');
-    }
-  };
+
   return (
     <div className="page-stack">
       <div className="page-heading">
@@ -88,8 +67,8 @@ export function UsersPage() {
       </div>
       {success && <div className="alert alert-success">{success}</div>}
       {error && <div className="alert alert-error">{error}</div>}
-      <section className="table-card">
-        <div className="table-toolbar">
+      <section className="table-card users-admin-card">
+        <div className="table-toolbar users-table-toolbar">
           <label className="search-field">
             <Search size={18} />
             <input
@@ -108,7 +87,7 @@ export function UsersPage() {
           </select>
         </div>
         <div className="table-wrap">
-          <table>
+          <table className="users-admin-table">
             <thead>
               <tr>
                 <th>Usuário</th>
@@ -138,18 +117,41 @@ export function UsersPage() {
                 data?.items.map((item) => (
                   <tr key={item.id}>
                     <td>
-                      <strong>{item.name}</strong>
-                      <small>{item.email}</small>
+                      <div className="user-table-identity">
+                        <span className="user-table-avatar">{item.name.trim().charAt(0).toUpperCase()}</span>
+                        <div>
+                          <strong>{item.name}</strong>
+                          <small>{item.email}</small>
+                        </div>
+                      </div>
                     </td>
                     <td>
                       <span className="role-pill">{roleLabel(item.role)}</span>
                     </td>
                     <td>
-                      {item.role === 'FUNCIONARIO'
-                        ? item.assignedCompanies
-                            .map((company) => company.tradeName || company.legalName)
-                            .join(', ') || '—'
-                        : item.company?.tradeName || item.company?.legalName || '—'}
+                      {item.role === 'FUNCIONARIO' ? (
+                        item.assignedCompanies.length > 0 ? (
+                          <div className="user-company-chips">
+                            {item.assignedCompanies.map((company) => (
+                              <span key={company.id}>
+                                <Building2 size={12} />
+                                {company.tradeName || company.legalName}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="user-no-company">Nenhuma empresa</span>
+                        )
+                      ) : item.company ? (
+                        <div className="user-company-chips">
+                          <span>
+                            <Building2 size={12} />
+                            {item.company.tradeName || item.company.legalName}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="user-no-company">—</span>
+                      )}
                     </td>
                     <td>
                       <span className={`status-pill ${item.active ? 'active' : 'inactive'}`}>
@@ -158,34 +160,12 @@ export function UsersPage() {
                     </td>
                     <td>
                       <div className="row-actions user-row-actions">
-                        <button className="action-button" onClick={() => setEditing(item)}>
-                          <Edit3 size={16} />
-                          Editar
-                        </button>
-                        {item.role === 'FUNCIONARIO' &&
-                          item.assignedCompanies.map((company) => (
-                            <button
-                              key={company.id}
-                              className="action-button danger-outline"
-                              disabled={unlinking === `${item.id}:${company.id}`}
-                              onClick={() => void unlinkCompany(item, company)}
-                            >
-                              <Unlink size={15} />
-                              {unlinking === `${item.id}:${company.id}`
-                                ? 'Desvinculando...'
-                                : `Desvincular ${company.tradeName || company.legalName}`}
-                            </button>
-                          ))}
-                        {item.role === 'EMPRESA' && item.company && (
-                          <button
-                            className="action-button danger-outline"
-                            disabled={unlinking === `${item.id}:${item.company.id}`}
-                            onClick={() => void unlinkCompany(item, item.company!)}
-                          >
-                            <Unlink size={15} />
-                            {unlinking === `${item.id}:${item.company.id}`
-                              ? 'Desvinculando...'
-                              : 'Desvincular'}
+                        {item.role === 'SUPER_ADMIN' ? (
+                          <span className="user-primary-account">Conta principal</span>
+                        ) : (
+                          <button className="action-button user-edit-button" onClick={() => setEditing(item)}>
+                            <Edit3 size={16} />
+                            Editar
                           </button>
                         )}
                       </div>
@@ -275,7 +255,7 @@ function UserModal({
   };
   return (
     <Modal title={user ? 'Editar usuário' : 'Novo usuário'} onClose={onClose}>
-      <form className="entity-form" onSubmit={submit}>
+      <form className="entity-form user-edit-form" onSubmit={submit}>
         {error && <div className="alert alert-error full">{error}</div>}
         <label>
           Nome
@@ -320,27 +300,38 @@ function UserModal({
           </label>
         )}
         {form.role === 'FUNCIONARIO' && (
-          <fieldset className="company-checklist full">
-            <legend>Empresas atendidas</legend>
-            <p>Marque as empresas que este usuário poderá administrar.</p>
-            <div>
-              {companies.map((company) => (
-                <label key={company.id}>
-                  <input
-                    type="checkbox"
-                    checked={form.companyIds.includes(company.id)}
-                    onChange={(event) =>
-                      setForm((current) => ({
-                        ...current,
-                        companyIds: event.target.checked
-                          ? [...current.companyIds, company.id]
-                          : current.companyIds.filter((id) => id !== company.id)
-                      }))
-                    }
-                  />
-                  <span>{company.tradeName || company.legalName}</span>
-                </label>
-              ))}
+          <fieldset className="company-checklist company-link-manager full">
+            <legend>Empresas vinculadas</legend>
+            <p>
+              Gerencie os vínculos somente por aqui. Clique em Vincular ou Desvincular e depois em
+              Salvar usuário.
+            </p>
+            <div className="company-link-list">
+              {companies.map((company) => {
+                const linked = form.companyIds.includes(company.id);
+                return (
+                  <div key={company.id} className={`company-link-row ${linked ? 'linked' : ''}`}>
+                    <span>
+                      <strong>{company.tradeName || company.legalName}</strong>
+                      <small>{linked ? 'Empresa vinculada ao usuário' : 'Disponível para vincular'}</small>
+                    </span>
+                    <button
+                      type="button"
+                      className={`company-link-toggle ${linked ? 'linked' : ''}`}
+                      onClick={() =>
+                        setForm((current) => ({
+                          ...current,
+                          companyIds: linked
+                            ? current.companyIds.filter((id) => id !== company.id)
+                            : [...current.companyIds, company.id]
+                        }))
+                      }
+                    >
+                      {linked ? 'Desvincular' : 'Vincular'}
+                    </button>
+                  </div>
+                );
+              })}
               {companies.length === 0 && <span>Nenhuma empresa ativa cadastrada.</span>}
             </div>
           </fieldset>
