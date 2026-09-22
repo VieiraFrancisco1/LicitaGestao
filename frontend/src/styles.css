@@ -10260,3 +10260,14 @@ button.bid-detail-action-card {
 .tender-scope-switcher .tender-company-tabs > button + button {
   margin-left: 0 !important;
 }
+/* ===== V42: titulos do topo compactos, sem alterar estrutura ===== */
+.topbar-title h1 {
+  font-size: 30px !important;
+  line-height: 1.05 !important;
+}
+
+@media (max-width: 640px) {
+  .topbar-title h1 {
+    font-size: 26px !important;
+  }
+}
