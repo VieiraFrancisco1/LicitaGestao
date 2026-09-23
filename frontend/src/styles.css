@@ -10431,3 +10431,72 @@ button.bid-detail-action-card {
     min-width: 460px !important;
   }
 }
+/* ===== V46: status maiores preenchendo a faixa ===== */
+.tender-date-filter-bar.tender-status-filter-row {
+  gap: 12px !important;
+  padding: 9px 10px !important;
+}
+
+.tender-status-filter-row > .tender-status-tabs {
+  flex: 1 1 auto !important;
+  width: 100% !important;
+  min-width: 720px !important;
+  display: flex !important;
+  gap: 5px !important;
+  padding: 4px !important;
+  border-radius: 11px !important;
+}
+
+.tender-status-filter-row > .tender-status-tabs button {
+  flex: 1 1 0 !important;
+  width: 100% !important;
+  min-width: 108px !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  padding: 0 12px !important;
+  gap: 7px !important;
+  border-radius: 9px !important;
+  font-size: 16px !important;
+  line-height: 1 !important;
+  font-weight: 900 !important;
+  letter-spacing: -0.2px !important;
+}
+
+.tender-status-filter-row > .tender-status-tabs button img {
+  width: 18px !important;
+  height: 18px !important;
+  flex: 0 0 18px !important;
+}
+
+.tender-status-filter-row > .tender-date-selectors {
+  flex: 0 0 auto !important;
+  gap: 7px !important;
+}
+
+.tender-status-filter-row > .tender-date-selectors select {
+  height: 44px !important;
+  font-size: 12px !important;
+}
+
+@media (max-width: 1350px) {
+  .tender-status-filter-row > .tender-status-tabs {
+    min-width: 680px !important;
+  }
+
+  .tender-status-filter-row > .tender-status-tabs button {
+    min-width: 100px !important;
+    font-size: 15px !important;
+    padding-left: 9px !important;
+    padding-right: 9px !important;
+  }
+}
+
+@media (max-width: 1180px) {
+  .tender-status-filter-row > .tender-status-tabs {
+    min-width: 720px !important;
+  }
+
+  .tender-status-filter-row > .tender-status-tabs button {
+    font-size: 14px !important;
+  }
+}
