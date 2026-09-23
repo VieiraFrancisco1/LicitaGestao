@@ -52,7 +52,7 @@ export const buildCompanyBannerStyle = (banner?: string) =>
   banner
     ? {
         backgroundImage: `linear-gradient(90deg, rgba(8, 25, 62, 0.18), rgba(8, 25, 62, 0.24)), url(${banner})`,
-        backgroundSize: '100% 100%, 70% auto',
+        backgroundSize: '100% 100%, cover',
         backgroundPosition: 'center, center',
         backgroundRepeat: 'no-repeat, no-repeat',
         backgroundColor: '#0b3978'
