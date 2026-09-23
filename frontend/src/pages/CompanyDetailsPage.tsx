@@ -1,4 +1,4 @@
-import { ArrowLeft, Building2, Gavel, Percent, RadioTower } from 'lucide-react';
+import { Building2, Gavel, Percent, RadioTower } from 'lucide-react';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { TendersPage } from './TendersPage';
@@ -6,11 +6,24 @@ import { CompanyDiscountsPanel } from './CompanyDiscountsPanel';
 import { GmailIntegrationPanel } from '../components/GmailIntegrationPanel';
 import { OutlookIntegrationPanel } from '../components/OutlookIntegrationPanel';
 import { CompanyConvocationsPanel } from '../components/CompanyConvocationsPanel';
+import { CompanyBrandMark } from '../components/CompanyBrand';
 import { api, errorMessage } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import type { ApiResponse, BidProgress, Company } from '../types';
 import { formatDate, optionLabel, progressOptions } from '../utils/bid';
-import { buildCompanyBannerStyle, resolveCompanyBanner } from '../utils/companyBranding';
+import dashboardHeroBg from '../assets/dashboard-hero-bg.png';
+import bannerAgf from '../assets/company-banners/agf.png';
+import bannerAmaro from '../assets/company-banners/amaro.png';
+import bannerEgr from '../assets/company-banners/egr.png';
+import bannerEqv from '../assets/company-banners/eqv.png';
+import bannerIcv from '../assets/company-banners/icv.png';
+import bannerLm from '../assets/company-banners/lm.png';
+import bannerRb from '../assets/company-banners/rb.png';
+import bannerRecanto from '../assets/company-banners/recanto.png';
+import bannerSecon from '../assets/company-banners/secon.png';
+import bannerSerfi from '../assets/company-banners/serfi.png';
+import bannerVertical from '../assets/company-banners/vertical.png';
+import bannerWhipec from '../assets/company-banners/whipec.png';
 
 type Tab = 'overview' | 'bids' | 'platforms' | 'discounts' | 'integrations' | 'convocations';
 
@@ -27,6 +40,43 @@ type PlatformGroup = {
       sessionDate: string;
     };
   }>;
+};
+
+const normalizeCompanyBannerName = (value?: string | null) =>
+  (value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\w\s&]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toUpperCase();
+
+const companyBannerMatches = (name: string, ...aliases: string[]) =>
+  aliases.some(
+    (alias) =>
+      name === alias ||
+      name.startsWith(`${alias} `) ||
+      name.includes(` ${alias} `) ||
+      name.endsWith(` ${alias}`)
+  );
+
+const resolveCompanyBanner = (value?: string | null) => {
+  const name = normalizeCompanyBannerName(value);
+
+  if (companyBannerMatches(name, 'AGF')) return bannerAgf;
+  if (companyBannerMatches(name, 'AMARO', 'AMARO ENGENHARIA', 'AMARO ENGENHARIA LTDA')) return bannerAmaro;
+  if (companyBannerMatches(name, 'EG&R', 'EGR', 'EG R', 'EG & R')) return bannerEgr;
+  if (companyBannerMatches(name, 'EQV', 'EQV EMPREENDIMENTOS')) return bannerEqv;
+  if (companyBannerMatches(name, 'ICV', 'I C V', 'ICV CONSTRUCAO CIVIL')) return bannerIcv;
+  if (companyBannerMatches(name, 'LM', 'LM CONSTRUCOES', 'LM CONSTRUCOES & SERVICOS')) return bannerLm;
+  if (companyBannerMatches(name, 'RB', 'RB EMPREENDIMENTOS')) return bannerRb;
+  if (companyBannerMatches(name, 'RECANTO', 'CONSTRUTORA RECANTO', 'RECANTO CONSTRUTORA')) return bannerRecanto;
+  if (companyBannerMatches(name, 'SECON', 'SECON SERVICOS & CONSTRUCOES')) return bannerSecon;
+  if (companyBannerMatches(name, 'SERFI', 'SERFI CONSTRUTORA')) return bannerSerfi;
+  if (companyBannerMatches(name, 'VERTICAL', 'VERTICAL ENGENHARIA', 'VERTICAL ENGENHARIA E SERVICOS')) return bannerVertical;
+  if (companyBannerMatches(name, 'WHIPEC', 'WHIPEC EMPREENDIMENTOS')) return bannerWhipec;
+
+  return undefined;
 };
 
 export function CompanyDetailsPage() {
@@ -97,7 +147,7 @@ export function CompanyDetailsPage() {
   return (
     <div className="page-stack">
       {employeeCompanies.length > 1 && (
-        <div className="employee-company-switcher" aria-label="Empresas vinculadas">
+        <div className="employee-company-switcher tender-company-tabs" aria-label="Empresas vinculadas">
           {employeeCompanies.map((item) => (
             <Link
               key={item.id}
@@ -105,18 +155,27 @@ export function CompanyDetailsPage() {
               to={`/empresas/${item.id}`}
               onClick={() => setActiveCompanyId(item.id)}
             >
-              {item.tradeName || item.legalName}
+              <CompanyBrandMark companyName={item.tradeName || item.legalName} size={34} />
+              <span>{(item.tradeName || item.legalName).toLocaleUpperCase('pt-BR')}</span>
             </Link>
           ))}
         </div>
       )}
 
-      <div className="details-header company-header" style={buildCompanyBannerStyle(companyBanner)}>
+      <div
+        className="details-header company-header dashboard-hero"
+        style={{
+          backgroundImage: companyBanner
+            ? `linear-gradient(90deg, rgba(8, 25, 62, 0.18), rgba(8, 25, 62, 0.24)), url(${companyBanner})`
+            : `linear-gradient(90deg, rgba(7, 47, 129, 0.92), rgba(9, 58, 157, 0.86)), url(${dashboardHeroBg})`,
+          backgroundSize: companyBanner ? '100% 100%, 70% auto' : 'cover',
+          backgroundPosition: 'center, center',
+          backgroundRepeat: 'no-repeat, no-repeat',
+          backgroundColor: companyBanner ? '#0b3978' : undefined
+        }}
+      >
         <div>
-          <Link className="back-link" to="/empresas">
-            <ArrowLeft size={16} />
-            Empresas
-          </Link>
+
           <span className="eyebrow">Área da empresa</span>
           <h2>{company.tradeName || company.legalName}</h2>
           <p>{company.legalName} · {formatCnpj(company.cnpj)}</p>
@@ -152,7 +211,7 @@ export function CompanyDetailsPage() {
           <CompanyStat icon={<Building2 />} label="Usuários da empresa" value={company._count?.users ?? 0} />
           <CompanyStat
             icon={<Building2 />}
-            label="Funcionários responsáveis"
+            label="Usuários responsáveis"
             value={company._count?.staffLinks ?? 0}
           />
           <section className="detail-panel full-width">

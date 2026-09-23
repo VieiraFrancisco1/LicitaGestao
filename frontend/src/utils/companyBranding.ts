@@ -51,9 +51,10 @@ export const resolveCompanyBanner = (value?: string | null) => {
 export const buildCompanyBannerStyle = (banner?: string) =>
   banner
     ? {
-        backgroundImage: `linear-gradient(90deg, rgba(8, 25, 62, 0.24), rgba(8, 25, 62, 0.34)), url(${banner})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat'
+        backgroundImage: `linear-gradient(90deg, rgba(8, 25, 62, 0.18), rgba(8, 25, 62, 0.24)), url(${banner})`,
+        backgroundSize: '100% 100%, 70% auto',
+        backgroundPosition: 'center, center',
+        backgroundRepeat: 'no-repeat, no-repeat',
+        backgroundColor: '#0b3978'
       }
     : undefined;
