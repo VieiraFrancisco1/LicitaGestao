@@ -15,9 +15,8 @@ import {
   TriangleAlert,
   X
 } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import dashboardHeroBg from '../assets/dashboard-hero-bg.png';
 import { Modal } from '../components/Modal';
 import { useAuth } from '../contexts/AuthContext';
 import { api, errorMessage } from '../services/api';
@@ -31,6 +30,7 @@ import type {
   TenderPriorityItem
 } from '../types';
 import { optionLabel, progressOptions, situationLabel } from '../utils/bid';
+import { buildCompanyBannerStyle, resolveCompanyBanner } from '../utils/companyBranding';
 
 function relative(days?: number) {
   if (days === undefined) return '';
@@ -43,7 +43,7 @@ function relative(days?: number) {
 const chatRoleLabel = {
   SUPER_ADMIN: 'Super Admin',
   ADMIN: 'Administrador',
-  FUNCIONARIO: 'Usuário',
+  FUNCIONARIO: 'Funcionário',
   EMPRESA: 'Empresa'
 } as const;
 
@@ -82,10 +82,7 @@ export function DashboardPage() {
   const [editingAgenda, setEditingAgenda] = useState<AgendaItem | null>(null);
   const [chatText, setChatText] = useState('');
   const [chatMentions, setChatMentions] = useState<string[]>([]);
-  const [deletingChatId, setDeletingChatId] = useState('');
-  const chatMessagesRef = useRef<HTMLDivElement | null>(null);
   const [sendingChat, setSendingChat] = useState(false);
-  const [savingPriorityIds, setSavingPriorityIds] = useState<string[]>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -164,12 +161,6 @@ export function DashboardPage() {
     return () => window.clearInterval(timer);
   }, [loadChat]);
 
-  useEffect(() => {
-    const container = chatMessagesRef.current;
-    if (!container) return;
-    container.scrollTop = container.scrollHeight;
-  }, [chat?.messages.length]);
-
   const selectedName = useMemo(
     () =>
       data?.companies.find((company) => company.id === companyId)?.tradeName ||
@@ -177,6 +168,10 @@ export function DashboardPage() {
       (user?.role === 'EMPRESA' ? user.company?.tradeName || user.company?.legalName : undefined),
     [data, companyId, user]
   );
+
+  const selectedCompany =
+    data?.companies.find((company) => company.id === companyId) || (user?.role === 'EMPRESA' ? user.company : null);
+  const selectedCompanyBanner = resolveCompanyBanner(selectedCompany?.tradeName || selectedCompany?.legalName);
 
   const selectCompany = (next: string) => {
     const value = next || null;
@@ -186,100 +181,40 @@ export function DashboardPage() {
 
   const addPriority = async (tenderId: string) => {
     if (!companyId) return;
-    const tender = companyTenders.find((item) => item.id === tenderId);
-    if (!tender) return;
-    const optimisticItem: TenderPriorityItem = {
-      id: `temp-${tenderId}`,
-      tenderId,
-      createdAt: new Date().toISOString(),
-      status: tender.workflowStatus ?? 'PENDENTE',
-      tender: {
-        id: tender.id,
-        municipality: tender.municipality,
-        noticeNumber: tender.noticeNumber,
-        processNumber: tender.processNumber,
-        object: tender.object,
-        sessionDate: tender.sessionDate,
-        sessionTime: tender.sessionTime,
-        bids: tender.bids.map((bid) => ({ id: bid.id, situation: bid.situation, progress: bid.progress })),
-        emailMessages: []
-      }
-    };
-
-    setSavingPriorityIds((current) => [...current, tenderId]);
-    setPriorities((current) => (current.some((item) => item.tenderId === tenderId) ? current : [optimisticItem, ...current]));
-
     try {
       await api.post(`/workspace/${companyId}/priorities`, { tenderId });
-      const response = await api.get<ApiResponse<TenderPriorityItem[]>>(`/workspace/${companyId}/priorities`);
-      setPriorities(response.data.data);
+      await loadWorkspace();
     } catch (err) {
-      setPriorities((current) => current.filter((item) => item.tenderId !== tenderId));
       setError(errorMessage(err));
-    } finally {
-      setSavingPriorityIds((current) => current.filter((id) => id !== tenderId));
     }
   };
 
   const removePriority = async (tenderId: string) => {
     if (!companyId) return;
-    const previous = priorities;
-    setSavingPriorityIds((current) => [...current, tenderId]);
-    setPriorities((current) => current.filter((item) => item.tenderId !== tenderId));
     try {
       await api.delete(`/workspace/${companyId}/priorities/${tenderId}`);
+      await loadWorkspace();
     } catch (err) {
-      setPriorities(previous);
       setError(errorMessage(err));
-    } finally {
-      setSavingPriorityIds((current) => current.filter((id) => id !== tenderId));
     }
   };
 
   const sendChat = async (event: FormEvent) => {
     event.preventDefault();
-    const content = chatText.trim();
-    if (!content || sendingChat) return;
-
-    const mentionUserIds = chatMentions.filter((memberId) => {
-      const member = chat?.members.find((item) => item.id === memberId);
-      return member ? content.includes(`@${member.name}`) : false;
-    });
-
+    if (!chatText.trim() || sendingChat) return;
     setSendingChat(true);
     try {
-      const response = await api.post<ApiResponse<CompanyChatData['messages'][number]>>('/workspace/chat', {
-        content,
-        mentionUserIds
+      await api.post('/workspace/chat', {
+        content: chatText.trim(),
+        mentionUserIds: chatMentions
       });
-      setChat((current) =>
-        current ? { ...current, messages: [...current.messages, response.data.data] } : current
-      );
       setChatText('');
       setChatMentions([]);
+      await loadChat();
     } catch (err) {
       setError(errorMessage(err));
     } finally {
       setSendingChat(false);
-    }
-  };
-
-  const deleteChatMessage = async (messageId: string) => {
-    if (deletingChatId) return;
-    if (!window.confirm('Excluir esta mensagem do chat?')) return;
-    setDeletingChatId(messageId);
-    setError('');
-    try {
-      await api.delete(`/workspace/chat/${messageId}`);
-      setChat((current) =>
-        current
-          ? { ...current, messages: current.messages.filter((message) => message.id !== messageId) }
-          : current
-      );
-    } catch (err) {
-      setError(errorMessage(err));
-    } finally {
-      setDeletingChatId('');
     }
   };
 
@@ -314,7 +249,7 @@ export function DashboardPage() {
 
   return (
     <div className="page-stack dashboard-page">
-      <section className="dashboard-hero" style={{ backgroundImage: `linear-gradient(90deg, rgba(7, 47, 129, 0.92), rgba(9, 58, 157, 0.86)), url(${dashboardHeroBg})` }}>
+      <section className="dashboard-hero" style={buildCompanyBannerStyle(selectedCompanyBanner)}>
         <div>
           <span className="eyebrow">Área de trabalho</span>
           <h2>Bom trabalho, {user?.name.split(' ')[0]}.</h2>
@@ -327,9 +262,9 @@ export function DashboardPage() {
         <div className="dashboard-scope-control dashboard-company-selector">
           {user?.role !== 'EMPRESA' && (
             <label>
-              <span>Empresa atual</span>
+              <span>Empresa</span>
               <select value={companyId ?? ''} onChange={(event) => selectCompany(event.target.value)}>
-                {(user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && <option value="">Todas as empresas</option>}
+                {(user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && <option value="">Visão geral</option>}
                 {(data?.companies ?? user?.assignedCompanies ?? []).map((company) => (
                   <option key={company.id} value={company.id}>
                     {company.tradeName || company.legalName}
@@ -353,7 +288,7 @@ export function DashboardPage() {
         <Metric icon={<TriangleAlert />} label="Sessões críticas" value={data?.metrics.criticalDeadlines ?? 0} detail="sessões vencidas ou em até 3 dias" />
       </section>
 
-      <section className="dashboard-top-layout">
+      <section className="dashboard-grid-main">
         <article className="dashboard-panel dashboard-attention dashboard-priority-panel">
           <div className="dashboard-panel-heading">
             <div>
@@ -396,7 +331,7 @@ export function DashboardPage() {
                       {priorityLabel[item.status]}
                     </span>
                   </Link>
-                  <button title="Retirar prioridade" disabled={savingPriorityIds.includes(item.tenderId)} onClick={() => void removePriority(item.tenderId)}>
+                  <button title="Retirar prioridade" onClick={() => void removePriority(item.tenderId)}>
                     <X size={15} />
                   </button>
                 </article>
@@ -428,172 +363,150 @@ export function DashboardPage() {
           )}
         </article>
 
-        <div className="dashboard-right-rail">
-          <article className="dashboard-panel dashboard-agenda-panel">
-            <div className="dashboard-panel-heading">
-              <div>
-                <span className="eyebrow">Agenda</span>
-                <h3>{companyId ? 'Agenda da empresa' : 'Próximas licitações'}</h3>
-              </div>
-              {companyId ? (
-                <button
-                  className="secondary-button compact"
-                  onClick={() => {
-                    setEditingAgenda(null);
-                    setAgendaModalOpen(true);
-                  }}
-                >
-                  <Plus size={15} /> Adicionar
-                </button>
-              ) : (
-                <Link to="/licitacoes">Ver todas</Link>
-              )}
+        <article className="dashboard-panel dashboard-agenda-panel">
+          <div className="dashboard-panel-heading">
+            <div>
+              <span className="eyebrow">Agenda</span>
+              <h3>{companyId ? 'Agenda da empresa' : 'Próximas licitações'}</h3>
             </div>
-
             {companyId ? (
-              <div className="dashboard-compact-list editable-agenda-list">
-                {!agenda.length && <div className="dashboard-empty">Agenda livre. Adicione uma licitação, tarefa ou lembrete.</div>}
-                {agenda.slice(0, 10).map((item) => (
-                  <article key={item.id} className="agenda-editable-row">
-                    <span className="dashboard-date-box">
-                      <strong>{new Date(item.eventDate).getDate().toString().padStart(2, '0')}</strong>
-                      <small>{new Intl.DateTimeFormat('pt-BR', { month: 'short' }).format(new Date(item.eventDate)).replace('.', '')}</small>
-                    </span>
-                    <div>
-                      <strong>{item.title}</strong>
-                      <small>
-                        {new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(item.eventDate))}
-                        {item.tender ? ` · ${item.tender.municipality}${item.tender.noticeNumber ? ` · ${item.tender.noticeNumber}` : ''}` : ''}
-                      </small>
-                      {item.notes && <p>{item.notes}</p>}
-                    </div>
-                    <div className="agenda-row-actions">
-                      <button
-                        title="Editar"
-                        onClick={() => {
-                          setEditingAgenda(item);
-                          setAgendaModalOpen(true);
-                        }}
-                      >
-                        <Edit3 size={15} />
-                      </button>
-                      <button
-                        title="Excluir"
-                        onClick={() => {
-                          if (!window.confirm('Excluir este item da agenda?')) return;
-                          void api
-                            .delete(`/workspace/${companyId}/agenda/${item.id}`)
-                            .then(() => loadWorkspace())
-                            .catch((err) => setError(errorMessage(err)));
-                        }}
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    </div>
-                  </article>
-                ))}
-              </div>
+              <button
+                className="secondary-button compact"
+                onClick={() => {
+                  setEditingAgenda(null);
+                  setAgendaModalOpen(true);
+                }}
+              >
+                <Plus size={15} /> Adicionar
+              </button>
             ) : (
-              <div className="dashboard-compact-list">
-                {!data?.upcomingBids.length && <div className="dashboard-empty">Nenhuma sessão futura cadastrada.</div>}
-                {data?.upcomingBids.map((bid) => (
-                  <Link key={bid.id} to={`/participacoes/${bid.id}`}>
-                    <span className="dashboard-date-box">
-                      <strong>{bid.sessionDate.slice(8, 10)}</strong>
-                      <small>
-                        {new Intl.DateTimeFormat('pt-BR', { month: 'short', timeZone: 'UTC' })
-                          .format(new Date(`${bid.sessionDate}T00:00:00Z`))
-                          .replace('.', '')}
-                      </small>
-                    </span>
-                    <span>
-                      <strong>{bid.municipality}{bid.noticeNumber ? ` · ${bid.noticeNumber}` : ''}</strong>
-                      <small>{bid.companyName} · {bid.platformName || 'Sem plataforma'}</small>
-                    </span>
-                    <em>{optionLabel(progressOptions, bid.progress)}</em>
-                  </Link>
-                ))}
+              <Link to="/licitacoes">Ver todas</Link>
+            )}
+          </div>
+
+          {companyId ? (
+            <div className="dashboard-compact-list editable-agenda-list">
+              {!agenda.length && <div className="dashboard-empty">Agenda livre. Adicione uma licitação, tarefa ou lembrete.</div>}
+              {agenda.slice(0, 10).map((item) => (
+                <article key={item.id} className="agenda-editable-row">
+                  <span className="dashboard-date-box">
+                    <strong>{new Date(item.eventDate).getDate().toString().padStart(2, '0')}</strong>
+                    <small>{new Intl.DateTimeFormat('pt-BR', { month: 'short' }).format(new Date(item.eventDate)).replace('.', '')}</small>
+                  </span>
+                  <div>
+                    <strong>{item.title}</strong>
+                    <small>
+                      {new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(item.eventDate))}
+                      {item.tender ? ` · ${item.tender.municipality}${item.tender.noticeNumber ? ` · ${item.tender.noticeNumber}` : ''}` : ''}
+                    </small>
+                    {item.notes && <p>{item.notes}</p>}
+                  </div>
+                  <div className="agenda-row-actions">
+                    <button
+                      title="Editar"
+                      onClick={() => {
+                        setEditingAgenda(item);
+                        setAgendaModalOpen(true);
+                      }}
+                    >
+                      <Edit3 size={15} />
+                    </button>
+                    <button
+                      title="Excluir"
+                      onClick={() => {
+                        if (!window.confirm('Excluir este item da agenda?')) return;
+                        void api
+                          .delete(`/workspace/${companyId}/agenda/${item.id}`)
+                          .then(() => loadWorkspace())
+                          .catch((err) => setError(errorMessage(err)));
+                      }}
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="dashboard-compact-list">
+              {!data?.upcomingBids.length && <div className="dashboard-empty">Nenhuma sessão futura cadastrada.</div>}
+              {data?.upcomingBids.map((bid) => (
+                <Link key={bid.id} to={`/participacoes/${bid.id}`}>
+                  <span className="dashboard-date-box">
+                    <strong>{bid.sessionDate.slice(8, 10)}</strong>
+                    <small>
+                      {new Intl.DateTimeFormat('pt-BR', { month: 'short', timeZone: 'UTC' })
+                        .format(new Date(`${bid.sessionDate}T00:00:00Z`))
+                        .replace('.', '')}
+                    </small>
+                  </span>
+                  <span>
+                    <strong>{bid.municipality}{bid.noticeNumber ? ` · ${bid.noticeNumber}` : ''}</strong>
+                    <small>{bid.companyName} · {bid.platformName || 'Sem plataforma'}</small>
+                  </span>
+                  <em>{optionLabel(progressOptions, bid.progress)}</em>
+                </Link>
+              ))}
+            </div>
+          )}
+        </article>
+      </section>
+
+      {chat && (
+        <section className="dashboard-panel team-chat-card" id="team-chat">
+          <div className="dashboard-panel-heading">
+            <div>
+              <span className="eyebrow">Equipe</span>
+              <h3>Chat da equipe</h3>
+              <p>Conversa única da organização. Trocar de empresa não altera o histórico. Use @nome para mencionar alguém.</p>
+            </div>
+            <MessageCircle size={20} />
+          </div>
+          <div className="team-chat-messages">
+            {!chat.enabled && (
+              <div className="dashboard-empty">
+                O chat será liberado assim que houver pelo menos dois usuários ativos na equipe da organização.
               </div>
             )}
-          </article>
-
-          {chat && (
-            <section className="dashboard-panel team-chat-card" id="team-chat">
-              <div className="dashboard-panel-heading">
+            {chat.enabled && !chat.messages.length && <div className="dashboard-empty">Nenhuma mensagem ainda.</div>}
+            {chat.enabled && chat.messages.map((message) => (
+              <article key={message.id} className={message.authorId === user?.id ? 'mine' : ''}>
                 <div>
-                  <span className="eyebrow">Equipe</span>
-                  <h3>Chat da equipe</h3>
-                  <p>Conversa única da organização. Trocar de empresa não altera o histórico. Use @nome para mencionar alguém.</p>
+                  <strong>{message.author.name}</strong>
+                  <small>{new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(message.createdAt))}</small>
                 </div>
-                <MessageCircle size={20} />
-              </div>
-              <div className="team-chat-messages" ref={chatMessagesRef}>
-                {!chat.enabled && (
-                  <div className="dashboard-empty">
-                    O chat será liberado assim que houver pelo menos dois usuários ativos na equipe da organização.
+                <p>{message.content}</p>
+              </article>
+            ))}
+          </div>
+          {chat.enabled && (
+            <form className="team-chat-form" onSubmit={(event) => void sendChat(event)}>
+              <div className="chat-input-wrap">
+                <textarea
+                  rows={2}
+                  value={chatText}
+                  onChange={(event) => setChatText(event.target.value)}
+                  placeholder="Escreva uma mensagem. Digite @ para marcar alguém."
+                  maxLength={3000}
+                />
+                {mentionOptions.length > 0 && (
+                  <div className="chat-mention-menu">
+                    {mentionOptions.map((member) => (
+                      <button type="button" key={member.id} onClick={() => insertMention(member.id, member.name)}>
+                        <span>{member.name.charAt(0).toUpperCase()}</span>
+                        <div><strong>{member.name}</strong><small>{chatRoleLabel[member.role]}</small></div>
+                      </button>
+                    ))}
                   </div>
                 )}
-                {chat.enabled && !chat.messages.length && <div className="dashboard-empty">Nenhuma mensagem ainda.</div>}
-                {chat.enabled && chat.messages.map((message) => (
-                  <article key={message.id} className={message.authorId === user?.id ? 'mine' : ''}>
-                    <div className="chat-message-heading">
-                      <strong>{message.author.name}</strong>
-                      <span className="chat-message-meta">
-                        <small>{new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(message.createdAt))}</small>
-                        {message.authorId === user?.id && (
-                          <button
-                            type="button"
-                            className="chat-delete-message"
-                            title="Excluir minha mensagem"
-                            aria-label="Excluir minha mensagem"
-                            disabled={deletingChatId === message.id}
-                            onClick={() => void deleteChatMessage(message.id)}
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        )}
-                      </span>
-                    </div>
-                    <p>{message.content}</p>
-                  </article>
-                ))}
               </div>
-              {chat.enabled && (
-                <form className="team-chat-form" onSubmit={(event) => void sendChat(event)}>
-                  <div className="chat-input-wrap">
-                    <textarea
-                      rows={2}
-                      value={chatText}
-                      onChange={(event) => setChatText(event.target.value)}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter' && !event.shiftKey) {
-                          event.preventDefault();
-                          if (chatText.trim() && !sendingChat) event.currentTarget.form?.requestSubmit();
-                        }
-                      }}
-                      placeholder="Escreva uma mensagem. Digite @ para marcar alguém."
-                      maxLength={3000}
-                    />
-                    {mentionOptions.length > 0 && (
-                      <div className="chat-mention-menu">
-                        {mentionOptions.map((member) => (
-                          <button type="button" key={member.id} onClick={() => insertMention(member.id, member.name)}>
-                            <span>{member.name.charAt(0).toUpperCase()}</span>
-                            <div><strong>{member.name}</strong><small>{chatRoleLabel[member.role]}</small></div>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <button className="primary-button compact" disabled={!chatText.trim() || sendingChat}>
-                    <Send size={15} /> {sendingChat ? 'Enviando...' : 'Enviar'}
-                  </button>
-                </form>
-              )}
-            </section>
+              <button className="primary-button compact" disabled={!chatText.trim() || sendingChat}>
+                <Send size={15} /> {sendingChat ? 'Enviando...' : 'Enviar'}
+              </button>
+            </form>
           )}
-        </div>
-      </section>
+        </section>
+      )}
 
       <section className="dashboard-grid-secondary">
         <article className="dashboard-panel">
@@ -672,14 +585,13 @@ export function DashboardPage() {
                   type="button"
                   key={tender.id}
                   className={selected ? 'selected' : ''}
-                  disabled={savingPriorityIds.includes(tender.id)}
                   onClick={() => void (selected ? removePriority(tender.id) : addPriority(tender.id))}
                 >
                   <span>
                     <strong>{tender.municipality}{tender.noticeNumber ? ` · ${tender.noticeNumber}` : ''}</strong>
                     <small>{tender.object}</small>
                   </span>
-                  {savingPriorityIds.includes(tender.id) ? <RefreshCw size={18} className="spin-icon" /> : selected ? <Check size={18} /> : <Star size={18} />}
+                  {selected ? <Check size={18} /> : <Star size={18} />}
                 </button>
               );
             })}
