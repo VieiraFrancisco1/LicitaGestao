@@ -10500,3 +10500,40 @@ button.bid-detail-action-card {
     font-size: 14px !important;
   }
 }
+
+/* ===== V48: somente a lista de licitacoes possui rolagem vertical ===== */
+.tender-control-card > .table-wrap {
+  position: relative;
+  height: clamp(380px, calc(100dvh - 350px), 680px);
+  max-height: none !important;
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+}
+
+/* Mantem a faixa azul LICITACAO / DATA / OBJETO / ... fixa durante a rolagem. */
+.tender-control-card .organized-tenders-table thead th {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 25 !important;
+  background: #3c6da8 !important;
+  box-shadow: 0 2px 0 #d0d6df, 0 4px 10px rgba(22, 50, 92, 0.12);
+}
+
+/* A rolagem fica visualmente restrita aos cards/linhas da tabela. */
+.tender-control-card .organized-tenders-table {
+  margin: 0 !important;
+}
+
+@media (max-height: 760px) {
+  .tender-control-card > .table-wrap {
+    height: max(320px, calc(100dvh - 315px));
+  }
+}
+
+@media (max-width: 760px) {
+  .tender-control-card > .table-wrap {
+    height: max(360px, calc(100dvh - 330px));
+  }
+}
