@@ -4,6 +4,24 @@ import { api, errorMessage } from '../services/api';
 import type { ApiResponse, DiscountCalculation, Tender } from '../types';
 import { formatCurrency, formatDate } from '../utils/bid';
 
+function parseFlexibleMoney(value: string) {
+  const raw = value.trim().replace(/\s+/g, '');
+  if (!raw) return null;
+
+  let normalized = raw.replace(/[^\d.,]/g, '');
+  if (normalized.includes(',') && normalized.includes('.')) {
+    normalized =
+      normalized.lastIndexOf(',') > normalized.lastIndexOf('.')
+        ? normalized.replace(/\./g, '').replace(',', '.')
+        : normalized.replace(/,/g, '');
+  } else if (normalized.includes(',')) {
+    normalized = normalized.replace(',', '.');
+  }
+
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+}
+
 export function CompanyDiscountsPanel({ companyId }: { companyId: string }) {
   const [items, setItems] = useState<DiscountCalculation[]>([]);
   const [tenders, setTenders] = useState<Tender[]>([]);
@@ -55,8 +73,9 @@ export function CompanyDiscountsPanel({ companyId }: { companyId: string }) {
 
   const calculate = async (item: DiscountCalculation) => {
     const value = values[item.id] ?? '';
-    if (!value) {
-      setError('Informe o valor já com desconto');
+    const normalizedValue = parseFlexibleMoney(value);
+    if (normalizedValue === null) {
+      setError('Informe um valor válido já com desconto');
       return;
     }
     setSavingId(item.id);
@@ -64,7 +83,7 @@ export function CompanyDiscountsPanel({ companyId }: { companyId: string }) {
     try {
       const response = await api.put<ApiResponse<DiscountCalculation>>(
         `/companies/${companyId}/discounts/${item.id}`,
-        { discountedValue: value }
+        { discountedValue: normalizedValue }
       );
       setItems((current) => current.map((row) => (row.id === item.id ? response.data.data : row)));
     } catch (err) {
@@ -160,13 +179,14 @@ export function CompanyDiscountsPanel({ companyId }: { companyId: string }) {
                   <td>
                     <input
                       aria-label="Valor com desconto"
-                      type="number"
-                      min="0"
-                      max={item.tender.estimatedValue ?? undefined}
-                      step="0.01"
+                      type="text"
+                      inputMode="decimal"
                       value={values[item.id] ?? ''}
                       onChange={(event) =>
-                        setValues((current) => ({ ...current, [item.id]: event.target.value }))
+                        setValues((current) => ({
+                          ...current,
+                          [item.id]: event.target.value.replace(/[^\d.,]/g, '')
+                        }))
                       }
                       placeholder="0,00"
                     />

@@ -1,5 +1,22 @@
 import { z } from 'zod';
 
+const flexibleMoney = z.preprocess((value) => {
+  if (value === '' || value === undefined || value === null) return null;
+  if (typeof value === 'number') return value;
+  if (typeof value !== 'string') return value;
+
+  const raw = value.trim().replace(/\s+/g, '');
+  if (!raw) return null;
+
+  if (raw.includes(',') && raw.includes('.')) {
+    return raw.lastIndexOf(',') > raw.lastIndexOf('.')
+      ? raw.replace(/\./g, '').replace(',', '.')
+      : raw.replace(/,/g, '');
+  }
+
+  return raw.includes(',') ? raw.replace(',', '.') : raw;
+}, z.coerce.number().nonnegative().nullable());
+
 export const listDiscountsSchema = z.object({
   body: z.object({}),
   params: z.object({ id: z.string().uuid() }),
@@ -14,10 +31,7 @@ export const createDiscountSchema = z.object({
 
 export const updateDiscountSchema = z.object({
   body: z.object({
-    discountedValue: z.preprocess(
-      (value) => (value === '' || value === undefined ? null : value),
-      z.coerce.number().nonnegative().nullable()
-    )
+    discountedValue: flexibleMoney
   }),
   params: z.object({ id: z.string().uuid(), discountId: z.string().uuid() }),
   query: z.object({})

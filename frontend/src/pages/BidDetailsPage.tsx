@@ -7,7 +7,7 @@ import {
   Pencil,
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { CompanyConvocationsPanel } from '../components/CompanyConvocationsPanel';
 import { api, errorMessage } from '../services/api';
@@ -31,6 +31,7 @@ type Tab = 'summary' | 'data' | 'discount' | 'convocations' | 'deadlines';
 export function BidDetailsPage() {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const { user } = useAuth();
   const [bid, setBid] = useState<Bid | null>(null);
   const [deadlines, setDeadlines] = useState<DeadlineAlert[]>([]);
@@ -96,16 +97,46 @@ export function BidDetailsPage() {
     user?.role === 'EMPRESA' ||
     user?.assignedCompanies.some((company) => company.id === bid.companyId)
   );
+  const navigationState = location.state as
+    | {
+        source?: 'tenders' | 'company';
+        companyId?: string;
+        tendersView?: {
+          companyScopeId: string;
+          search: string;
+          workflowStatus: string;
+          city: string;
+          day: string;
+          month: string;
+          year: number;
+          page: number;
+        };
+      }
+    | null;
+  const cameFromTenders = navigationState?.source === 'tenders';
+  const backTarget = cameFromTenders
+    ? '/licitacoes'
+    : navigationState?.source === 'company'
+      ? `/empresas/${bid.companyId}?tab=bids`
+      : `/empresas/${bid.companyId}`;
+  const backState =
+    cameFromTenders && navigationState?.tendersView
+      ? { restoreTendersView: navigationState.tendersView }
+      : undefined;
+  const backLabel = cameFromTenders ? 'Voltar para licitações' : 'Área da empresa';
+
   const seobraLinks = bid.tender.seobraLinks?.length
     ? bid.tender.seobraLinks
     : bid.tender.seobraLink
       ? [bid.tender.seobraLink]
       : [];
-  const markAttached = async () => {
+  const toggleAttached = async () => {
+    if (bid.situation !== 'PENDENTE' && bid.situation !== 'ANEXADA') return;
     setMarkingAttached(true);
     setError('');
     try {
-      await api.put(`/bids/${bid.id}`, { situation: 'ANEXADA' });
+      const nextSituation = bid.situation === 'ANEXADA' ? 'PENDENTE' : 'ANEXADA';
+      await api.put(`/bids/${bid.id}`, { situation: nextSituation });
       await loadBid();
     } catch (err) {
       setError(errorMessage(err));
@@ -118,9 +149,9 @@ export function BidDetailsPage() {
     <div className="page-stack">
       <div className="details-header bid-details-header">
         <div className="details-copy">
-          <Link to={`/empresas/${bid.companyId}`} className="back-link">
+          <Link to={backTarget} state={backState} className="back-link">
             <ArrowLeft size={16} />
-            Área da empresa
+            {backLabel}
           </Link>
           <span className="eyebrow">{bid.company.tradeName || bid.company.legalName}</span>
           <h2>
@@ -160,13 +191,25 @@ export function BidDetailsPage() {
               <span><small>Link não informado</small><strong>Plataforma</strong></span>
             </span>
           )}
-          {canEdit && bid.situation === 'PENDENTE' ? (
-            <button className="bid-detail-action-card status-action" disabled={markingAttached} onClick={() => void markAttached()}>
+          {canEdit && (bid.situation === 'PENDENTE' || bid.situation === 'ANEXADA') ? (
+            <button
+              className={`bid-detail-action-card status-action ${bid.situation === 'ANEXADA' ? 'attached' : ''}`.trim()}
+              disabled={markingAttached}
+              onClick={() => void toggleAttached()}
+              title={bid.situation === 'ANEXADA' ? 'Clique para desanexar' : 'Clique para anexar'}
+            >
               <CheckCircle2 size={16} />
-              <span><small>Situação</small><strong>{markingAttached ? 'Marcando...' : 'Marcar anexada'}</strong></span>
+              <span>
+                <small>Situação</small>
+                <strong>
+                  {markingAttached ? 'Atualizando...' : bid.situation === 'ANEXADA' ? 'Anexada' : 'Anexar'}
+                </strong>
+              </span>
             </button>
           ) : (
-            <span className="bid-detail-action-card status-action attached">
+            <span
+              className={`bid-detail-action-card status-action ${bid.situation === 'ANEXADA' ? 'attached' : ''}`.trim()}
+            >
               <CheckCircle2 size={16} />
               <span><small>Situação</small><strong>{situationLabel(bid.situation, bid.tender.isPreQualification)}</strong></span>
             </span>
@@ -174,7 +217,7 @@ export function BidDetailsPage() {
           {canEdit ? (
             <Link className="bid-detail-action-card primary" to={`/participacoes/${bid.id}/editar`}>
               <Pencil size={16} />
-              <span><small>Dados da empresa</small><strong>Editar</strong></span>
+              <span><small>Dados da participação</small><strong>Editar</strong></span>
             </Link>
           ) : (
             <span className="bid-detail-action-card disabled">
@@ -301,6 +344,24 @@ export function BidDetailsPage() {
   );
 }
 
+function parseFlexibleMoney(value: string) {
+  const raw = value.trim().replace(/\s+/g, '');
+  if (!raw) return null;
+
+  let normalized = raw.replace(/[^\d.,]/g, '');
+  if (normalized.includes(',') && normalized.includes('.')) {
+    normalized =
+      normalized.lastIndexOf(',') > normalized.lastIndexOf('.')
+        ? normalized.replace(/\./g, '').replace(',', '.')
+        : normalized.replace(/,/g, '');
+  } else if (normalized.includes(',')) {
+    normalized = normalized.replace(',', '.');
+  }
+
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+}
+
 function DiscountPanel({ bid, canEdit }: { bid: Bid; canEdit: boolean }) {
   const [item, setItem] = useState<DiscountCalculation | null>(null);
   const [value, setValue] = useState('');
@@ -331,7 +392,8 @@ function DiscountPanel({ bid, canEdit }: { bid: Bid; canEdit: boolean }) {
   }, [load]);
 
   const save = async () => {
-    if (!value) return setError('Informe o valor final da proposta após a baixa.');
+    const normalizedValue = parseFlexibleMoney(value);
+    if (normalizedValue === null) return setError('Informe um valor válido para a proposta após a baixa.');
     setSaving(true);
     setError('');
     try {
@@ -345,7 +407,7 @@ function DiscountPanel({ bid, canEdit }: { bid: Bid; canEdit: boolean }) {
         );
         discountId = created.data.data.id;
       }
-      await api.put(`/companies/${bid.companyId}/discounts/${discountId}`, { discountedValue: value });
+      await api.put(`/companies/${bid.companyId}/discounts/${discountId}`, { discountedValue: normalizedValue });
       await load();
     } catch (err) {
       setError(errorMessage(err));
@@ -380,12 +442,10 @@ function DiscountPanel({ bid, canEdit }: { bid: Bid; canEdit: boolean }) {
           <label>
             Valor final após a baixa
             <input
-              type="number"
-              min="0"
-              step="0.01"
-              max={bid.tender.estimatedValue ?? undefined}
+              type="text"
+              inputMode="decimal"
               value={value}
-              onChange={(event) => setValue(event.target.value)}
+              onChange={(event) => setValue(event.target.value.replace(/[^\d.,]/g, ''))}
               disabled={!canEdit}
               placeholder="0,00"
             />

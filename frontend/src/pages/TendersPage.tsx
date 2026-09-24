@@ -15,7 +15,7 @@ import {
   UserRoundX
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { CompanyBrandMark } from '../components/CompanyBrand';
 import { Modal } from '../components/Modal';
 import { useAuth } from '../contexts/AuthContext';
@@ -64,6 +64,17 @@ const workflowTabs: Array<{ status: TenderWorkflowStatus; label: string; icon: s
   { status: 'RECURSO', label: 'Recursos', icon: iconRecursos }
 ];
 
+type TendersViewState = {
+  companyScopeId: string;
+  search: string;
+  workflowStatus: TenderWorkflowStatus;
+  city: string;
+  day: string;
+  month: string;
+  year: number;
+  page: number;
+};
+
 function dateRange(year: number, month: string, day: string) {
   if (month === 'all') return {};
   const monthNumber = Number(month);
@@ -92,20 +103,26 @@ export function TendersPage({
   embedded?: boolean;
 } = {}) {
   const { user } = useAuth();
+  const location = useLocation();
   const currentMonth = new Date().getMonth() + 1;
   const currentYear = new Date().getFullYear();
+  const restoredView = fixedCompanyId
+    ? undefined
+    : (location.state as { restoreTendersView?: TendersViewState } | null)?.restoreTendersView;
   const [data, setData] = useState<Paginated<Tender> | null>(null);
   const [companies, setCompanies] = useState<CompanySummary[]>([]);
-  const [companyScopeId, setCompanyScopeId] = useState(fixedCompanyId ?? '');
+  const [companyScopeId, setCompanyScopeId] = useState(fixedCompanyId ?? restoredView?.companyScopeId ?? '');
   const [companyStaffCount, setCompanyStaffCount] = useState<number | null>(null);
-  const [search, setSearch] = useState('');
-  const [workflowStatus, setWorkflowStatus] = useState<TenderWorkflowStatus>('PENDENTE');
-  const [city, setCity] = useState('');
+  const [search, setSearch] = useState(restoredView?.search ?? '');
+  const [workflowStatus, setWorkflowStatus] = useState<TenderWorkflowStatus>(
+    restoredView?.workflowStatus ?? 'PENDENTE'
+  );
+  const [city, setCity] = useState(restoredView?.city ?? '');
   const [cityOptions, setCityOptions] = useState<string[]>([]);
-  const [day, setDay] = useState('all');
-  const [month, setMonth] = useState(String(currentMonth));
-  const [year, setYear] = useState(currentYear);
-  const [page, setPage] = useState(1);
+  const [day, setDay] = useState(restoredView?.day ?? 'all');
+  const [month, setMonth] = useState(restoredView?.month ?? String(currentMonth));
+  const [year, setYear] = useState(restoredView?.year ?? currentYear);
+  const [page, setPage] = useState(restoredView?.page ?? 1);
   const [loading, setLoading] = useState(true);
   const [actionId, setActionId] = useState('');
   const [error, setError] = useState('');
@@ -263,11 +280,15 @@ export function TendersPage({
     }
   };
 
-  const markAttached = async (bidId: string) => {
+  const toggleAttached = async (bidId: string, currentSituation: BidSituation) => {
+    if (currentSituation !== 'PENDENTE' && currentSituation !== 'ANEXADA') return;
     setActionId(bidId);
     setError('');
     try {
-      const response = await api.put<ApiResponse<TenderParticipation>>(`/bids/${bidId}`, { situation: 'ANEXADA' });
+      const nextSituation: BidSituation = currentSituation === 'ANEXADA' ? 'PENDENTE' : 'ANEXADA';
+      const response = await api.put<ApiResponse<TenderParticipation>>(`/bids/${bidId}`, {
+        situation: nextSituation
+      });
       setData((current) =>
         current
           ? {
@@ -327,6 +348,21 @@ export function TendersPage({
 
   const canShowAssume =
     !companyMode || companyStaffCount === null || companyStaffCount > 1;
+
+  const participationNavigationState = {
+    source: embedded && fixedCompanyId ? ('company' as const) : ('tenders' as const),
+    companyId: selectedCompanyId,
+    tendersView: {
+      companyScopeId,
+      search,
+      workflowStatus,
+      city,
+      day,
+      month,
+      year,
+      page
+    }
+  };
 
   return (
     <div className={embedded ? 'page-stack embedded-tenders-page' : 'page-stack'}>
@@ -588,19 +624,24 @@ export function TendersPage({
                       <td className="companies-cell organized-companies-cell">
                         {companyMode && selectedBid ? (
                           <div className="company-attachment-control">
-                            <span className={`attachment-status ${selectedBid.situation === 'ANEXADA' ? 'attached' : 'pending'}`}>
-                              {selectedBid.situation === 'ANEXADA' ? 'Anexada' : 'Pendente'}
-                            </span>
-                            {selectedBid.situation !== 'ANEXADA' && (
+                            {(selectedBid.situation === 'PENDENTE' || selectedBid.situation === 'ANEXADA') ? (
                               <button
                                 type="button"
-                                className="mini-action-button attach-now-button"
+                                className={`attachment-status attachment-toggle ${selectedBid.situation === 'ANEXADA' ? 'attached' : 'pending'}`}
                                 disabled={actionId === selectedBid.id}
-                                onClick={() => void markAttached(selectedBid.id)}
+                                onClick={() => void toggleAttached(selectedBid.id, selectedBid.situation)}
+                                title={selectedBid.situation === 'ANEXADA' ? 'Clique para desanexar' : 'Clique para anexar'}
                               >
-                                <CheckCircle2 size={14} />
-                                {actionId === selectedBid.id ? 'Salvando...' : 'Anexar'}
+                                {actionId === selectedBid.id
+                                  ? 'Atualizando...'
+                                  : selectedBid.situation === 'ANEXADA'
+                                    ? 'Anexada'
+                                    : 'Anexar'}
                               </button>
+                            ) : (
+                              <span className="attachment-status attached">
+                                {selectedBid.situation}
+                              </span>
                             )}
                           </div>
                         ) : (
@@ -663,7 +704,11 @@ export function TendersPage({
                       <td className="organized-actions-cell">
                         {companyMode && selectedBid ? (
                           <div className="organized-row-actions company-action-grid">
-                            <Link className="action-button compact-action-button" to={`/participacoes/${selectedBid.id}`}>
+                            <Link
+                              className="action-button compact-action-button"
+                              to={`/participacoes/${selectedBid.id}`}
+                              state={participationNavigationState}
+                            >
                               <FolderOpen size={15} /> Abrir
                             </Link>
                             <button

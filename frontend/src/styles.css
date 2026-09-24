@@ -10537,3 +10537,38 @@ button.bid-detail-action-card {
     height: max(360px, calc(100dvh - 330px));
   }
 }
+
+/* ===== V49: participacao, anexacao e baixa ===== */
+.bid-detail-action-grid {
+  grid-auto-rows: 64px;
+  align-items: stretch;
+}
+
+.bid-detail-action-card {
+  width: 100%;
+  min-width: 0;
+  height: 64px;
+  min-height: 64px;
+  box-sizing: border-box;
+}
+
+.bid-detail-action-card > span {
+  min-width: 0;
+}
+
+button.attachment-status.attachment-toggle {
+  appearance: none;
+  font: inherit;
+  cursor: pointer;
+  transition: 140ms ease;
+}
+
+button.attachment-status.attachment-toggle:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(28, 64, 118, 0.09);
+}
+
+button.attachment-status.attachment-toggle:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
