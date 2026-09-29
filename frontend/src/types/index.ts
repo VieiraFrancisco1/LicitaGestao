@@ -102,6 +102,7 @@ export type Tender = {
   noticeNumber: string | null;
   processNumber: string | null;
   isPreQualification: boolean; // LICITAGESTAO_PREQUAL_ALL_EMAILS_V1_TYPES
+  isInvertedPhase: boolean;
   executionTerm: string | null;
   municipality: string;
   state: string | null;

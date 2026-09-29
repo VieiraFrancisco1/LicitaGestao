@@ -19,6 +19,7 @@ export type TenderInput = {
   processNumber?: string | null;
   executionTerm?: string | null;
   isPreQualification?: boolean; // LICITAGESTAO_PREQUAL_ALL_EMAILS_V1_SERVICE
+  isInvertedPhase?: boolean;
   municipality?: string;
   state?: string | null;
   agency?: string | null;
@@ -124,7 +125,7 @@ const includeTender = (auth: AuthScope) =>
   }) satisfies Prisma.TenderInclude;
 
 export const createTender = async (
-  input: TenderInput & Required<Pick<TenderInput, 'municipality' | 'sessionDate' | 'object' | 'proposalValidityDays' | 'estimatedValue' | 'platformId'>>,
+  input: TenderInput & Required<Pick<TenderInput, 'sessionDate'>>,
   auth: AuthScope
 ) => {
   await ensurePlatform(input.platformId, auth);
@@ -132,9 +133,9 @@ export const createTender = async (
     data: {
       ...clean(input, input.estimatedValue),
       organizationId: requireOrganizationId(auth),
-      municipality: input.municipality,
+      municipality: input.municipality ?? '',
       sessionDate: input.sessionDate,
-      object: input.object,
+      object: input.object ?? '',
       proposalExpirationDate: addDays(input.sessionDate, input.proposalValidityDays),
       createdById: auth.userId,
       updatedById: auth.userId

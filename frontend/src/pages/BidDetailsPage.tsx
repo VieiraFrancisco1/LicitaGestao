@@ -270,6 +270,10 @@ export function BidDetailsPage() {
               <dd>{bid.tender.modality || '—'}</dd>
             </div>
             <div>
+              <dt>Fase invertida</dt>
+              <dd>{bid.tender.isInvertedPhase ? 'Sim' : 'Não'}</dd>
+            </div>
+            <div>
               <dt>Número do edital</dt>
               <dd>{bid.tender.noticeNumber || '—'}</dd>
             </div>

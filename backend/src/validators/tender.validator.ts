@@ -11,11 +11,12 @@ const optionalHttpUrl = z
 
 
 const flexibleMoney = z.preprocess((raw) => {
+  if (raw === '' || raw === undefined || raw === null) return null;
   if (typeof raw === 'number') return raw;
   if (typeof raw !== 'string') return raw;
 
   let value = raw.trim().replace(/\s/g, '').replace(/^R\$/i, '');
-  if (!value) return raw;
+  if (!value) return null;
   if (!/^[0-9.,]+$/.test(value)) return raw;
 
   const lastDot = value.lastIndexOf('.');
@@ -40,7 +41,7 @@ const flexibleMoney = z.preprocess((raw) => {
   }
 
   return Number(value);
-}, z.number().positive());
+}, z.number().positive().nullable());
 
 const date = z
   .string()
@@ -53,13 +54,20 @@ export const tenderBody = z.object({
   processNumber: z.string().trim().max(120).optional(),
   executionTerm: z.string().trim().max(120).optional(),
   isPreQualification: z.boolean().optional(), // LICITAGESTAO_PREQUAL_ALL_EMAILS_V1_VALIDATOR
-  municipality: z.string().trim().min(1, 'Informe a cidade').max(120),
+  isInvertedPhase: z.boolean().optional(),
+  municipality: z.string().trim().max(120).optional(),
   sessionDate: date,
-  object: z.string().trim().min(1, 'Informe o objeto').max(10000),
-  proposalValidityDays: z.coerce.number().int().min(1).max(3650),
-  estimatedValue: flexibleMoney,
-  requiresGuaranteeOnePercent: z.boolean(),
-  platformId: z.string().trim().uuid('Selecione uma plataforma válida'),
+  object: z.string().trim().max(10000).optional(),
+  proposalValidityDays: z.preprocess(
+    (value) => (value === '' || value === undefined ? null : value),
+    z.coerce.number().int().min(1).max(3650).nullable()
+  ).optional(),
+  estimatedValue: flexibleMoney.optional(),
+  requiresGuaranteeOnePercent: z.boolean().optional(),
+  platformId: z.preprocess(
+    (value) => (value === '' || value === undefined ? null : value),
+    z.string().trim().uuid('Selecione uma plataforma válida').nullable()
+  ).optional(),
   platformLink: optionalHttpUrl,
   seobraLink: optionalHttpUrl,
   seobraLinks: z.array(optionalHttpUrl.unwrap()).max(20).optional()

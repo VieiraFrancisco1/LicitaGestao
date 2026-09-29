@@ -8,12 +8,11 @@ type TenderForm = { // LICITAGESTAO_PREQUAL_ALL_EMAILS_V1_FORM
   modality: string;
   noticeNumber: string;
   processNumber: string;
-  executionTerm: string;
   isPreQualification: boolean;
+  isInvertedPhase: boolean;
   municipality: string;
   sessionDate: string;
   object: string;
-  proposalValidityDays: string;
   estimatedValue: string;
   requiresGuaranteeOnePercent: boolean;
   platformId: string;
@@ -25,12 +24,11 @@ const emptyForm: TenderForm = {
   modality: '',
   noticeNumber: '',
   processNumber: '',
-  executionTerm: '',
   isPreQualification: false,
+  isInvertedPhase: false,
   municipality: '',
   sessionDate: '',
   object: '',
-  proposalValidityDays: '',
   estimatedValue: '',
   requiresGuaranteeOnePercent: false,
   platformId: '',
@@ -64,12 +62,11 @@ export function BidFormPage() {
           modality: tender.modality ?? '',
           noticeNumber: tender.noticeNumber ?? '',
           processNumber: tender.processNumber ?? '',
-          executionTerm: tender.executionTerm ?? '',
           isPreQualification: tender.isPreQualification,
+          isInvertedPhase: tender.isInvertedPhase ?? false,
           municipality: tender.municipality,
           sessionDate: tender.sessionDate.slice(0, 10),
           object: tender.object,
-          proposalValidityDays: tender.proposalValidityDays?.toString() ?? '',
           estimatedValue: tender.estimatedValue ?? '',
           requiresGuaranteeOnePercent:
             tender.guaranteeType !== 'NAO_EXIGIDA' && Number(tender.guaranteePercentage) === 1,
@@ -143,32 +140,15 @@ export function BidFormPage() {
 
     const municipality = form.municipality.trim();
     const object = form.object.trim();
-    const proposalValidityDays = Number(form.proposalValidityDays);
-    const estimatedValue = parseMoney(form.estimatedValue);
-    const platformId = form.platformId.trim();
+    const estimatedValue = form.estimatedValue.trim() ? parseMoney(form.estimatedValue) : null;
+    const platformId = form.platformId.trim() || null;
 
     if (!form.sessionDate) {
       setError('Informe a data da licitação.');
       return;
     }
-    if (!municipality) {
-      setError('Informe a cidade da licitação.');
-      return;
-    }
-    if (!object) {
-      setError('Informe o objeto da licitação.');
-      return;
-    }
-    if (!Number.isInteger(proposalValidityDays) || proposalValidityDays < 1 || proposalValidityDays > 3650) {
-      setError('Informe uma validade da carta-proposta entre 1 e 3650 dias.');
-      return;
-    }
-    if (!Number.isFinite(estimatedValue) || estimatedValue <= 0) {
-      setError('Informe um valor global válido.');
-      return;
-    }
-    if (!platformId) {
-      setError('Selecione a plataforma da licitação.');
+    if (estimatedValue !== null && (!Number.isFinite(estimatedValue) || estimatedValue <= 0)) {
+      setError('Informe um valor global válido ou deixe o campo em branco.');
       return;
     }
 
@@ -176,12 +156,11 @@ export function BidFormPage() {
       modality: form.modality.trim(),
       noticeNumber: form.noticeNumber.trim(),
       processNumber: form.processNumber.trim(),
-      executionTerm: form.executionTerm.trim(),
       isPreQualification: form.isPreQualification,
+      isInvertedPhase: form.isInvertedPhase,
       municipality,
       sessionDate: form.sessionDate,
       object,
-      proposalValidityDays,
       estimatedValue,
       requiresGuaranteeOnePercent: form.requiresGuaranteeOnePercent,
       platformId,
@@ -262,6 +241,17 @@ export function BidFormPage() {
             </small>
           </label>
           <label>
+            É fase invertida?
+            <select
+              value={form.isInvertedPhase ? 'sim' : 'nao'}
+              onChange={(event) => field('isInvertedPhase', event.target.value === 'sim')}
+            >
+              <option value="nao">Não</option>
+              <option value="sim">Sim</option>
+            </select>
+            <small className="field-help">Informe se esta licitação utiliza fase invertida.</small>
+          </label>
+          <label>
             Número do edital
             <input
               placeholder="Ex.: 005/2026"
@@ -279,22 +269,13 @@ export function BidFormPage() {
             />
             <small className="field-help">Informe exatamente como aparece nos avisos da plataforma.</small>
           </label>
-          <label>
-            Prazo de execução
-            <input
-              placeholder="Ex.: 8 meses ou 240 dias"
-              value={form.executionTerm}
-              onChange={(event) => field('executionTerm', event.target.value)}
-            />
-            <small className="field-help">Usado automaticamente na Carta Proposta.</small>
-          </label>
+
           <label>
             Data da licitação
             <input
               type="date"
               value={form.sessionDate}
               onChange={(event) => field('sessionDate', event.target.value)}
-              required
             />
           </label>
           <label>
@@ -302,19 +283,9 @@ export function BidFormPage() {
             <input
               value={form.municipality}
               onChange={(event) => field('municipality', event.target.value)}
-              required
             />
           </label>
-          <label>
-            Validade da carta-proposta (dias)
-            <input
-              type="number"
-              min="1"
-              value={form.proposalValidityDays}
-              onChange={(event) => field('proposalValidityDays', event.target.value)}
-              required
-            />
-          </label>
+
           <label>
             Garantia de proposta de 1%?
             <select
@@ -333,7 +304,6 @@ export function BidFormPage() {
               placeholder="Ex.: 3.437.508,84 ou 3437508.84"
               value={form.estimatedValue}
               onChange={(event) => field('estimatedValue', event.target.value)}
-              required
             />
           </label>
           <label>
@@ -341,9 +311,8 @@ export function BidFormPage() {
             <select
               value={form.platformId}
               onChange={(event) => field('platformId', event.target.value)}
-              required
             >
-              <option value="">{platforms.length ? 'Selecione' : 'Nenhuma plataforma cadastrada'}</option>
+              <option value="">{platforms.length ? 'Nenhuma / selecionar plataforma' : 'Nenhuma plataforma cadastrada'}</option>
               {platforms.map((platform) => (
                 <option key={platform.id} value={platform.id}>
                   {platform.name}
@@ -408,7 +377,6 @@ export function BidFormPage() {
               rows={4}
               value={form.object}
               onChange={(event) => field('object', event.target.value)}
-              required
             />
           </label>
         </div>
