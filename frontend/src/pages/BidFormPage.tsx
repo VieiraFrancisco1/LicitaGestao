@@ -13,6 +13,7 @@ type TenderForm = { // LICITAGESTAO_PREQUAL_ALL_EMAILS_V1_FORM
   municipality: string;
   sessionDate: string;
   object: string;
+  proposalValidityDays: string;
   estimatedValue: string;
   requiresGuaranteeOnePercent: boolean;
   platformId: string;
@@ -29,6 +30,7 @@ const emptyForm: TenderForm = {
   municipality: '',
   sessionDate: '',
   object: '',
+  proposalValidityDays: '',
   estimatedValue: '',
   requiresGuaranteeOnePercent: false,
   platformId: '',
@@ -67,6 +69,7 @@ export function BidFormPage() {
           municipality: tender.municipality,
           sessionDate: tender.sessionDate.slice(0, 10),
           object: tender.object,
+          proposalValidityDays: tender.proposalValidityDays?.toString() ?? '',
           estimatedValue: tender.estimatedValue ?? '',
           requiresGuaranteeOnePercent:
             tender.guaranteeType !== 'NAO_EXIGIDA' && Number(tender.guaranteePercentage) === 1,
@@ -140,11 +143,21 @@ export function BidFormPage() {
 
     const municipality = form.municipality.trim();
     const object = form.object.trim();
+    const proposalValidityDays = form.proposalValidityDays.trim()
+      ? Number(form.proposalValidityDays)
+      : null;
     const estimatedValue = form.estimatedValue.trim() ? parseMoney(form.estimatedValue) : null;
     const platformId = form.platformId.trim() || null;
 
     if (!form.sessionDate) {
       setError('Informe a data da licitação.');
+      return;
+    }
+    if (
+      proposalValidityDays !== null &&
+      (!Number.isInteger(proposalValidityDays) || proposalValidityDays < 1 || proposalValidityDays > 3650)
+    ) {
+      setError('Informe uma validade da proposta entre 1 e 3650 dias ou deixe o campo em branco.');
       return;
     }
     if (estimatedValue !== null && (!Number.isFinite(estimatedValue) || estimatedValue <= 0)) {
@@ -161,6 +174,7 @@ export function BidFormPage() {
       municipality,
       sessionDate: form.sessionDate,
       object,
+      proposalValidityDays,
       estimatedValue,
       requiresGuaranteeOnePercent: form.requiresGuaranteeOnePercent,
       platformId,
@@ -286,6 +300,18 @@ export function BidFormPage() {
             />
           </label>
 
+          <label>
+            Validade da proposta (dias)
+            <input
+              type="number"
+              min="1"
+              max="3650"
+              placeholder="Opcional"
+              value={form.proposalValidityDays}
+              onChange={(event) => field('proposalValidityDays', event.target.value)}
+            />
+            <small className="field-help">Pode deixar em branco se não quiser informar.</small>
+          </label>
           <label>
             Garantia de proposta de 1%?
             <select
