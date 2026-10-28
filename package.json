@@ -18,7 +18,7 @@
     "typecheck": "npm run typecheck -w backend && npm run typecheck -w frontend",
     "test": "npm run test -w backend",
     "lint": "npm run lint -w backend && npm run lint -w frontend",
-    "quality": "npm run lint && npm run typecheck && npm run test && npm run build",
+    "quality": "npm run audit:critical && npm run lint && npm run typecheck && npm run test && npm run build",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "db:generate": "npm run db:generate -w backend",
@@ -26,7 +26,8 @@
     "db:seed": "npm run db:seed -w backend",
     "start": "npm run start -w backend",
     "deploy:start": "npm run db:deploy && npm run start -w backend",
-    "db:deploy": "npm run db:deploy -w backend"
+    "db:deploy": "npm run db:deploy -w backend",
+    "audit:critical": "npm audit --omit=dev --audit-level=critical"
   },
   "devDependencies": {
     "concurrently": "latest",
