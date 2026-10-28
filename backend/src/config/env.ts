@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 const envSchema = z.object({
   TENDER_AI_API_KEY: z.string().trim().min(1).optional(),
-  TENDER_AI_MODEL: z.string().trim().min(1).default('gpt-5.4-mini'),
+  TENDER_AI_MODEL: z.string().trim().min(1).default('gpt-6-luna'),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(3333),
   FRONTEND_URL: z.string().url(),

@@ -2,7 +2,7 @@ import { UserRole } from '@prisma/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { prisma } from '../src/config/database.js';
 import { classify, deduplicate, discoverySettings, isOpen, matches, type Candidate } from '../src/services/discovery-core.js';
-import { collectSources, parsePncp, parseTce, validSourceLink } from '../src/services/discovery-sources.js';
+import { collectSources, parsePncp, parseTce, platformFromOrigin, validSourceLink } from '../src/services/discovery-sources.js';
 import { discoveryScope, getDiscoveryStatus, listOpportunities, opportunityDraft } from '../src/services/discovery.service.js';
 import { createTender } from '../src/services/tender.service.js';
 import { env } from '../src/config/env.js';
@@ -19,6 +19,11 @@ describe('busca de obras no Ceará', () => {
     ['Assessoria de engenharia para fiscalização das obras de escolas', []],
     ['Execução de pavimentação em paralelepípedo em diversas ruas', ['CALCAMENTO', 'PAVIMENTACAO']],
     ['Construção de creche padrão FNDE', ['ESCOLAS']],
+    ['Construção de uma praça pública com urbanização', ['OBRAS_GERAIS']],
+    ['Implantação de sistema de saneamento e rede de esgoto', ['OBRAS_GERAIS']],
+    ['Execução das obras de drenagem do bairro', ['OBRAS_GERAIS']],
+    ['Aquisição de materiais de construção para obras municipais', []],
+    ['Manutenção de computadores na prefeitura', []],
     ['Ampliação de centro de educação infantil', ['ESCOLAS']],
     ['Reforma de quadra na EMEIEF João', ['ESCOLAS']],
     ['Aquisição de merenda escolar', []],
@@ -34,6 +39,7 @@ describe('busca de obras no Ceará', () => {
   it('usa limite estritamente superior a um milhão e Ceará fixo', () => {
     const settings = discoverySettings.parse({});
     expect(matches(candidate, settings, now)).toBe(true);
+    expect(matches({ ...candidate, categories: ['OBRAS_GERAIS'] }, settings, now)).toBe(true);
     expect(matches({ ...candidate, estimatedValue: 1000000 }, settings, now)).toBe(false);
     expect(matches({ ...candidate, state: 'SP' } as any, settings, now)).toBe(false);
     expect(matches({ ...candidate, estimatedValue: null }, settings, now)).toBe(false);
@@ -63,6 +69,12 @@ describe('busca de obras no Ceará', () => {
     const fetcher = vi.fn().mockResolvedValueOnce(new Response(JSON.stringify({ data: [], totalPaginas: 2 }))).mockResolvedValueOnce(new Response(JSON.stringify({ data: [], totalPaginas: 2 })));
     const result = await collectSources(['PNCP'], fetcher, now);
     expect(result.reports[0]?.pages).toBe(2); expect(new URL(String(fetcher.mock.calls[0]![0])).searchParams.get('uf')).toBe('CE');
+  });
+  it('usa linkSistemaOrigem para identificar a plataforma da disputa sem confundir com PNCP', () => {
+    expect(platformFromOrigin('https://www.bllcompras.com/Home/PublicAccess')).toEqual({ platformName: 'BLL Compras', platformUrl: 'https://www.bllcompras.com/Home/PublicAccess' });
+    expect(platformFromOrigin('https://pncp.gov.br/app/editais/123/2026/1').platformName).toBeNull();
+    expect(platformFromOrigin('javascript:alert(1)').platformUrl).toBeNull();
+    expect(platformFromOrigin('http://127.0.0.1/secret').platformUrl).toBeNull();
   });
   it('descarta dados de outros estados e respostas incompatíveis', () => {
     expect(parsePncp({ data: [{ unidadeOrgao: { ufSigla: 'SP' } }] }).items).toHaveLength(0);

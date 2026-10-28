@@ -6,15 +6,15 @@ import type { ApiResponse } from '../types';
 import { formatCurrency, formatDate } from '../utils/bid';
 import './opportunities.css';
 
-type Category = 'CALCAMENTO' | 'PAVIMENTACAO' | 'ESCOLAS';
+type Category = 'CALCAMENTO' | 'PAVIMENTACAO' | 'ESCOLAS' | 'OBRAS_GERAIS';
 type Source = 'PNCP' | 'TCE';
 type Settings = { minValue: number; categories: Category[]; sources: Source[]; municipality: string; keywords: string; includeUnknownValue: boolean; useAi: boolean; enabled: boolean; intervalHours: number };
 type Run = { id: string; status: string; progress: string; warnings: string[]; addedCount: number; startedAt: string; reports?: Array<{ source: Source; pages: number; records: number; complete: boolean; message: string }> };
-type Opportunity = { id: string; municipality: string; reference: string; agency: string; object: string; estimatedValue: number | null; sessionDate: string; sessionTime: string | null; categories: Category[]; sources: Array<{ source: Source; url: string }>; reason: string; aiReviewed: boolean; lastSeenAt: string; importedTenderId: string | null };
+type Opportunity = { id: string; municipality: string; reference: string; agency: string; object: string; estimatedValue: number | null; sessionDate: string; sessionTime: string | null; categories: Category[]; sources: Array<{ source: Source; url: string }>; platformName?: string | null; platformUrl?: string | null; reason: string; aiReviewed: boolean; lastSeenAt: string; importedTenderId: string | null };
 type Result = { items: Opportunity[]; total: number; page: number; pages: number; limited: boolean };
 type Status = { settings: Settings; run: Run | null; aiAvailable: boolean };
-const categories: Array<[Category, string]> = [['CALCAMENTO', 'Calçamento'], ['PAVIMENTACAO', 'Pavimentação'], ['ESCOLAS', 'Escolas e creches']];
-const defaults: Settings = { minValue: 1000000, categories: ['CALCAMENTO', 'PAVIMENTACAO', 'ESCOLAS'], sources: ['TCE', 'PNCP'], municipality: '', keywords: '', includeUnknownValue: false, useAi: true, enabled: false, intervalHours: 6 };
+const categories: Array<[Category, string]> = [['OBRAS_GERAIS', 'Todas as obras'], ['CALCAMENTO', 'Calçamento'], ['PAVIMENTACAO', 'Pavimentação'], ['ESCOLAS', 'Escolas e creches']];
+const defaults: Settings = { minValue: 1000000, categories: ['OBRAS_GERAIS'], sources: ['TCE', 'PNCP'], municipality: '', keywords: '', includeUnknownValue: false, useAi: true, enabled: false, intervalHours: 6 };
 const label = (source: Source) => source === 'TCE' ? 'TCE-CE' : 'PNCP';
 export function OpportunitiesPage() {
   const navigate = useNavigate();
@@ -67,7 +67,7 @@ export function OpportunitiesPage() {
   return (
     <div className="page-stack discovery-page">
       <section className="discovery-hero">
-        <div><span className="discovery-eyebrow"><Radar size={17} /> OPORTUNIDADES NO CEARÁ</span><h2>Encontre a próxima obra.</h2><p>Consulte TCE-CE e PNCP, filtre os editais e leve as oportunidades para o seu controle.</p></div>
+        <div><span className="discovery-eyebrow"><Radar size={17} /> OPORTUNIDADES NO CEARÁ</span><h2>Encontre obras em todo o Ceará.</h2><p>Consulte TCE-CE e PNCP, filtre os editais e leve as oportunidades para o seu controle.</p></div>
         <span className="discovery-ce"><MapPin size={18} /> Somente Ceará</span>
       </section>
       {error && <div className="alert alert-error" role="alert">{error}</div>}
@@ -80,7 +80,7 @@ export function OpportunitiesPage() {
           <label>Palavras adicionais<input placeholder="Ex.: drenagem, zona rural" value={settings.keywords} onChange={(e) => field('keywords', e.target.value)} maxLength={180} /><small>Todos os termos informados devem aparecer no objeto.</small></label>
         </div>
         <div className="discovery-options-row">
-          <fieldset><legend>Tipos de obra</legend><div className="discovery-choice-list">{categories.map(([value, name]) => <label key={value} className={settings.categories.includes(value) ? 'selected' : ''}><input type="checkbox" checked={settings.categories.includes(value)} onChange={() => toggle('categories', value)} />{name}</label>)}</div></fieldset>
+          <fieldset><legend>Tipos de obra (selecione 'Todas as obras' para incluir qualquer obra de engenharia)</legend><div className="discovery-choice-list">{categories.map(([value, name]) => <label key={value} className={settings.categories.includes(value) ? 'selected' : ''}><input type="checkbox" checked={settings.categories.includes(value)} onChange={() => toggle('categories', value)} />{name}</label>)}</div></fieldset>
           <fieldset><legend>Fontes oficiais</legend><div className="discovery-choice-list">{(['TCE', 'PNCP'] as Source[]).map((value) => <label key={value} className={settings.sources.includes(value) ? 'selected' : ''}><input type="checkbox" checked={settings.sources.includes(value)} onChange={() => toggle('sources', value)} />{label(value)}</label>)}</div></fieldset>
         </div>
         <div className="discovery-checks">
@@ -95,12 +95,13 @@ export function OpportunitiesPage() {
         <small className="discovery-footnote">Consulta dos próximos 90 dias. O monitoramento funciona enquanto o servidor do LicitaGestão estiver ativo. As fontes podem limitar ou interromper consultas.</small>
       </section>
       {status?.run && <section className={`discovery-run ${running ? 'running' : ''}`} role="status"><div><RefreshCw size={18} className={running ? 'discovery-spin' : ''} /><strong>{status.run.progress}</strong><span>Última busca: {new Date(status.run.startedAt).toLocaleString('pt-BR')}</span></div>{status.run.reports && <div className="discovery-source-report">{status.run.reports.map((r) => <span key={r.source}>{label(r.source)} · {r.pages} página(s) · {r.complete ? 'consulta concluída' : 'consulta parcial'}</span>)}</div>}{status.run.warnings.map((w, i) => <p key={i}>{w}</p>)}</section>}
-      <div className="discovery-results-heading"><div><h3>Licitações encontradas <span>{result?.total ?? 0}</span></h3><p>Confira o edital e as datas na fonte antes de participar.</p></div><button type="button" className="secondary-button compact" onClick={() => void refresh()}><RefreshCw size={15} />Atualizar lista</button></div>
+      <div className="discovery-results-heading"><div><h3>Licitações encontradas <span>{result?.total ?? 0}</span></h3><p>Fonte (PNCP/TCE-CE) e plataforma da disputa são informações diferentes; confirme edital e horário antes de participar.</p></div><button type="button" className="secondary-button compact" onClick={() => void refresh()}><RefreshCw size={15} />Atualizar lista</button></div>
       {result?.limited && <div className="alert">A lista alcançou o limite de registros. Refine os filtros e execute uma nova busca.</div>}
       {!result?.items.length && <div className="discovery-empty"><Radar size={35} /><h3>{running ? 'Consultando os portais oficiais...' : 'Sua próxima oportunidade começa aqui'}</h3><p>{running ? 'Você pode continuar usando o sistema enquanto a busca é realizada.' : 'Clique em Buscar agora. Se não houver correspondências, ajuste os filtros e tente novamente.'}</p></div>}
       <div className="discovery-results">{result?.items.map((item) => <article key={item.id} className="discovery-result">
         <div className="discovery-result-top"><span><MapPin size={15} />{item.municipality} · CE</span><div>{item.sources.map((source) => <a key={source.url} href={source.url} target="_blank" rel="noreferrer">{label(source.source)} <ExternalLink size={12} /></a>)}</div></div>
         <h3>{item.reference || 'Edital de licitação'}</h3><p className="discovery-object">{item.object.length > 400 ? `${item.object.slice(0, 400)}…` : item.object}</p>{item.object.length > 400 && <details><summary>Ver objeto completo</summary><p>{item.object}</p></details>}
+        <div className="discovery-platform"><div><small>Plataforma da disputa</small><strong>{item.platformName || 'Plataforma não informada'}</strong></div>{item.platformUrl && <a href={item.platformUrl} target="_blank" rel="noopener noreferrer">Ir para plataforma <ExternalLink size={14} /></a>}</div>
         <div className="discovery-result-meta"><div><small>Valor estimado</small><strong>{item.estimatedValue === null ? 'Não publicado' : formatCurrency(String(item.estimatedValue))}</strong></div><div><small>Abertura / prazo de propostas</small><strong>{formatDate(item.sessionDate)}{item.sessionTime ? ` · ${item.sessionTime}` : ''}</strong>{!item.sessionTime && <small>Confira o horário no edital</small>}</div></div>
         <div className="discovery-tags">{item.categories.map((category) => <span key={category}>{categories.find(([c]) => c === category)?.[1]}</span>)}<span className={item.aiReviewed ? 'ai' : ''}>{item.aiReviewed ? 'Revisada por IA' : 'Classificada por filtros'}</span></div>
         <p className="discovery-reason">{item.reason}</p>

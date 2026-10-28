@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
 
-export const categoryNames = { CALCAMENTO: 'Calçamento', PAVIMENTACAO: 'Pavimentação', ESCOLAS: 'Escolas e creches' } as const;
+export const categoryNames = { CALCAMENTO: 'Calçamento', PAVIMENTACAO: 'Pavimentação', ESCOLAS: 'Escolas e creches', OBRAS_GERAIS: 'Outras obras e engenharia' } as const;
 export type Category = keyof typeof categoryNames;
 export type Source = 'PNCP' | 'TCE';
 export type Candidate = {
@@ -10,10 +10,11 @@ export type Candidate = {
   agency: string; modality: string; object: string; estimatedValue: number | null;
   sessionDate: string; sessionTime: string | null; publishedDate: string | null;
   categories: Category[]; reason: string; aiReviewed: boolean;
+  platformName?: string | null; platformUrl?: string | null;
 };
 export const discoverySettings = z.object({
   minValue: z.coerce.number().min(0).max(999999999999).default(1000000),
-  categories: z.array(z.enum(['CALCAMENTO', 'PAVIMENTACAO', 'ESCOLAS'])).min(1).max(3).default(['CALCAMENTO', 'PAVIMENTACAO', 'ESCOLAS']),
+  categories: z.array(z.enum(['CALCAMENTO', 'PAVIMENTACAO', 'ESCOLAS', 'OBRAS_GERAIS'])).min(1).max(4).default(['OBRAS_GERAIS']),
   sources: z.array(z.enum(['PNCP', 'TCE'])).min(1).max(2).default(['PNCP', 'TCE']),
   municipality: z.string().trim().max(120).default(''),
   keywords: z.string().trim().max(180).default(''),
@@ -42,16 +43,17 @@ export function safeUrl(value: unknown): string | null {
 }
 export function classify(object: string): Category[] {
   const text = normalize(object);
-  // Obras e serviços de execução: evita merenda, mobiliário e aquisição de pedras soltas.
-  const work = /construc|reforma|ampliac|execuc|obra|recuperac|conservac|requalific|implantac|manutenc|adequac|engenharia|pavimenta|calcamento|recapeamento/.test(text);
-  if (!work) return [];
-  if (/consultoria|assessoria|fiscalizacao|elaboracao de projetos/.test(text) && !/execuc|construc|reforma|ampliac|implantac/.test(text)) return [];
-  if (/aquisic|fornecimento/.test(text) && !/execuc|construc|reforma|ampliac|obra/.test(text)) return [];
+  // A fonte pode trazer compras de materiais de construção: elas NÃO são obras.
+  const engineering = /\b(obras?|engenharia|construcao|reforma|ampliacao|pavimentacao|calcamento|recapeamento|terraplenagem|drenagem|saneamento|infraestrutura|ponte|viaduto|rodovia|estrada|edificacao|predial|quadra|unidade de saude|hospital|posto de saude|urbanizacao|praca|adutora|barragem|iluminacao publica|rede eletrica|eletrificacao|rede de esgoto|rede de agua)\b/.test(text);
+  const procurement = /\b(aquisicao|compras?|fornecimento|locacao|aluguel)\b/.test(text);
+  const excluded = /consultoria|assessoria|fiscalizacao|elaboracao de projetos|projeto executivo|projetos de engenharia|estudo tecnico|inspecao|laudo/.test(text);
+  const explicitWorkContract = /execucao (de |das |dos )?(obras?|servicos de engenharia|pavimentacao|calcamento|construcao|reforma|drenagem|saneamento)/.test(text);
+  if (!engineering || (excluded && !explicitWorkContract) || (procurement && !explicitWorkContract)) return [];
   const categories: Category[] = [];
   if (/calcamento|pedra tosca|paralelepiped|intertravado|bloquet|paver/.test(text)) categories.push('CALCAMENTO');
   if (/pavimenta|asfalt|cbuq|recapeamento/.test(text)) categories.push('PAVIMENTACAO');
   if (/escola|escolar|creche|educacao infantil|unidade de ensino|emeief|emef|centro educacional/.test(text)) categories.push('ESCOLAS');
-  return categories;
+  return categories.length ? categories : ['OBRAS_GERAIS'];
 }
 export function isOpen(item: Candidate, now = new Date()) {
   if (item.state !== 'CE' || !validDate(item.sessionDate) || item.sessionDate < todayCE(now) || item.sessionDate > todayCE(new Date(now.getTime() + 90 * 86400000))) return false;
@@ -59,7 +61,7 @@ export function isOpen(item: Candidate, now = new Date()) {
   return true;
 }
 export function matches(item: Candidate, settings: DiscoverySettings, now = new Date()) {
-  return isOpen(item, now) && item.categories.some((c) => settings.categories.includes(c)) &&
+  return isOpen(item, now) && item.categories.length > 0 && (settings.categories.includes('OBRAS_GERAIS') || item.categories.some((c) => settings.categories.includes(c))) &&
     item.sources.some((s) => settings.sources.includes(s.source)) &&
     (item.estimatedValue === null ? settings.includeUnknownValue : item.estimatedValue > settings.minValue) &&
     (!settings.municipality || normalize(item.municipality).includes(normalize(settings.municipality))) &&
@@ -85,6 +87,7 @@ export function deduplicate(items: Candidate[]) {
     if (existing) {
       existing.sourceKeys = [...new Set([...existing.sourceKeys, ...item.sourceKeys])];
       for (const source of item.sources) if (!existing.sources.some((s) => s.url === source.url)) existing.sources.push(source);
+      if (!existing.platformUrl && item.platformUrl) { existing.platformUrl = item.platformUrl; existing.platformName = item.platformName ?? null; }
       item.sourceKeys.forEach((key) => byKey.set(key, existing)); byHash.set(hash, existing);
     } else {
       const copy = { ...item, sourceKeys: [...item.sourceKeys], sources: [...item.sources] }; result.push(copy);

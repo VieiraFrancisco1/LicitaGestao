@@ -56,7 +56,7 @@ export async function opportunityDraft(id: string, auth: AuthScope) {
   if (row.importedTender) throw new AppError('Esta oportunidade já foi adicionada ao controle', 409);
   const data = row.data as unknown as Candidate;
   if (!data || data.state !== 'CE' || !data.sources?.length || !data.sources.every((s) => validSourceLink(s.url))) throw new AppError('Dados da fonte inválidos', 422);
-  return { opportunityId: row.id, municipality: data.municipality, modality: data.modality, noticeNumber: data.reference, processNumber: data.processNumber, sessionDate: data.sessionDate, object: data.object, estimatedValue: data.estimatedValue?.toString() ?? '', platformLink: data.sources[0]!.url, sourceLabel: data.sources.map((s) => s.source === 'TCE' ? 'TCE-CE' : 'PNCP').join(' / ') };
+  return { opportunityId: row.id, municipality: data.municipality, modality: data.modality, noticeNumber: data.reference, processNumber: data.processNumber, sessionDate: data.sessionDate, object: data.object, estimatedValue: data.estimatedValue?.toString() ?? '', platformLink: data.platformUrl ?? data.sources[0]!.url, sourceLabel: data.sources.map((s) => s.source === 'TCE' ? 'TCE-CE' : 'PNCP').join(' / ') };
 }
 export async function startDiscoveryScan(auth: AuthScope, input?: DiscoverySettings) {
   const organizationId = discoveryScope(auth);
@@ -93,7 +93,7 @@ async function executeScan(runId: string, auth: AuthScope, settings: DiscoverySe
       const current = await prisma.discoveryOpportunity.findFirst({ where: { organizationId, OR: [{ sourceKeys: { hasSome: item.sourceKeys } }, { fingerprint: hash }] } });
       if (current) {
         const previous = current.data as unknown as Candidate;
-        const merged = { ...item, sourceKeys: [...new Set([...previous.sourceKeys, ...item.sourceKeys])], sources: [...previous.sources.filter((s) => !item.sources.some((n) => n.url === s.url)), ...item.sources] };
+        const merged = { ...item, platformUrl: item.platformUrl ?? previous.platformUrl ?? null, platformName: item.platformName ?? previous.platformName ?? null, sourceKeys: [...new Set([...previous.sourceKeys, ...item.sourceKeys])], sources: [...previous.sources.filter((s) => !item.sources.some((n) => n.url === s.url)), ...item.sources] };
         await prisma.discoveryOpportunity.update({ where: { id: current.id }, data: { data: json(merged), sourceKeys: merged.sourceKeys, active: true, lastSeenAt: new Date() } });
       } else {
         await prisma.discoveryOpportunity.create({ data: { organizationId, fingerprint: hash, sourceKeys: item.sourceKeys, data: json(item) } }); addedCount++;

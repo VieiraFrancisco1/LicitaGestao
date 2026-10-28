@@ -2,6 +2,27 @@ import { setTimeout as wait } from 'node:timers/promises';
 import { brDate, classify, safeUrl, validDate, type Candidate, type Source } from './discovery-core.js';
 
 export const TCE_ORIGIN = 'https://municipios-licitacoes.tce.ce.gov.br';
+// A plataforma da disputa é diferente do portal que publicou a notícia.
+// Não acessamos essas URLs no servidor: são apenas links HTTPS exibidos ao usuário.
+export function platformFromOrigin(raw: unknown): { platformName: string | null; platformUrl: string | null } {
+  const url = safeUrl(raw);
+  if (!url || url.length > 512) return { platformName: null, platformUrl: null };
+  const hostname = new URL(url).hostname.toLowerCase();
+  const known: Array<[RegExp, string]> = [
+    [/^(.*\.)?bll(compras)?\.(org\.br|com\.br|com)$/, 'BLL Compras'],
+    [/^(.*\.)?m2atecnologia\.com\.br$/, 'M2A Tecnologia'],
+    [/^(.*\.)?licitamais(brasil)?\.com\.br$/, 'Licita Mais'],
+    [/^(.*\.)?(compras\.gov\.br|comprasnet\.gov\.br)$/, 'Compras.gov.br'],
+    [/^(.*\.)?portaldecompraspublicas\.com\.br$/, 'Portal de Compras Públicas'],
+    [/^(.*\.)?licitanet\.com\.br$/, 'Licitanet'],
+    [/^(.*\.)?bbmnet\.com\.br$/, 'BBMNET'],
+    [/^(.*\.)?licitacoes-e2\.bb\.com\.br$/, 'Licitações-e']
+  ];
+  // Links para o PNCP identificam a fonte, não o local da disputa.
+  if (hostname === 'pncp.gov.br' || hostname.endsWith('.pncp.gov.br')) return { platformName: null, platformUrl: null };
+  return { platformName: known.find(([pattern]) => pattern.test(hostname))?.[1] ?? hostname, platformUrl: url };
+}
+
 export type SourceReport = { source: Source; pages: number; records: number; complete: boolean; message: string };
 export type Collection = { items: Candidate[]; reports: SourceReport[] };
 export function text(html: string) {
@@ -41,7 +62,8 @@ export function parsePncp(body: unknown): { items: Candidate[]; pages: number } 
     if (!sessionDate || !/^\d{14}$/.test(cnpj) || !item.numeroControlePNCP || !Number.isInteger(item.anoCompra) || !Number.isInteger(item.sequencialCompra) || typeof item.objetoCompra !== 'string') continue;
     const key = `PNCP:${String(item.numeroControlePNCP).slice(0, 100)}`;
     const amount = Number(item.valorTotalEstimado);
-    items.push({ key, sourceKeys: [key], sources: [{ source: 'PNCP', url: `https://pncp.gov.br/app/editais/${cnpj}/${item.anoCompra}/${item.sequencialCompra}` }], municipality: String(item.unidadeOrgao.municipioNome ?? ''), state: 'CE', reference: String(item.numeroCompra ?? '').slice(0, 120), processNumber: String(item.processo ?? '').slice(0, 120), agency: String(item.orgaoEntidade.razaoSocial ?? ''), modality: String(item.modalidadeNome ?? ''), object: item.objetoCompra.slice(0, 10000), estimatedValue: amount > 0 && Number.isFinite(amount) ? amount : null, sessionDate, sessionTime: /^\d\d:\d\d/.test(String(item.dataEncerramentoProposta).slice(11)) ? String(item.dataEncerramentoProposta).slice(11, 16) : null, publishedDate: validDate(String(item.dataPublicacaoPncp ?? '').slice(0, 10)), categories: classify(item.objetoCompra), reason: 'Objeto e dados publicados pelo PNCP.', aiReviewed: false });
+    const platform = platformFromOrigin(item.linkSistemaOrigem);
+    items.push({ key, sourceKeys: [key], sources: [{ source: 'PNCP', url: `https://pncp.gov.br/app/editais/${cnpj}/${item.anoCompra}/${item.sequencialCompra}` }], municipality: String(item.unidadeOrgao.municipioNome ?? ''), state: 'CE', reference: String(item.numeroCompra ?? '').slice(0, 120), processNumber: String(item.processo ?? '').slice(0, 120), agency: String(item.orgaoEntidade.razaoSocial ?? ''), modality: String(item.modalidadeNome ?? ''), object: item.objetoCompra.slice(0, 10000), estimatedValue: amount > 0 && Number.isFinite(amount) ? amount : null, sessionDate, sessionTime: /^\d\d:\d\d/.test(String(item.dataEncerramentoProposta).slice(11)) ? String(item.dataEncerramentoProposta).slice(11, 16) : null, publishedDate: validDate(String(item.dataPublicacaoPncp ?? '').slice(0, 10)), categories: classify(item.objetoCompra), reason: 'Objeto e dados publicados pelo PNCP.', aiReviewed: false, ...platform });
   }
   return { items, pages: Math.max(1, Number(data.totalPaginas) || 1) };
 }
@@ -57,7 +79,8 @@ async function read(response: Response) {
 // Somente endpoints públicos fixos. Nunca busca URLs fornecidas por usuários ou pela IA.
 export async function collectSources(sources: Source[], fetcher: typeof fetch = fetch, now = new Date(), signal = AbortSignal.timeout(240000)): Promise<Collection> {
   const items: Candidate[] = []; const reports: SourceReport[] = [];
-  for (const source of [...new Set(sources)]) {
+  // Prioriza PNCP para não deixar sua busca sem resultados se o portal do TCE atrasar.
+  for (const source of [...new Set(sources)].sort((a, b) => a === 'PNCP' ? -1 : b === 'PNCP' ? 1 : 0)) {
     const report: SourceReport = { source, pages: 0, records: 0, complete: true, message: '' };
     reports.push(report);
     try {
@@ -75,15 +98,15 @@ export async function collectSources(sources: Source[], fetcher: typeof fetch = 
         }
       } else {
         // A busca textual do próprio TCE reduz a carga e evita varrer páginas antigas.
-        for (const term of ['PAVIMENTA', 'CALÇAMENTO', 'ESCOLA', 'CRECHE', 'EDUCAÇÃO INFANTIL']) {
-          for (let page = 1; page <= 8; page++) {
+        for (const term of ['PAVIMENTA', 'CALÇAMENTO', 'CONSTRU', 'REFORMA', 'AMPLIA', 'ENGENHARIA', 'DRENAGEM', 'SANEAMENTO', 'ESTRADA', 'RECUPERA', 'ESCOLA', 'CRECHE', 'OBRA', 'PONTE']) {
+          for (let page = 1; page <= 5; page++) {
             if (signal.aborted) throw new Error('Tempo máximo da consulta atingido.');
             const url = `${TCE_ORIGIN}/index.php/licitacao/abertas${page > 1 ? `/page/${page}` : ''}`;
             const response = await fetcher(url, { method: 'POST', body: new URLSearchParams({ proc: '', obj: term, mun: '0', periodo: '' }), signal: AbortSignal.any([signal, AbortSignal.timeout(15000)]), headers: { 'User-Agent': 'LicitaGestao/1.0 (consulta publica de editais)' }, redirect: 'error' });
             const parsed = parseTce(await read(response));
             items.push(...parsed.items); report.pages++; report.records += parsed.items.length;
             if (page >= parsed.pages) break;
-            if (page === 8) { report.complete = false; report.message = 'Consulta parcial: limite de páginas do TCE-CE atingido para um dos termos.'; }
+            if (page === 5) { report.complete = false; report.message = 'Consulta parcial: limite de 5 páginas do TCE-CE por palavra-chave atingido.'; }
             await wait(200, undefined, { signal });
           }
         }
