@@ -1,3 +1,4 @@
+import { startDiscoveryPolling, stopDiscoveryPolling } from './services/discovery.service.js';
 import { app } from './app.js';
 import { env } from './config/env.js';
 import { prisma } from './config/database.js';
@@ -6,11 +7,13 @@ import { startOutlookPolling, stopOutlookPolling } from './services/outlook.serv
 
 const server = app.listen(env.PORT, '0.0.0.0', () => {
   console.log(`API disponível em http://0.0.0.0:${env.PORT}`);
+  startDiscoveryPolling();
   startGmailPolling();
   startOutlookPolling();
 });
 
 const shutdown = async () => {
+  stopDiscoveryPolling();
   stopGmailPolling();
   stopOutlookPolling();
   server.close(async () => {

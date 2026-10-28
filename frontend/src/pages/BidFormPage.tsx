@@ -1,6 +1,6 @@
 import { ArrowLeft, Plus, Save, Trash2 } from 'lucide-react';
 import { useEffect, useState, type FormEvent } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { CompanyBrandMark } from '../components/CompanyBrand';
 import { useAuth } from '../contexts/AuthContext';
 import { api, errorMessage } from '../services/api';
@@ -42,13 +42,15 @@ const emptyForm: TenderForm = {
 
 export function BidFormPage() {
   const { id } = useParams();
+  const location = useLocation();
+  const draft = (location.state as { opportunityDraft?: Partial<TenderForm> & { opportunityId: string; sourceLabel: string } } | null)?.opportunityDraft;
   const navigate = useNavigate();
   const { user } = useAuth();
   const [companies, setCompanies] = useState<Array<CompanySummary & { cnpj: string; active: boolean }>>([]);
   const [participantCompanyIds, setParticipantCompanyIds] = useState<string[]>([]);
   const [companiesLoading, setCompaniesLoading] = useState(!id);
   const [companiesError, setCompaniesError] = useState('');
-  const [form, setForm] = useState<TenderForm>(emptyForm);
+  const [form, setForm] = useState<TenderForm>(() => !id && draft ? { ...emptyForm, ...draft } : emptyForm);
   const [platforms, setPlatforms] = useState<Platform[]>([]);
   const [loading, setLoading] = useState(Boolean(id));
   const [saving, setSaving] = useState(false);
@@ -197,7 +199,7 @@ export function BidFormPage() {
       platformId,
       platformLink: normalizeUrl(form.platformLink),
       seobraLinks: form.seobraLinks.map(normalizeUrl).filter(Boolean),
-      ...(!id ? { participantCompanyIds } : {})
+      ...(!id ? { participantCompanyIds, ...(draft?.opportunityId ? { opportunityId: draft.opportunityId } : {}) } : {})
     };
 
     setSaving(true);
@@ -240,6 +242,7 @@ export function BidFormPage() {
         </Link>
       </div>
       {error && <div className="alert alert-error">{error}</div>}
+      {!id && draft && <div className="discovery-message">Dados obtidos de {draft.sourceLabel}. Confira o edital, revise os campos e selecione as empresas participantes antes de salvar.</div>}
 
       <section className="form-section simplified-tender-form">
         <div className="form-section-title">

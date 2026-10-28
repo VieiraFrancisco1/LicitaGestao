@@ -149,10 +149,10 @@ export const listTenderParticipants = async (id: string, auth: AuthScope) => {
 };
 
 export const createTender = async (
-  input: TenderInput & Required<Pick<TenderInput, 'sessionDate'>> & { participantCompanyIds?: string[] },
+  input: TenderInput & Required<Pick<TenderInput, 'sessionDate'>> & { participantCompanyIds?: string[]; opportunityId?: string },
   auth: AuthScope
 ) => {
-  const { participantCompanyIds = [], ...tenderInput } = input;
+  const { participantCompanyIds = [], opportunityId, ...tenderInput } = input;
   const companyIds = [...new Set(participantCompanyIds)];
   const organizationId = requireOrganizationId(auth);
   if (companyIds.length) {
@@ -163,11 +163,18 @@ export const createTender = async (
     });
     if (companies.length !== companyIds.length) throw new AppError('Selecione empresas ativas desta conta', 422);
   }
+  if (opportunityId) {
+    if (auth.role === UserRole.EMPRESA) throw new AppError('Esta área é destinada à equipe interna da conta', 403);
+    const opportunity = await prisma.discoveryOpportunity.findFirst({ where: { id: opportunityId, organizationId, active: true }, include: { importedTender: { select: { id: true } } } });
+    if (!opportunity) throw new AppError('Oportunidade não encontrada nesta conta', 404);
+    if (opportunity.importedTender) throw new AppError('Esta oportunidade já foi adicionada ao controle', 409);
+  }
   await ensurePlatform(input.platformId, auth);
   // Escrita aninhada atômica: falhar uma participação também desfaz o cadastro da licitação.
   return prisma.tender.create({
     data: {
       ...clean(tenderInput, input.estimatedValue),
+      ...(opportunityId ? { discoveryOpportunityId: opportunityId } : {}),
       ...(companyIds.length ? { bids: { create: companyIds.map((companyId) => ({
         companyId, createdById: auth.userId, updatedById: auth.userId
       })) } } : {}),

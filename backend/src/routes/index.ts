@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { discoveryRouter } from './discovery.routes.js';
 import { prisma } from '../config/database.js';
 import { authRouter } from './auth.routes.js';
 import { companyRouter } from './company.routes.js';
@@ -59,3 +60,5 @@ apiRouter.use('/support', supportRouter);
 
 // LICITAGESTAO_BILLING_ORDERS_API_V2_ROUTES
 apiRouter.use('/billing', billingRouter);
+
+apiRouter.use('/opportunities', discoveryRouter);

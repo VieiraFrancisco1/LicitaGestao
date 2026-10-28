@@ -126,6 +126,9 @@ model Organization {
   subscriptionStatus    SubscriptionStatus                @default(PENDING) @map("subscription_status")
   subscriptionPlan      SubscriptionPlan?                 @map("subscription_plan")
   subscriptionExpiresAt DateTime?                         @map("subscription_expires_at")
+  discoveryProfiles     DiscoveryProfile[]
+  discoveryOpportunities DiscoveryOpportunity[]
+  discoveryRuns         DiscoveryRun[]
   billingPayments       BillingPayment[]
   users                 User[]
   companies             Company[]
@@ -168,6 +171,8 @@ model User {
   updatedDiscounts            DiscountCalculation[] @relation("DiscountUpdatedBy")
   auditLogs                   AuditLog[]
   notificationReads           NotificationRead[]
+  discoveryProfile            DiscoveryProfile?
+  discoveryRuns               DiscoveryRun[]
   userNotifications            UserNotification[]
   gmailAccessRequests          GmailAccessRequest[] @relation("GmailAccessRequestedBy")
   gmailAccessReviews           GmailAccessRequest[] @relation("GmailAccessReviewedBy")
@@ -252,6 +257,8 @@ model Platform {
 }
 
 model Tender {
+  discoveryOpportunityId String? @unique @map("discovery_opportunity_id") @db.Uuid
+  discoveryOpportunity DiscoveryOpportunity? @relation(fields: [discoveryOpportunityId], references: [id], onDelete: SetNull)
   id                           String                @id @default(uuid()) @db.Uuid
   organizationId               String                @map("organization_id") @db.Uuid
   organization                 Organization          @relation(fields: [organizationId], references: [id], onDelete: Restrict)
@@ -698,4 +705,49 @@ model NotificationRead {
   @@index([readAt])
   @@index([dismissedAt])
   @@map("notification_reads")
+}
+
+model DiscoveryProfile {
+  id String @id @default(uuid()) @db.Uuid
+  organizationId String @map("organization_id") @db.Uuid
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId String @unique @map("user_id") @db.Uuid
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  settings Json
+  enabled Boolean @default(false)
+  lastRunAt DateTime? @map("last_run_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  @@index([organizationId])
+  @@map("discovery_profiles")
+}
+model DiscoveryOpportunity {
+  id String @id @default(uuid()) @db.Uuid
+  organizationId String @map("organization_id") @db.Uuid
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  fingerprint String @db.VarChar(64)
+  sourceKeys String[] @map("source_keys")
+  data Json
+  active Boolean @default(true)
+  firstSeenAt DateTime @default(now()) @map("first_seen_at")
+  lastSeenAt DateTime @default(now()) @map("last_seen_at")
+  importedTender Tender?
+  @@unique([organizationId, fingerprint])
+  @@index([organizationId, lastSeenAt])
+  @@map("discovery_opportunities")
+}
+model DiscoveryRun {
+  id String @id @default(uuid()) @db.Uuid
+  organizationId String @map("organization_id") @db.Uuid
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId String @map("user_id") @db.Uuid
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status String @default("RUNNING") @db.VarChar(20)
+  progress String @default("Consultando fontes públicas") @db.VarChar(200)
+  reports Json?
+  warnings String[] @default([])
+  addedCount Int @default(0) @map("added_count")
+  startedAt DateTime @default(now()) @map("started_at")
+  finishedAt DateTime? @map("finished_at")
+  @@index([organizationId, startedAt])
+  @@map("discovery_runs")
 }
