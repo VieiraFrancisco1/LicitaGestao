@@ -1,6 +1,7 @@
 import { BidSituation, GuaranteeType, Prisma, TenderListStatus, UserRole } from '@prisma/client';
 import { prisma } from '../config/database.js';
 import { AppError } from '../utils/app-error.js';
+import { resolveTenderWorkflowStatus } from '../utils/tender-workflow.js';
 import { assertCompanyPortalAccess, requireOrganizationId, type AuthScope } from './access.service.js';
 
 // LICITAGESTAO_WORKFLOW_CITY_LAYOUT_V3_SERVICE
@@ -124,14 +125,52 @@ const includeTender = (auth: AuthScope) =>
     _count: { select: { bids: true } }
   }) satisfies Prisma.TenderInclude;
 
+// Esta seleção ampla é exclusiva do cadastro: não altera as permissões das áreas por empresa.
+export const listTenderCreationCompanies = async (auth: AuthScope) => {
+  if (auth.role === UserRole.EMPRESA) throw new AppError('Seu perfil não pode selecionar outras empresas', 403);
+  return prisma.company.findMany({
+    where: { organizationId: requireOrganizationId(auth) },
+    select: { id: true, legalName: true, tradeName: true, cnpj: true, active: true },
+    orderBy: { legalName: 'asc' }
+  });
+};
+
+export const listTenderParticipants = async (id: string, auth: AuthScope) => {
+  const tender = await prisma.tender.findFirst({
+    where: { id, organizationId: requireOrganizationId(auth) },
+    select: { bids: {
+      where: auth.role === UserRole.EMPRESA ? accessibleParticipationWhere(auth) : {},
+      select: { company: { select: { id: true, legalName: true, tradeName: true, cnpj: true } } },
+      orderBy: { company: { legalName: 'asc' } }
+    } }
+  });
+  if (!tender) throw new AppError('Licitação geral não encontrada', 404);
+  return tender.bids.map((bid) => bid.company);
+};
+
 export const createTender = async (
-  input: TenderInput & Required<Pick<TenderInput, 'sessionDate'>>,
+  input: TenderInput & Required<Pick<TenderInput, 'sessionDate'>> & { participantCompanyIds?: string[] },
   auth: AuthScope
 ) => {
+  const { participantCompanyIds = [], ...tenderInput } = input;
+  const companyIds = [...new Set(participantCompanyIds)];
+  const organizationId = requireOrganizationId(auth);
+  if (companyIds.length) {
+    if (auth.role === UserRole.EMPRESA) throw new AppError('Seu perfil não pode selecionar outras empresas', 403);
+    const companies = await prisma.company.findMany({
+      where: { id: { in: companyIds }, organizationId, active: true },
+      select: { id: true }
+    });
+    if (companies.length !== companyIds.length) throw new AppError('Selecione empresas ativas desta conta', 422);
+  }
   await ensurePlatform(input.platformId, auth);
+  // Escrita aninhada atômica: falhar uma participação também desfaz o cadastro da licitação.
   return prisma.tender.create({
     data: {
-      ...clean(input, input.estimatedValue),
+      ...clean(tenderInput, input.estimatedValue),
+      ...(companyIds.length ? { bids: { create: companyIds.map((companyId) => ({
+        companyId, createdById: auth.userId, updatedById: auth.userId
+      })) } } : {}),
       organizationId: requireOrganizationId(auth),
       municipality: input.municipality ?? '',
       sessionDate: input.sessionDate,
@@ -377,21 +416,7 @@ const addWorkflowMetadata = async <
       }
     }
 
-    let workflowStatus: TenderWorkflowStatus;
-
-    if (latestEventType === 'SUSPENDED') {
-      workflowStatus = 'SUSPENSA';
-    } else if (latestEventType === 'CONVOCATED') {
-      workflowStatus = 'CONVOCADA';
-    } else if (latestEventType === 'RESOURCE') {
-      workflowStatus = 'RECURSO';
-    } else if (latestEventType === 'RESUMED') {
-      workflowStatus = 'INICIADA';
-    } else if (item.sessionDate.toISOString().slice(0, 10) <= today) {
-      workflowStatus = 'INICIADA';
-    } else {
-      workflowStatus = item.listStatus === TenderListStatus.ANEXADA ? 'ANEXADA' : 'PENDENTE';
-    }
+    const workflowStatus = resolveTenderWorkflowStatus(item.sessionDate, latestEventType, today);
 
     return {
       ...item,

@@ -11,6 +11,7 @@ import {
   Plus,
   Search,
   Unlink,
+  Trash2,
   UserRoundCheck,
   UserRoundX
 } from 'lucide-react';
@@ -18,6 +19,7 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react
 import { Link, useLocation } from 'react-router-dom';
 import { CompanyBrandMark } from '../components/CompanyBrand';
 import { Modal } from '../components/Modal';
+import { ConfirmTenderDelete } from '../components/ConfirmTenderDelete';
 import { useAuth } from '../contexts/AuthContext';
 import { api, errorMessage } from '../services/api';
 import type {
@@ -34,7 +36,6 @@ import type {
 } from '../types';
 import { availableSituationOptions, formatCurrency, formatDate, progressOptions } from '../utils/bid';
 import iconPendentes from '../assets/status-pendentes.png';
-import iconAnexadas from '../assets/status-anexadas.png';
 import iconIniciadas from '../assets/status-iniciadas.png';
 import iconSuspensas from '../assets/status-suspensas.png';
 import iconConvocadas from '../assets/status-convocadas.png';
@@ -57,7 +58,6 @@ const monthOptions = [
 
 const workflowTabs: Array<{ status: TenderWorkflowStatus; label: string; icon: string }> = [
   { status: 'PENDENTE', label: 'Pendentes', icon: iconPendentes },
-  { status: 'ANEXADA', label: 'Anexadas', icon: iconAnexadas },
   { status: 'INICIADA', label: 'Iniciadas', icon: iconIniciadas },
   { status: 'SUSPENSA', label: 'Suspensas', icon: iconSuspensas },
   { status: 'CONVOCADA', label: 'Convocadas', icon: iconConvocadas },
@@ -115,7 +115,7 @@ export function TendersPage({
   const [companyStaffCount, setCompanyStaffCount] = useState<number | null>(null);
   const [search, setSearch] = useState(restoredView?.search ?? '');
   const [workflowStatus, setWorkflowStatus] = useState<TenderWorkflowStatus>(
-    restoredView?.workflowStatus ?? 'PENDENTE'
+    restoredView?.workflowStatus === 'ANEXADA' ? 'PENDENTE' : restoredView?.workflowStatus ?? 'PENDENTE'
   );
   const [city, setCity] = useState(restoredView?.city ?? '');
   const [cityOptions, setCityOptions] = useState<string[]>([]);
@@ -129,6 +129,7 @@ export function TendersPage({
   const [associating, setAssociating] = useState<Tender | null>(null);
   const [viewingCompanies, setViewingCompanies] = useState<Tender | null>(null);
   const [linksTender, setLinksTender] = useState<Tender | null>(null);
+  const [deletingTender, setDeletingTender] = useState<Tender | null>(null);
 
   const selectedCompanyId = fixedCompanyId ?? (companyScopeId || undefined);
   const selectedCompany = companies.find((company) => company.id === selectedCompanyId) ?? null;
@@ -280,26 +281,15 @@ export function TendersPage({
     }
   };
 
-  const toggleAttached = async (bidId: string, currentSituation: BidSituation) => {
-    if (currentSituation !== 'PENDENTE' && currentSituation !== 'ANEXADA') return;
-    setActionId(bidId);
+  const removeTender = async () => {
+    if (!deletingTender || actionId) return;
+    setActionId(deletingTender.id);
     setError('');
     try {
-      const nextSituation: BidSituation = currentSituation === 'ANEXADA' ? 'PENDENTE' : 'ANEXADA';
-      const response = await api.put<ApiResponse<TenderParticipation>>(`/bids/${bidId}`, {
-        situation: nextSituation
-      });
-      setData((current) =>
-        current
-          ? {
-              ...current,
-              items: current.items.map((item) => ({
-                ...item,
-                bids: item.bids.map((bid) => (bid.id === bidId ? { ...bid, ...response.data.data } : bid))
-              }))
-            }
-          : current
-      );
+      await api.delete(`/tenders/${deletingTender.id}`);
+      setDeletingTender(null);
+      await load();
+      await loadCityOptions();
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -387,6 +377,7 @@ export function TendersPage({
           <nav className="tender-company-tabs tender-company-tabs-compact" aria-label="Licitações por empresa">
             <button
               className={`general-company-tab ${!companyScopeId ? 'active' : ''}`.trim()}
+              aria-pressed={!companyScopeId}
               onClick={() => {
                 setCompanyScopeId('');
                 setPage(1);
@@ -400,6 +391,7 @@ export function TendersPage({
               <button
                 key={company.id}
                 className={companyScopeId === company.id ? 'active' : ''}
+                aria-pressed={companyScopeId === company.id}
                 onClick={() => {
                   setCompanyScopeId(company.id);
                   setPage(1);
@@ -433,6 +425,7 @@ export function TendersPage({
               <button
                 key={tab.status}
                 className={workflowStatus === tab.status ? 'active' : ''}
+                aria-pressed={workflowStatus === tab.status}
                 onClick={() => {
                   setWorkflowStatus(tab.status);
                   setCity('');
@@ -587,7 +580,7 @@ export function TendersPage({
                   const hasAssociableCompanies = companies.some(
                     (company) => !tender.bids.some((bid) => bid.companyId === company.id)
                   );
-                  const attachedBids = tender.bids.filter((bid) => bid.situation === 'ANEXADA');
+                  const participantCount = tender._count?.bids ?? tender.bids.length;
                   const tenderLabel = [tender.modality, tender.noticeNumber ? `Nº ${tender.noticeNumber}` : null]
                     .filter(Boolean)
                     .join(' · ');
@@ -616,45 +609,29 @@ export function TendersPage({
                       <td className="tender-validity-cell">
                         <strong>{tender.proposalValidityDays ?? '—'} dias</strong>
                         <small>Validade da proposta</small>
+                        <small className="tender-inverted-phase"><strong>Inversa:</strong> {tender.isInvertedPhase ? 'Sim' : 'Não'}</small>
                       </td>
                       <td className="tender-value-platform-cell">
                         <strong>{formatCurrency(tender.estimatedValue)}</strong>
                         <small>{tender.platform?.name || 'Sem plataforma'}</small>
                       </td>
                       <td className="companies-cell organized-companies-cell">
-                        {companyMode && selectedBid ? (
-                          <div className="company-attachment-control">
-                            {(selectedBid.situation === 'PENDENTE' || selectedBid.situation === 'ANEXADA') ? (
-                              <button
-                                type="button"
-                                className={`attachment-status attachment-toggle ${selectedBid.situation === 'ANEXADA' ? 'attached' : 'pending'}`}
-                                disabled={actionId === selectedBid.id}
-                                onClick={() => void toggleAttached(selectedBid.id, selectedBid.situation)}
-                                title={selectedBid.situation === 'ANEXADA' ? 'Clique para desanexar' : 'Clique para anexar'}
-                              >
-                                {actionId === selectedBid.id
-                                  ? 'Atualizando...'
-                                  : selectedBid.situation === 'ANEXADA'
-                                    ? 'Anexada'
-                                    : 'Anexar'}
-                              </button>
-                            ) : (
-                              <span className="attachment-status attached">
-                                {selectedBid.situation}
-                              </span>
-                            )}
-                          </div>
-                        ) : (
-                          <button
-                            type="button"
-                            className="association-count"
-                            disabled={attachedBids.length === 0}
-                            onClick={() => setViewingCompanies(tender)}
-                          >
-                            <Building2 size={15} />
-                            {attachedBids.length} {attachedBids.length === 1 ? 'anexou' : 'anexaram'}
+                        <div className="tender-participant-actions">
+                          <button type="button" className="association-count" onClick={() => setViewingCompanies(tender)}>
+                            <Building2 size={15} /> Participantes ({participantCount})
                           </button>
-                        )}
+                          {companyMode && selectedBid ? (
+                            <button className="action-button compact-action-button danger-soft-button"
+                              disabled={actionId === selectedBid.id} onClick={() => void detach(selectedBid.id)}>
+                              <Unlink size={15} /> Desvincular
+                            </button>
+                          ) : (
+                            <button className="action-button compact-action-button"
+                              disabled={!hasAssociableCompanies} onClick={() => hasAssociableCompanies && setAssociating(tender)}>
+                              <Link2 size={15} /> Participar
+                            </button>
+                          )}
+                        </div>
                       </td>
                       <td className="spreadsheet-control-cell">
                         <div className="spreadsheet-inline-layout">
@@ -711,12 +688,9 @@ export function TendersPage({
                             >
                               <FolderOpen size={15} /> Abrir
                             </Link>
-                            <button
-                              className="action-button compact-action-button danger-soft-button"
-                              disabled={actionId === selectedBid.id}
-                              onClick={() => void detach(selectedBid.id)}
-                            >
-                              <Unlink size={15} /> Desvincular
+                            <button className="action-button compact-action-button danger-soft-button"
+                              onClick={() => { setError(''); setDeletingTender(tender); }}>
+                              <Trash2 size={15} /> Excluir
                             </button>
                             <Link className="action-button compact-action-button" to={`/participacoes/${selectedBid.id}/editar`}>
                               <Pencil size={15} /> Editar
@@ -730,12 +704,9 @@ export function TendersPage({
                             <Link className="action-button compact-action-button" to={`/licitacoes/${tender.id}`}>
                               <FolderOpen size={15} /> Abrir
                             </Link>
-                            <button
-                              className="action-button compact-action-button"
-                              disabled={!hasAssociableCompanies}
-                              onClick={() => hasAssociableCompanies && setAssociating(tender)}
-                            >
-                              <Link2 size={15} /> Participar
+                            <button className="action-button compact-action-button danger-soft-button"
+                              onClick={() => { setError(''); setDeletingTender(tender); }}>
+                              <Trash2 size={15} /> Excluir
                             </button>
                             <Link className="action-button compact-action-button" to={`/licitacoes/${tender.id}/editar`}>
                               <Pencil size={15} /> Editar
@@ -770,18 +741,10 @@ export function TendersPage({
           tender={associating}
           companies={companies.filter((company) => !associating.bids.some((bid) => bid.companyId === company.id))}
           onClose={() => setAssociating(null)}
-          onSaved={(bid) => {
-            setData((current) =>
-              current
-                ? {
-                    ...current,
-                    items: current.items.map((item) =>
-                      item.id === associating.id ? { ...item, bids: [...item.bids, bid] } : item
-                    )
-                  }
-                : current
-            );
+          onSaved={() => {
             setAssociating(null);
+            void load();
+            void loadCityOptions();
           }}
         />
       )}
@@ -790,37 +753,48 @@ export function TendersPage({
         <TenderCompaniesModal tender={viewingCompanies} onClose={() => setViewingCompanies(null)} />
       )}
 
+      {deletingTender && <ConfirmTenderDelete tender={deletingTender} pending={Boolean(actionId)} error={error}
+        onClose={() => { if (!actionId) setDeletingTender(null); }} onConfirm={() => void removeTender()} />}
+
       {linksTender && <TenderLinksModal tender={linksTender} onClose={() => setLinksTender(null)} />}
     </div>
   );
 }
 
 function TenderCompaniesModal({ tender, onClose }: { tender: Tender; onClose: () => void }) {
-  const attachedBids = tender.bids.filter((bid) => bid.situation === 'ANEXADA');
+  const [participants, setParticipants] = useState<Array<CompanySummary & { cnpj?: string }>>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  useEffect(() => {
+    let active = true;
+    void api.get<ApiResponse<Array<CompanySummary & { cnpj?: string }>>>(`/tenders/${tender.id}/participants`)
+      .then((response) => { if (active) setParticipants(response.data.data); })
+      .catch((err) => { if (active) setError(errorMessage(err)); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [tender.id]);
   const reference = [tender.municipality, tender.noticeNumber ? `Nº ${tender.noticeNumber}` : tender.processNumber]
     .filter(Boolean)
     .join(' · ');
 
   return (
-    <Modal title="Empresas que anexaram" eyebrow="Licitação" onClose={onClose}>
+    <Modal title="Empresas participantes" eyebrow="Licitação" onClose={onClose}>
       <div className="tender-companies-modal">
         <div className="tender-companies-modal-summary">
           <span className="tender-companies-modal-icon"><Building2 size={20} /></span>
           <div>
             <strong>{reference}</strong>
-            <small>{attachedBids.length} {attachedBids.length === 1 ? 'empresa anexou esta licitação' : 'empresas anexaram esta licitação'}</small>
+            <small>{loading ? 'Carregando participantes...' : `${participants.length} ${participants.length === 1 ? 'empresa vinculada' : 'empresas vinculadas'}`}</small>
           </div>
         </div>
         <div className="tender-companies-modal-list">
-          {attachedBids.length === 0 && <div className="table-message">Nenhuma empresa anexou esta licitação.</div>}
-          {attachedBids.map((bid) => (
-            <article key={bid.id}>
-              <span className="tender-company-check"><CompanyBrandMark companyName={bid.company.tradeName || bid.company.legalName} size={22} /></span>
-              <div>
-                <strong>{bid.company.tradeName || bid.company.legalName}</strong>
-                <small>Situação atual da participação</small>
-              </div>
-              <span className="tender-company-status">Anexada</span>
+          {error && <div className="alert alert-error">{error}</div>}
+          {!loading && !error && participants.length === 0 && <div className="table-message">Nenhuma empresa vinculada a esta licitação.</div>}
+          {participants.map((company) => (
+            <article key={company.id}>
+              <span className="tender-company-check"><CompanyBrandMark companyName={companyName(company)} size={22} /></span>
+              <div><strong>{companyName(company)}</strong><small>{company.cnpj || company.legalName}</small></div>
+              <span className="tender-company-status">Participante</span>
             </article>
           ))}
         </div>

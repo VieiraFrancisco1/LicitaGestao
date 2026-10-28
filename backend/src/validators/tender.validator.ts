@@ -73,10 +73,10 @@ export const tenderBody = z.object({
   seobraLinks: z.array(optionalHttpUrl.unwrap()).max(20).optional()
 });
 
-export const createTenderSchema = z.object({ body: tenderBody, params: z.object({}), query: z.object({}) });
+export const createTenderSchema = z.object({ body: tenderBody.extend({ participantCompanyIds: z.array(z.string().uuid()).max(500).optional() }), params: z.object({}), query: z.object({}) });
 
 export const updateTenderSchema = z.object({
-  body: tenderBody.partial().refine((value) => Object.keys(value).length > 0),
+  body: tenderBody.partial().extend({ participantCompanyIds: z.never().optional() }).refine((value) => Object.keys(value).length > 0),
   params: z.object({ id: z.string().uuid() }),
   query: z.object({})
 });

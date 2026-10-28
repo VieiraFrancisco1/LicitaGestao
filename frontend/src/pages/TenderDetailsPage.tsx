@@ -1,5 +1,4 @@
 import {
-  Archive,
   ArrowLeft,
   Building2,
   ExternalLink,
@@ -8,7 +7,6 @@ import {
   FolderOpen,
   MessageSquareText,
   Pencil,
-  RotateCcw,
   Trash2,
   UserRoundCheck,
   UserRoundX
@@ -16,6 +14,7 @@ import {
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Modal } from '../components/Modal';
+import { ConfirmTenderDelete } from '../components/ConfirmTenderDelete';
 import { useAuth } from '../contexts/AuthContext';
 import { api, errorMessage } from '../services/api';
 import type { ApiResponse, Tender } from '../types';
@@ -30,6 +29,7 @@ export function TenderDetailsPage() {
   const [action, setAction] = useState(false);
   const [error, setError] = useState('');
   const [notesOpen, setNotesOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [notes, setNotes] = useState('');
 
   const load = async () => {
@@ -87,30 +87,8 @@ export function TenderDetailsPage() {
     }
   };
 
-  const toggleListStatus = async () => {
-    if (!tender) return;
-    const status = tender.listStatus === 'ANEXADA' ? 'PENDENTE' : 'ANEXADA';
-    setAction(true);
-    setError('');
-    try {
-      await api.patch(`/tenders/${tender.id}/list-status`, { status });
-      await load();
-    } catch (err) {
-      setError(errorMessage(err));
-    } finally {
-      setAction(false);
-    }
-  };
-
   const removeTender = async () => {
     if (!tender) return;
-    const label = tender.noticeNumber
-      ? `${tender.municipality} · ${tender.noticeNumber}`
-      : tender.municipality;
-    const confirmation = window.prompt(
-      `ATENÇÃO: excluir ${label} também remove as participações e os registros vinculados.\n\nDigite EXCLUIR para confirmar:`
-    );
-    if (confirmation?.trim().toUpperCase() !== 'EXCLUIR') return;
     setAction(true);
     try {
       await api.delete(`/tenders/${tender.id}`);
@@ -156,14 +134,6 @@ export function TenderDetailsPage() {
           <p>{tender.object}</p>
         </div>
         <div className="detail-header-actions">
-          <button
-            className={`secondary-button tender-list-status-action ${tender.listStatus === 'ANEXADA' ? 'attached' : ''}`}
-            disabled={action}
-            onClick={() => void toggleListStatus()}
-          >
-            {tender.listStatus === 'ANEXADA' ? <RotateCcw size={16} /> : <Archive size={16} />}
-            {tender.listStatus === 'ANEXADA' ? 'Voltar para pendentes' : 'Mover para já anexadas'}
-          </button>
           <Link className="primary-button" to={`/licitacoes/${tender.id}/editar`}>
             <Pencil size={16} />
             Editar dados gerais
@@ -171,7 +141,7 @@ export function TenderDetailsPage() {
           <button
             className="secondary-button danger-action"
             disabled={action}
-            onClick={() => void removeTender()}
+            onClick={() => { setError(''); setDeleteOpen(true); }}
           >
             <Trash2 size={16} />
             Excluir
@@ -179,6 +149,8 @@ export function TenderDetailsPage() {
         </div>
       </div>
       {error && <div className="alert alert-error">{error}</div>}
+      {deleteOpen && <ConfirmTenderDelete tender={tender} pending={action} error={error}
+        onClose={() => { if (!action) setDeleteOpen(false); }} onConfirm={() => void removeTender()} />}
 
       <section className="detail-panel spreadsheet-detail-panel">
         <div className="spreadsheet-detail-summary">
@@ -271,7 +243,7 @@ export function TenderDetailsPage() {
         />
         <Info label="Garantia de 1%" value={Number(tender.guaranteePercentage) === 1 ? 'Sim' : 'Não'} />
         <Info label="Planilha" value={tender.spreadsheetReady ? 'Concluído' : 'Em andamento'} />
-        <Info label="Lista" value={tender.listStatus === 'ANEXADA' ? 'Já anexada' : 'Pendente'} />
+        <Info label="Participantes" value={String(tender._count?.bids ?? tender.bids.length)} />
         <Info label="Empresas associadas" value={String(tender._count?.bids ?? 0)} />
       </div>
       <section className="detail-panel">

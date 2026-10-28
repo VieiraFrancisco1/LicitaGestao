@@ -48,6 +48,8 @@ tenderRouter.patch(
   validate(tenderListStatusSchema),
   asyncHandler(tenderController.listStatus)
 );
+tenderRouter.get('/creation-companies', asyncHandler(tenderController.creationCompanies));
+tenderRouter.get('/:id/participants', validate(tenderIdSchema), asyncHandler(tenderController.participants));
 tenderRouter.get('/:id', validate(tenderIdSchema), asyncHandler(tenderController.show));
 tenderRouter.put('/:id', validate(updateTenderSchema), asyncHandler(tenderController.update));
 tenderRouter.delete('/:id', validate(tenderIdSchema), asyncHandler(tenderController.remove));

@@ -34,14 +34,15 @@ async function main() {
     'Compras.gov.br',
     'Licitanet',
     'Portal de Compras Públicas',
-    'BBMNET Licitações'
+    'BBMNET Licitações',
+    'Mais Brasil'
   ];
 
   for (const name of platforms) {
     await prisma.platform.upsert({
       where: { organizationId_name: { organizationId: organization.id, name } },
       update: {},
-      create: { organizationId: organization.id, name }
+      create: { organizationId: organization.id, name, ...(name === 'Mais Brasil' ? { site: 'https://licitamaisbrasil.com.br/' } : {}) }
     });
   }
   console.log(`${platforms.length} plataformas padrão preparadas.`);

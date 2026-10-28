@@ -22,8 +22,7 @@ import {
   formatDate,
   guaranteeOptions,
   optionLabel,
-  progressOptions,
-  situationLabel
+  progressOptions
 } from '../utils/bid';
 
 type Tab = 'summary' | 'data' | 'discount' | 'convocations' | 'deadlines';
@@ -47,7 +46,6 @@ export function BidDetailsPage() {
       : 'summary'
   );
   const [loading, setLoading] = useState(true);
-  const [markingAttached, setMarkingAttached] = useState(false);
   const [error, setError] = useState('');
 
   const loadBid = useCallback(async () => {
@@ -130,20 +128,6 @@ export function BidDetailsPage() {
     : bid.tender.seobraLink
       ? [bid.tender.seobraLink]
       : [];
-  const toggleAttached = async () => {
-    if (bid.situation !== 'PENDENTE' && bid.situation !== 'ANEXADA') return;
-    setMarkingAttached(true);
-    setError('');
-    try {
-      const nextSituation = bid.situation === 'ANEXADA' ? 'PENDENTE' : 'ANEXADA';
-      await api.put(`/bids/${bid.id}`, { situation: nextSituation });
-      await loadBid();
-    } catch (err) {
-      setError(errorMessage(err));
-    } finally {
-      setMarkingAttached(false);
-    }
-  };
 
   return (
     <div className="page-stack">
@@ -191,29 +175,10 @@ export function BidDetailsPage() {
               <span><small>Link não informado</small><strong>Plataforma</strong></span>
             </span>
           )}
-          {canEdit && (bid.situation === 'PENDENTE' || bid.situation === 'ANEXADA') ? (
-            <button
-              className={`bid-detail-action-card status-action ${bid.situation === 'ANEXADA' ? 'attached' : ''}`.trim()}
-              disabled={markingAttached}
-              onClick={() => void toggleAttached()}
-              title={bid.situation === 'ANEXADA' ? 'Clique para desanexar' : 'Clique para anexar'}
-            >
-              <CheckCircle2 size={16} />
-              <span>
-                <small>Situação</small>
-                <strong>
-                  {markingAttached ? 'Atualizando...' : bid.situation === 'ANEXADA' ? 'Anexada' : 'Anexar'}
-                </strong>
-              </span>
-            </button>
-          ) : (
-            <span
-              className={`bid-detail-action-card status-action ${bid.situation === 'ANEXADA' ? 'attached' : ''}`.trim()}
-            >
-              <CheckCircle2 size={16} />
-              <span><small>Situação</small><strong>{situationLabel(bid.situation, bid.tender.isPreQualification)}</strong></span>
-            </span>
-          )}
+          <span className="bid-detail-action-card status-action attached">
+            <CheckCircle2 size={16} />
+            <span><small>Participação</small><strong>Empresa vinculada</strong></span>
+          </span>
           {canEdit ? (
             <Link className="bid-detail-action-card primary" to={`/participacoes/${bid.id}/editar`}>
               <Pencil size={16} />
@@ -291,7 +256,7 @@ export function BidDetailsPage() {
             </div>
             <div>
               <dt>Lista geral</dt>
-              <dd>{bid.tender.listStatus === 'ANEXADA' ? 'Já anexada' : 'Pendente'}</dd>
+              <dd>Participação registrada</dd>
             </div>
             <div>
               <dt>Valor estimado</dt>

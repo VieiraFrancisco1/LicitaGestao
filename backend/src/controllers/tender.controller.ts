@@ -4,6 +4,8 @@ import {
   deleteTender,
   getTender,
   listTenderFilterOptions,
+  listTenderCreationCompanies,
+  listTenderParticipants,
   listTenders,
   setSpreadsheetReady,
   setSpreadsheetResponsibility,
@@ -26,6 +28,14 @@ export const filterOptions = async (req: Request, res: Response) => {
     req.auth!
   );
   res.json({ success: true, data: result });
+};
+
+export const creationCompanies = async (req: Request, res: Response) => {
+  res.json({ success: true, data: await listTenderCreationCompanies(req.auth!) });
+};
+
+export const participants = async (req: Request, res: Response) => {
+  res.json({ success: true, data: await listTenderParticipants(req.params.id as string, req.auth!) });
 };
 
 export const show = async (req: Request, res: Response) => {

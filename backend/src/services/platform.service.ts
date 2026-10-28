@@ -27,8 +27,15 @@ export const updatePlatform = async (id: string, data: PlatformInput, auth: Auth
   return prisma.platform.update({ where: { id }, data: clean(data) });
 };
 
-export const listPlatforms = (query: { search?: string; active?: string }, auth: AuthScope) =>
-  prisma.platform.findMany({
+export const listPlatforms = async (query: { search?: string; active?: string }, auth: AuthScope) => {
+  const organizationId = requireOrganizationId(auth);
+  // Também cobre contas criadas depois da migration, sem reativar plataformas desativadas.
+  await prisma.platform.upsert({
+    where: { organizationId_name: { organizationId, name: 'Mais Brasil' } },
+    create: { organizationId, name: 'Mais Brasil', site: 'https://licitamaisbrasil.com.br/' },
+    update: {}
+  });
+  return prisma.platform.findMany({
     where: {
       organizationId: requireOrganizationId(auth),
       ...(query.active ? { active: query.active === 'true' } : {}),
@@ -37,3 +44,4 @@ export const listPlatforms = (query: { search?: string; active?: string }, auth:
     include: { _count: { select: { tenders: true } } },
     orderBy: { name: 'asc' }
   });
+};

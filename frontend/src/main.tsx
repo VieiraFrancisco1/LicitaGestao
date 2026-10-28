@@ -4,6 +4,7 @@ import App from './App';
 import './styles.css';
 import './tenders-compact.css';
 import './login-right-fix.css';
+import './tenders-v51.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

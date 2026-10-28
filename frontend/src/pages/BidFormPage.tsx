@@ -1,8 +1,10 @@
 import { ArrowLeft, Plus, Save, Trash2 } from 'lucide-react';
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import { CompanyBrandMark } from '../components/CompanyBrand';
+import { useAuth } from '../contexts/AuthContext';
 import { api, errorMessage } from '../services/api';
-import type { ApiResponse, Platform, Tender } from '../types';
+import type { ApiResponse, CompanySummary, Platform, Tender } from '../types';
 
 type TenderForm = { // LICITAGESTAO_PREQUAL_ALL_EMAILS_V1_FORM
   modality: string;
@@ -41,6 +43,11 @@ const emptyForm: TenderForm = {
 export function BidFormPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [companies, setCompanies] = useState<Array<CompanySummary & { cnpj: string; active: boolean }>>([]);
+  const [participantCompanyIds, setParticipantCompanyIds] = useState<string[]>([]);
+  const [companiesLoading, setCompaniesLoading] = useState(!id);
+  const [companiesError, setCompaniesError] = useState('');
   const [form, setForm] = useState<TenderForm>(emptyForm);
   const [platforms, setPlatforms] = useState<Platform[]>([]);
   const [loading, setLoading] = useState(Boolean(id));
@@ -81,6 +88,16 @@ export function BidFormPage() {
       .catch((err) => setError(errorMessage(err)))
       .finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    if (id || user?.role === 'EMPRESA') return;
+    let active = true;
+    void api.get<ApiResponse<Array<CompanySummary & { cnpj: string; active: boolean }>>>('/tenders/creation-companies')
+      .then((response) => { if (active) setCompanies(response.data.data); })
+      .catch((err) => { if (active) setCompaniesError(errorMessage(err)); })
+      .finally(() => { if (active) setCompaniesLoading(false); });
+    return () => { active = false; };
+  }, [id, user?.role]);
 
   const field = (key: keyof TenderForm, value: string | boolean) =>
     setForm((current) => ({ ...current, [key]: value }));
@@ -179,7 +196,8 @@ export function BidFormPage() {
       requiresGuaranteeOnePercent: form.requiresGuaranteeOnePercent,
       platformId,
       platformLink: normalizeUrl(form.platformLink),
-      seobraLinks: form.seobraLinks.map(normalizeUrl).filter(Boolean)
+      seobraLinks: form.seobraLinks.map(normalizeUrl).filter(Boolean),
+      ...(!id ? { participantCompanyIds } : {})
     };
 
     setSaving(true);
@@ -397,6 +415,27 @@ export function BidFormPage() {
               ))}
             </div>
           </div>
+          {!id && user?.role !== 'EMPRESA' && (
+            <fieldset className="tender-creation-companies full">
+              <legend>Empresas participantes ({participantCompanyIds.length})</legend>
+              <p>Selecione as empresas desta conta que participarão da licitação.</p>
+              {companiesLoading && <small>Carregando empresas...</small>}
+              {companiesError && <div className="alert alert-error">{companiesError}</div>}
+              {!companiesLoading && !companiesError && !companies.length && <small>Nenhuma empresa cadastrada nesta conta.</small>}
+              <div className="tender-creation-company-list">
+                {companies.map((company) => (
+                  <label key={company.id} className={`tender-creation-company ${participantCompanyIds.includes(company.id) ? 'selected' : ''}`}>
+                    <input type="checkbox" disabled={!company.active || saving}
+                      checked={participantCompanyIds.includes(company.id)}
+                      onChange={(event) => setParticipantCompanyIds((current) => event.target.checked
+                        ? [...current, company.id] : current.filter((companyId) => companyId !== company.id))} />
+                    <CompanyBrandMark companyName={company.tradeName || company.legalName} size={24} />
+                    <span><strong>{company.tradeName || company.legalName}</strong><small>{company.cnpj}{!company.active ? ' · Inativa' : ''}</small></span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+          )}
           <label className="full">
             Objeto
             <textarea

@@ -166,16 +166,18 @@ export function CompanyDetailsPage() {
         className="details-header company-header dashboard-hero"
         style={{
           backgroundImage: companyBanner
-            ? `linear-gradient(90deg, rgba(8, 25, 62, 0.18), rgba(8, 25, 62, 0.24)), url(${companyBanner})`
+            ? `linear-gradient(90deg, rgba(8, 25, 62, 0.88) 0%, rgba(8, 25, 62, 0.64) 25%, rgba(8, 25, 62, 0.08) 56%, rgba(8, 25, 62, 0.12) 100%), url(${companyBanner})`
             : `linear-gradient(90deg, rgba(7, 47, 129, 0.92), rgba(9, 58, 157, 0.86)), url(${dashboardHeroBg})`,
-          backgroundSize: companyBanner ? '100% 100%, 70% auto' : 'cover',
+          backgroundSize: companyBanner ? '100% 100%, cover' : 'cover',
           backgroundPosition: 'center, center',
           backgroundRepeat: 'no-repeat, no-repeat',
           backgroundColor: companyBanner ? '#0b3978' : undefined
         }}
       >
+        {(companyBanner === bannerSerfi || companyBanner === bannerEgr) && (
+          <img className="company-header-banner-art" src={companyBanner} alt="" aria-hidden="true" />
+        )}
         <div>
-
           <span className="eyebrow">Área da empresa</span>
           <h2>{company.tradeName || company.legalName}</h2>
           <p>{company.legalName} · {formatCnpj(company.cnpj)}</p>

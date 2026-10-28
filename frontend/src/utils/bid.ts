@@ -14,7 +14,6 @@ export const progressOptions: Array<{ value: BidProgress; label: string }> = [
 
 export const situationOptions: Array<{ value: BidSituation; label: string }> = [
   { value: 'PENDENTE', label: 'Pendente' },
-  { value: 'ANEXADA', label: 'Anexada' },
   { value: 'CLASSIFICADA', label: 'Classificada' },
   { value: 'FINALIZADA', label: 'Finalizada' }
 ];
@@ -26,7 +25,8 @@ export const normalizeEditableSituation = (
   situation: BidSituation,
   isPreQualification: boolean
 ): BidSituation => {
-  if (situation === 'PENDENTE' || situation === 'ANEXADA' || situation === 'FINALIZADA') return situation;
+  if (situation === 'ANEXADA') return 'PENDENTE';
+  if (situation === 'PENDENTE' || situation === 'FINALIZADA') return situation;
   if (situation === 'CLASSIFICADA' && isPreQualification) return situation;
   return 'FINALIZADA';
 };
