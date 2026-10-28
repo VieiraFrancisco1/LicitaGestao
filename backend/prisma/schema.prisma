@@ -126,6 +126,7 @@ model Organization {
   subscriptionStatus    SubscriptionStatus                @default(PENDING) @map("subscription_status")
   subscriptionPlan      SubscriptionPlan?                 @map("subscription_plan")
   subscriptionExpiresAt DateTime?                         @map("subscription_expires_at")
+  platformCredentials   PlatformCredential[]
   discoveryProfiles     DiscoveryProfile[]
   discoveryOpportunities DiscoveryOpportunity[]
   discoveryRuns         DiscoveryRun[]
@@ -171,6 +172,7 @@ model User {
   updatedDiscounts            DiscountCalculation[] @relation("DiscountUpdatedBy")
   auditLogs                   AuditLog[]
   notificationReads           NotificationRead[]
+  platformCredentials         PlatformCredential[]
   discoveryProfile            DiscoveryProfile?
   discoveryRuns               DiscoveryRun[]
   userNotifications            UserNotification[]
@@ -750,4 +752,21 @@ model DiscoveryRun {
   finishedAt DateTime? @map("finished_at")
   @@index([organizationId, startedAt])
   @@map("discovery_runs")
+}
+
+
+// Credenciais por usuário, criptografadas no servidor; não são expostas via API.
+model PlatformCredential {
+  id              String       @id @default(uuid()) @db.Uuid
+  organizationId  String       @map("organization_id") @db.Uuid
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId          String       @map("user_id") @db.Uuid
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  platform        String       @db.VarChar(30)
+  secretEncrypted String       @map("secret_encrypted") @db.Text
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+  @@unique([userId, platform])
+  @@index([organizationId, platform])
+  @@map("platform_credentials")
 }

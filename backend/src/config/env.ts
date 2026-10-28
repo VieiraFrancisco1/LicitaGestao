@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { z } from 'zod';
 
 const envSchema = z.object({
+  PLATFORM_CREDENTIAL_ENCRYPTION_KEY: z.string().min(32).optional(),
   TENDER_AI_API_KEY: z.string().trim().min(1).optional(),
   TENDER_AI_MODEL: z.string().trim().min(1).default('gpt-6-luna'),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),

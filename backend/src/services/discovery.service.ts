@@ -5,7 +5,7 @@ import { AppError } from '../utils/app-error.js';
 import { requireOrganizationId, type AuthScope } from './access.service.js';
 import { organizationHasPaidAccess } from './billing.service.js';
 import { reviewWithAi } from './discovery-ai.js';
-import { categoryNames, deduplicate, discoverySettings, fingerprint, matches, type Candidate, type DiscoverySettings, type Source } from './discovery-core.js';
+import { categoryNames, deduplicate, discoverySettings, fingerprint, matches, platformKey, type Platform, type Candidate, type DiscoverySettings, type Source } from './discovery-core.js';
 import { collectSources, validSourceLink, type Collection } from './discovery-sources.js';
 import { enrichPncpDocuments } from './discovery-documents.js';
 import { analyzePhaseDocument } from './discovery-phase.js';
@@ -44,13 +44,19 @@ export async function saveDiscoverySettings(input: DiscoverySettings, auth: Auth
   await prisma.discoveryProfile.upsert({ where: { userId: auth.userId }, create: { organizationId, userId: auth.userId, settings: json(settings), enabled: settings.enabled }, update: { organizationId, settings: json(settings), enabled: settings.enabled } });
   return settings;
 }
-export async function listOpportunities(auth: AuthScope, page = 1, settings?: DiscoverySettings) {
+export async function listOpportunities(auth: AuthScope, page = 1, settings?: DiscoverySettings, platform?: Platform) {
   const organizationId = discoveryScope(auth);
   const filter = settings ?? (await getDiscoveryStatus(auth)).settings;
   const rows = await prisma.discoveryOpportunity.findMany({ where: { organizationId, active: true }, include: { importedTender: { select: { id: true } } }, orderBy: { lastSeenAt: 'desc' }, take: 3000 });
-  const items = rows.map((row) => ({ ...(row.data as unknown as Candidate), id: row.id, firstSeenAt: row.firstSeenAt, lastSeenAt: row.lastSeenAt, importedTenderId: row.importedTender?.id ?? null })).filter((row) => matches(row, filter));
+  const matched = rows.map((row) => ({ ...(row.data as unknown as Candidate), id: row.id, firstSeenAt: row.firstSeenAt, lastSeenAt: row.lastSeenAt, importedTenderId: row.importedTender?.id ?? null })).filter((row) => matches(row, filter));
+  const platformCounts: Partial<Record<Platform, number>> = {};
+  for (const item of matched) {
+    const key = platformKey(item.platformName);
+    platformCounts[key] = (platformCounts[key] ?? 0) + 1;
+  }
+  const items = platform ? matched.filter((item) => platformKey(item.platformName) === platform) : matched;
   items.sort((a, b) => a.sessionDate.localeCompare(b.sessionDate) || a.municipality.localeCompare(b.municipality));
-  return { items: items.slice((page - 1) * 20, page * 20), total: items.length, page, pages: Math.ceil(items.length / 20), limited: rows.length === 3000 };
+  return { items: items.slice((page - 1) * 20, page * 20), total: items.length, allTotal: matched.length, platformCounts, page, pages: Math.ceil(items.length / 20), limited: rows.length === 3000 };
 }
 export async function opportunityDraft(id: string, auth: AuthScope) {
   const row = await prisma.discoveryOpportunity.findFirst({ where: { id, organizationId: discoveryScope(auth), active: true }, include: { importedTender: { select: { id: true } } } });

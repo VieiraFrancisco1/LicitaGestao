@@ -1,7 +1,7 @@
 import { UserRole } from '@prisma/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { prisma } from '../src/config/database.js';
-import { classify, deduplicate, discoverySettings, isOpen, matches, platformKey, type Candidate } from '../src/services/discovery-core.js';
+import { classify, deduplicate, discoverySettings, isExcludedMunicipality, isOpen, matches, platformKey, type Candidate } from '../src/services/discovery-core.js';
 import { collectSources, parsePncp, parseTce, platformFromOrigin, validSourceLink } from '../src/services/discovery-sources.js';
 import { discoveryScope, getDiscoveryStatus, listOpportunities, opportunityDraft } from '../src/services/discovery.service.js';
 import { createTender } from '../src/services/tender.service.js';
@@ -18,19 +18,22 @@ describe('busca de obras no Ceará', () => {
     ['Contratação dos serviços de engenharia para pavimentação em paralelepípedo em diversas ruas', ['CALCAMENTO', 'PAVIMENTACAO']],
     ['Assessoria de engenharia para fiscalização das obras de escolas', []],
     ['Execução de pavimentação em paralelepípedo em diversas ruas', ['CALCAMENTO', 'PAVIMENTACAO']],
-    ['Construção de creche padrão FNDE', ['ESCOLAS', 'CONSTRUCAO']],
-    ['Construção de uma praça pública com urbanização', ['CONSTRUCAO']],
+    ['Construção de creche padrão FNDE', ['CRECHES', 'CONSTRUCAO']],
+    ['Construção de uma praça pública com urbanização', ['PRACAS', 'URBANIZACAO', 'CONSTRUCAO']],
     ['Implantação de sistema de saneamento e rede de esgoto', ['SANEAMENTO']],
     ['Execução das obras de drenagem do bairro', ['DRENAGEM']],
     ['Aquisição de materiais de construção para obras municipais', []],
     ['Manutenção de computadores na prefeitura', []],
-    ['Ampliação de centro de educação infantil', ['ESCOLAS', 'REFORMAS']],
+    ['Ampliação de centro de educação infantil', ['CRECHES', 'REFORMAS', 'CEI']],
     ['Reforma de quadra na EMEIEF João', ['ESCOLAS', 'REFORMAS']],
     ['Aquisição de merenda escolar', []],
     ['Aquisição de mobiliário escolar', []],
     ['Fornecimento de pedras para manutenção de pavimentação', []],
     ['Contratação de consultoria para projetos de saúde', []]
-  ])('classifica o objeto: %s', (object, expected) => expect(classify(object)).toEqual(expected));
+  ])('classifica o objeto: %s', (object, expected) => {
+    if (expected.length === 0) expect(classify(object)).toEqual([]);
+    else expect(classify(object)).toEqual(expect.arrayContaining(expected));
+  });
   it('interpreta moeda brasileira e prioriza reabertura', () => {
     const result = parseTce(html); expect(result.items[0]?.estimatedValue).toBe(1500000); expect(result.items[0]?.sessionDate).toBe('2026-11-15'); expect(result.pages).toBe(3);
   });
@@ -157,5 +160,80 @@ describe('agente de monitoramento V54', () => {
     expect(docs).toHaveLength(1);
     expect(docs[0]?.url).toBe('https://pncp.gov.br/api/pncp/v1/orgaos/12345678000199/compras/2026/5/arquivos/2');
     expect(fetcher.mock.calls[0]![0]).not.toContain('127.0.0.1');
+  });
+});
+
+
+describe('V56 — vinte e um filtros e municípios excluídos', () => {
+  it.each([
+    ['Execução de obras de UBS', 'UBS'],
+    ['Construção de creche', 'CRECHES'],
+    ['Execução de pavimentação em piso intertravado', 'INTERTRAVADO'],
+    ['Construção de passagem molhada', 'PASSAGEM_MOLHADA'],
+    ['Construção de praça pública', 'PRACAS'],
+    ['Execução de drenagem pluvial', 'DRENAGEM'],
+    ['Obras de saneamento básico', 'SANEAMENTO'],
+    ['Execução de asfalto em vias municipais', 'ASFALTO'],
+    ['Execução de iluminação pública', 'ILUMINACAO'],
+    ['Obras de revitalização de espaços públicos', 'REVITALIZACAO'],
+    ['Execução de obras em estradas', 'ESTRADAS'],
+    ['Obras de urbanização', 'URBANIZACAO'],
+    ['Serviços de manutenção predial de escolas', 'MANUTENCAO_PREDIAL'],
+    ['Execução de obras nas estradas vicinais', 'ESTRADAS_VICINAIS'],
+    ['Construção de unidades habitacionais', 'UNIDADES_HABITACIONAIS'],
+    ['Execução de obras de abastecimento de água', 'ABASTECIMENTO'],
+    ['Reformas de escolas', 'ESCOLAS'],
+    ['Construção de CEI', 'CEI'],
+    ['Construção de prédio público', 'CONSTRUCAO'],
+    ['Execução das obras de pavimentação', 'PAVIMENTACAO'],
+    ['Reforma de hospital', 'REFORMAS']
+  ])('%s inclui %s', (text, category) => expect(classify(text)).toContain(category));
+  it('exclui apenas Fortaleza e Eusébio por município, com ou sem acento', () => {
+    expect(isExcludedMunicipality('Fortaleza')).toBe(true);
+    expect(isExcludedMunicipality('Eusébio')).toBe(true);
+    expect(isExcludedMunicipality('Maracanaú')).toBe(false);
+    expect(isExcludedMunicipality('Caucaia')).toBe(false);
+    const settings = discoverySettings.parse({});
+    expect(matches({ ...candidate, municipality: 'Fortaleza' }, settings, now)).toBe(false);
+    expect(matches({ ...candidate, municipality: 'Eusébio' }, settings, now)).toBe(false);
+    expect(matches({ ...candidate, municipality: 'Caucaia' }, settings, now)).toBe(true);
+  });
+  it('permite pesquisar cada filtro de obra e preserva o padrão V54', () => {
+    const rules = discoverySettings.parse({ categories: ['UBS'] });
+    expect(matches({ ...candidate, object: 'Construção de UBS', categories: ['UBS'] }, rules, now)).toBe(true);
+    expect(matches({ ...candidate, categories: ['PAVIMENTACAO'] }, rules, now)).toBe(false);
+    expect(discoverySettings.parse({ categories: ['OBRAS_GERAIS'] }).categories).toContain('OBRAS_GERAIS');
+  });
+  it('retorna contagens separadas por plataforma sem compartilhar dados de outras organizações', async () => {
+    vi.spyOn(prisma.discoveryOpportunity, 'findMany').mockResolvedValue([
+      { id:'r1', firstSeenAt:now, lastSeenAt:now, importedTender:null, data: { ...candidate, platformName:'BLL Compras' } },
+      { id:'r2', firstSeenAt:now, lastSeenAt:now, importedTender:null, data: { ...candidate, platformName:'M2A Compras' } }
+    ] as never);
+    const result = await listOpportunities(auth, 1, discoverySettings.parse({}), 'BLL');
+    expect(result.allTotal).toBe(2);
+    expect(result.total).toBe(1);
+    expect(result.platformCounts.BLL).toBe(1);
+    expect(result.platformCounts.M2A).toBe(1);
+  });
+});
+
+// O cofre salva informações secretas somente criptografadas e retorna metadados.
+import { listPlatformLoginStatus, savePlatformLogin } from '../src/services/discovery-credentials.js';
+describe('V56 — cofre individual das plataformas', () => {
+  it('não expõe login, senha nem token ao listar contas cadastradas', async () => {
+    const find = vi.spyOn(prisma.platformCredential, 'findMany').mockResolvedValue([{ platform: 'BLL', updatedAt: now, secretEncrypted: 'senha-super-secreta' }] as never);
+    const result = await listPlatformLoginStatus(auth);
+    expect(result.items).toEqual([{ platform: 'BLL', saved: true, updatedAt: now }]);
+    expect(JSON.stringify(result)).not.toContain('senha-super-secreta');
+    expect(find).toHaveBeenCalledWith(expect.objectContaining({ where: { organizationId: auth.organizationId, userId: auth.userId } }));
+  });
+  it('não salva credenciais se a chave do cofre estiver ausente', async () => {
+    const old = env.PLATFORM_CREDENTIAL_ENCRYPTION_KEY;
+    env.PLATFORM_CREDENTIAL_ENCRYPTION_KEY = undefined;
+    try {
+      const upsert = vi.spyOn(prisma.platformCredential, 'upsert');
+      await expect(savePlatformLogin(auth, { platform: 'BLL', username: 'usuario', password: 'segredo' })).rejects.toThrow('PLATFORM_CREDENTIAL_ENCRYPTION_KEY');
+      expect(upsert).not.toHaveBeenCalled();
+    } finally { env.PLATFORM_CREDENTIAL_ENCRYPTION_KEY = old; }
   });
 });

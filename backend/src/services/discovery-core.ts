@@ -1,7 +1,18 @@
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
 
-export const categoryNames = { CALCAMENTO: 'Calçamento', PAVIMENTACAO: 'Pavimentação', ESCOLAS: 'Escolas e creches', CONSTRUCAO: 'Construção', REFORMAS: 'Reformas e ampliações', DRENAGEM: 'Drenagem', SANEAMENTO: 'Saneamento', ESTRADAS: 'Rodovias e pontes', OBRAS_GERAIS: 'Todas as obras' } as const;
+// Preserva categorias antigas nos perfis já salvos (V54), adicionando os 21 filtros da V56.
+export const categoryNames = {
+  OBRAS_GERAIS: 'Todas as obras', CALCAMENTO: 'Calçamento',
+  UBS: 'UBS', CRECHES: 'Creches', INTERTRAVADO: 'Intertravado',
+  PAVIMENTACAO: 'Pavimentação', PASSAGEM_MOLHADA: 'Passagem molhada',
+  REFORMAS: 'Reformas', PRACAS: 'Praças', DRENAGEM: 'Drenagem',
+  SANEAMENTO: 'Saneamento', ASFALTO: 'Asfalto', ILUMINACAO: 'Iluminação pública',
+  REVITALIZACAO: 'Revitalização', ESTRADAS: 'Estradas', URBANIZACAO: 'Urbanização',
+  MANUTENCAO_PREDIAL: 'Manutenção predial', ESTRADAS_VICINAIS: 'Estradas vicinais',
+  UNIDADES_HABITACIONAIS: 'Unidades habitacionais', ABASTECIMENTO: 'Abastecimento de água',
+  ESCOLAS: 'Escolas', CEI: 'CEI', CONSTRUCAO: 'Construção'
+} as const;
 export type Category = keyof typeof categoryNames;
 export type Source = 'PNCP' | 'TCE';
 export type Platform = 'BLL' | 'M2A' | 'LICITAMAIS' | 'COMPRASGOV' | 'PORTALCOMPRAS' | 'LICITANET' | 'BBMNET' | 'OUTRAS' | 'NAO_INFORMADA';
@@ -17,7 +28,7 @@ export type Candidate = {
 };
 export const discoverySettings = z.object({
   minValue: z.coerce.number().min(0).max(999999999999).default(1000000),
-  categories: z.array(z.enum(['CALCAMENTO', 'PAVIMENTACAO', 'ESCOLAS', 'CONSTRUCAO', 'REFORMAS', 'DRENAGEM', 'SANEAMENTO', 'ESTRADAS', 'OBRAS_GERAIS'])).min(1).max(9).default(['OBRAS_GERAIS']),
+  categories: z.array(z.enum(Object.keys(categoryNames) as [Category, ...Category[]])).min(1).max(23).default(['OBRAS_GERAIS']),
   sources: z.array(z.enum(['PNCP', 'TCE'])).min(1).max(2).default(['PNCP', 'TCE']),
   municipality: z.string().trim().max(120).default(''),
   platforms: z.array(z.enum(['BLL', 'M2A', 'LICITAMAIS', 'COMPRASGOV', 'PORTALCOMPRAS', 'LICITANET', 'BBMNET', 'OUTRAS', 'NAO_INFORMADA'])).max(9).default([]),
@@ -50,23 +61,43 @@ export function safeUrl(value: unknown): string | null {
   if (typeof value !== 'string') return null;
   try { const u = new URL(value); return u.protocol === 'https:' && !u.username && !u.password ? u.href : null; } catch { return null; }
 }
+export const excludedMunicipalities = new Set(['fortaleza', 'eusebio']);
+export function isExcludedMunicipality(municipality: string) {
+  // Usa o município da execução quando informado pela fonte; não confundir com o endereço do órgão.
+  return excludedMunicipalities.has(normalize(municipality));
+}
 export function classify(object: string): Category[] {
   const text = normalize(object);
-  // A fonte pode trazer compras de materiais de construção: elas NÃO são obras.
-  const engineering = /\b(obras?|engenharia|construcao|reforma|ampliacao|pavimentacao|calcamento|recapeamento|terraplenagem|drenagem|saneamento|infraestrutura|ponte|viaduto|rodovia|estrada|edificacao|predial|quadra|unidade de saude|hospital|posto de saude|urbanizacao|praca|adutora|barragem|iluminacao publica|rede eletrica|eletrificacao|rede de esgoto|rede de agua)\b/.test(text);
+  const engineering = /\b(obra|obras|engenharia|construcao|reformas?|ampliacao|pavimentacao|calcamento|recapeamento|terraplenagem|drenagem|saneamento|infraestrutura|ponte|viaduto|rodovia|estradas?|edificacao|predial|quadra|urbanizacao|revitalizacao|restauracao|pracas?|adutora|barragem|iluminacao|eletrificacao|rede de esgoto|rede de agua|abastecimento|ubs|unidade basica de saude|creches?|escolas?|cei|centro de educacao infantil|habitacional|passagem molhada|intertravado|asfaltamento|asfalto)\b/.test(text);
   const procurement = /\b(aquisicao|compras?|fornecimento|locacao|aluguel)\b/.test(text);
   const excluded = /consultoria|assessoria|fiscalizacao|elaboracao de projetos|projeto executivo|projetos de engenharia|estudo tecnico|inspecao|laudo/.test(text);
-  const explicitWorkContract = /execucao (de |das |dos )?(obras?|servicos de engenharia|pavimentacao|calcamento|construcao|reforma|drenagem|saneamento)/.test(text);
-  if (!engineering || (excluded && !explicitWorkContract) || (procurement && !explicitWorkContract)) return [];
+  const explicitExecution = /execucao (de |das |dos )?(obras?|servicos de engenharia|pavimentacao|calcamento|construcao|reforma|drenagem|saneamento|iluminacao|urbanizacao)|contratacao de empresa (especializada )?para (execucao|construcao|reforma)|servicos de (construcao|reforma|pavimentacao|manutencao predial|engenharia)/.test(text);
+  if (!engineering || (excluded && !explicitExecution) || (procurement && !explicitExecution)) return [];
   const categories: Category[] = [];
-  if (/calcamento|pedra tosca|paralelepiped|intertravado|bloquet|paver/.test(text)) categories.push('CALCAMENTO');
-  if (/pavimenta|asfalt|cbuq|recapeamento/.test(text)) categories.push('PAVIMENTACAO');
-  if (/escola|escolar|creche|educacao infantil|unidade de ensino|emeief|emef|centro educacional/.test(text)) categories.push('ESCOLAS');
-  if (/construcao|edificacao|construcao civil|nova unidade/.test(text)) categories.push('CONSTRUCAO');
-  if (/reforma|ampliacao|restauracao|requalificacao|recuperacao predial/.test(text)) categories.push('REFORMAS');
-  if (/drenagem|galeria pluvial|aguas pluviais/.test(text)) categories.push('DRENAGEM');
-  if (/saneamento|esgotamento|rede de agua|rede de esgoto|adutora|abastecimento/.test(text)) categories.push('SANEAMENTO');
-  if (/estrada|rodovia|ponte|viaduto|passagem molhada/.test(text)) categories.push('ESTRADAS');
+  const add = (key: Category, pattern: RegExp) => { if (pattern.test(text)) categories.push(key); };
+  add('UBS', /\bubs\b|unidade basica de saude|posto de saude|unidade de saude/);
+  add('CRECHES', /creche|educacao infantil/);
+  add('INTERTRAVADO', /intertravado|bloquet|paver|piso intertravado/);
+  add('CALCAMENTO', /calcamento|pedra tosca|paralelepiped/);
+  add('PAVIMENTACAO', /pavimenta|recapeamento|calcamento|intertravado|asfalt|cbuq/);
+  add('PASSAGEM_MOLHADA', /passagem molhada/);
+  add('REFORMAS', /reforma|ampliacao|restauracao|recuperacao predial/);
+  add('PRACAS', /praca|passeio publico|espaco publico|parque urbano/);
+  add('DRENAGEM', /drenagem|galeria pluvial|aguas pluviais/);
+  add('SANEAMENTO', /saneamento|esgotamento|rede de agua|rede de esgoto|adutora|abastecimento/);
+  add('ASFALTO', /asfalt|cbuq|massa asfaltica|recapeamento/);
+  add('ILUMINACAO', /iluminacao|luminarias|eletrificacao|rede eletrica/);
+  add('REVITALIZACAO', /revitalizacao|requalificacao|restauracao/);
+  add('ESTRADAS', /estrada|rodovia|ponte|viaduto|passagem molhada/);
+  add('URBANIZACAO', /urbanizacao|paisagismo|passeio publico/);
+  add('MANUTENCAO_PREDIAL', /manutencao predial|manutencao (de |das |dos )?(edific|predi)|reparos prediais/);
+  add('ESTRADAS_VICINAIS', /estrada vicinal|estradas vicinais|via vicinal|vias vicinais/);
+  add('UNIDADES_HABITACIONAIS', /unidade habitacional|unidades habitacionais|conjunto habitacional|habitacao popular|moradias/);
+  add('ABASTECIMENTO', /abastecimento|adutora|sistema de agua|rede de agua/);
+  add('ESCOLAS', /escola|escolar|unidade de ensino|emeief|emef|centro educacional/);
+  add('CEI', /\bcei\b|centro de educacao infantil/);
+  add('CONSTRUCAO', /construcao|edificacao|construcao civil|nova unidade/);
+  // OBRAS_GERAIS cobre obras de engenharia sem uma das palavras-chave específicas.
   return categories.length ? [...new Set(categories)] : ['OBRAS_GERAIS'];
 }
 export function isOpen(item: Candidate, now = new Date()) {
@@ -88,6 +119,7 @@ export function platformKey(name: string | null | undefined): Platform {
 }
 export function matches(item: Candidate, settings: DiscoverySettings, now = new Date()) {
   return isOpen(item, now)
+    && !isExcludedMunicipality(item.municipality)
     && (!settings.sessionFrom || item.sessionDate >= settings.sessionFrom)
     && (settings.sessionTo ? item.sessionDate <= settings.sessionTo : item.sessionDate <= todayCE(new Date(now.getTime() + 90 * 86400000)))
     && (!settings.platforms.length || settings.platforms.includes(platformKey(item.platformName))) && item.categories.length > 0 && (settings.categories.includes('OBRAS_GERAIS') || item.categories.some((c) => settings.categories.includes(c))) &&
