@@ -1,7 +1,7 @@
 import { UserRole } from '@prisma/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { prisma } from '../src/config/database.js';
-import { classify, deduplicate, discoverySettings, isOpen, matches, type Candidate } from '../src/services/discovery-core.js';
+import { classify, deduplicate, discoverySettings, isOpen, matches, platformKey, type Candidate } from '../src/services/discovery-core.js';
 import { collectSources, parsePncp, parseTce, platformFromOrigin, validSourceLink } from '../src/services/discovery-sources.js';
 import { discoveryScope, getDiscoveryStatus, listOpportunities, opportunityDraft } from '../src/services/discovery.service.js';
 import { createTender } from '../src/services/tender.service.js';
@@ -18,14 +18,14 @@ describe('busca de obras no Ceará', () => {
     ['Contratação dos serviços de engenharia para pavimentação em paralelepípedo em diversas ruas', ['CALCAMENTO', 'PAVIMENTACAO']],
     ['Assessoria de engenharia para fiscalização das obras de escolas', []],
     ['Execução de pavimentação em paralelepípedo em diversas ruas', ['CALCAMENTO', 'PAVIMENTACAO']],
-    ['Construção de creche padrão FNDE', ['ESCOLAS']],
-    ['Construção de uma praça pública com urbanização', ['OBRAS_GERAIS']],
-    ['Implantação de sistema de saneamento e rede de esgoto', ['OBRAS_GERAIS']],
-    ['Execução das obras de drenagem do bairro', ['OBRAS_GERAIS']],
+    ['Construção de creche padrão FNDE', ['ESCOLAS', 'CONSTRUCAO']],
+    ['Construção de uma praça pública com urbanização', ['CONSTRUCAO']],
+    ['Implantação de sistema de saneamento e rede de esgoto', ['SANEAMENTO']],
+    ['Execução das obras de drenagem do bairro', ['DRENAGEM']],
     ['Aquisição de materiais de construção para obras municipais', []],
     ['Manutenção de computadores na prefeitura', []],
-    ['Ampliação de centro de educação infantil', ['ESCOLAS']],
-    ['Reforma de quadra na EMEIEF João', ['ESCOLAS']],
+    ['Ampliação de centro de educação infantil', ['ESCOLAS', 'REFORMAS']],
+    ['Reforma de quadra na EMEIEF João', ['ESCOLAS', 'REFORMAS']],
     ['Aquisição de merenda escolar', []],
     ['Aquisição de mobiliário escolar', []],
     ['Fornecimento de pedras para manutenção de pavimentação', []],
@@ -126,5 +126,36 @@ describe('análise por IA', () => {
       expect(result.items).toEqual([candidate]); expect(result.warning).toContain('não pôde');
       const body = JSON.parse(fetcher.mock.calls[0]![1].body); expect(body.store).toBe(false); expect(body.tools).toBeUndefined();
     } finally { env.TENDER_AI_API_KEY = old; }
+  });
+});
+
+// V54: regras selecionáveis e consulta de anexos oficiais
+import { collectPncpDocuments } from '../src/services/discovery-documents.js';
+describe('agente de monitoramento V54', () => {
+  it('aceita período explícito de 20 a 20 e valida datas', () => {
+    const rules = discoverySettings.parse({ sessionFrom: '2026-11-20', sessionTo: '2026-12-20' });
+    expect(matches({ ...candidate, sessionDate: '2026-11-20' }, rules, now)).toBe(true);
+    expect(matches({ ...candidate, sessionDate: '2026-12-21' }, rules, now)).toBe(false);
+    expect(() => discoverySettings.parse({ sessionFrom: '2026-12-21', sessionTo: '2026-11-20' })).toThrow();
+  });
+  it('seleciona plataforma conhecida e não presume as desconhecidas', () => {
+    expect(platformKey('BLL Compras')).toBe('BLL');
+    expect(platformKey(null)).toBe('NAO_INFORMADA');
+    const rules = discoverySettings.parse({ platforms: ['BLL'] });
+    expect(matches({ ...candidate, platformName: 'BLL Compras' }, rules, now)).toBe(true);
+    expect(matches(candidate, rules, now)).toBe(false);
+  });
+  it('recusa buscar URLs arbitrárias de arquivos', async () => {
+    const fetcher = vi.fn();
+    expect(await collectPncpDocuments(candidate, fetcher)).toEqual([]);
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+  it('monta links restritos à API oficial para arquivos do PNCP', async () => {
+    const item = { ...candidate, sources: [{ source: 'PNCP' as const, url: 'https://pncp.gov.br/app/editais/12345678000199/2026/5' }] };
+    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify([{ sequencialDocumento: 2, titulo: 'Edital.pdf', tipoDocumentoNome: 'Edital' }])));
+    const docs = await collectPncpDocuments(item, fetcher);
+    expect(docs).toHaveLength(1);
+    expect(docs[0]?.url).toBe('https://pncp.gov.br/api/pncp/v1/orgaos/12345678000199/compras/2026/5/arquivos/2');
+    expect(fetcher.mock.calls[0]![0]).not.toContain('127.0.0.1');
   });
 });

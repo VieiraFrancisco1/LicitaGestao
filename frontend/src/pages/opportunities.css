@@ -73,3 +73,24 @@
 .discovery-platform strong {color:#173c6c; font-size:14px; overflow-wrap:anywhere;}
 .discovery-platform a {display:flex; align-items:center; gap:6px; color:#1556a4; font-size:12px; font-weight:700; text-decoration:none;}
 .discovery-platform a:hover {text-decoration:underline;}
+
+/* V54 - agente e documentos */
+.discovery-period,.discovery-platform-filter { margin-top:18px; padding:15px; background:#f8fbff; border:1px solid #dce8f8; border-radius:12px; }
+.discovery-period-title { display:flex; align-items:center; gap:8px; flex-wrap:wrap; color:#244b7c; font-size:13px; }
+.discovery-period-title small { flex-basis:100%; font-size:11px; color:#69809a; }
+.discovery-dates { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-top:12px; }
+.discovery-dates label { display:grid; gap:5px; font-size:12px; font-weight:700; color:#3b5272; }
+.discovery-dates input { min-width:0; height:42px; border:1px solid #c8d8ee; background:#fff; padding:8px; border-radius:8px; }
+.discovery-platform-filter legend { padding:0 4px; font-weight:800; color:#244b7c; font-size:13px; }
+.discovery-platform-filter>p,.discovery-platform-filter>small { display:block; color:#64748b; font-size:11px; margin:3px 0 12px; line-height:1.6; }
+.discovery-platform-filter>small { margin:12px 0 0; }
+.discovery-phase { margin-top:12px; padding:13px; border:1px solid #e4e8f1; border-radius:10px; background:#fafcff; display:grid; gap:7px; }
+.discovery-phase>div { display:grid; gap:3px; }
+.discovery-phase small,.discovery-documents small { font-size:10px; color:#73839c; }
+.discovery-phase strong { font-size:13px; color:#334b6d; }
+.discovery-documents { margin-top:12px; padding:13px; border:1px solid #cfe2d9; border-radius:10px; background:#f7fbf9; display:grid; gap:9px; }
+.discovery-documents>strong { display:flex; align-items:center; gap:8px; color:#245c50; font-size:12px; }
+.discovery-documents>p { font-size:11px; color:#64748b; margin:0; }
+.discovery-doc-list { display:flex; flex-wrap:wrap; gap:7px; }
+.discovery-doc-list>a { display:inline-flex; gap:6px; align-items:center; border:1px solid #a8d5c5; border-radius:8px; background:#fff; color:#126b55; padding:9px; font-size:11px; text-decoration:none; overflow-wrap:anywhere; }
+@media(max-width:640px) { .discovery-dates { grid-template-columns:1fr; } }

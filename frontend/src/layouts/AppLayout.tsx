@@ -30,7 +30,7 @@ import licitaGestaoLogo from '../assets/licitagestao-logo.png';
 const titles: Record<string, string> = {
   '/': 'Dashboard',
   '/licitacoes': 'Licitações',
-  '/oportunidades': 'Busca inteligente',
+  '/oportunidades': 'Agente de Monitoramento',
   '/empresas': 'Empresas',
   '/convocacoes': 'E-mails',
   '/prazos': 'Prazos',
@@ -83,7 +83,7 @@ export function AppLayout() {
       items: [
         { to: '/', label: 'Dashboard', icon: LayoutDashboard },
         { to: '/licitacoes', label: 'Licitações', icon: Gavel },
-        ...(user?.role !== 'EMPRESA' ? [{ to: '/oportunidades', label: 'Busca inteligente', icon: Radar }] : []),
+        ...(user?.role !== 'EMPRESA' ? [{ to: '/oportunidades', label: 'Agente de Monitoramento', icon: Radar }] : []),
         {
           to: companyPath,
           label: user?.role === 'EMPRESA' ? 'Minha empresa' : 'Empresas',

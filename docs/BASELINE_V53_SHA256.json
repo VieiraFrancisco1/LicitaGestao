@@ -1,0 +1,10 @@
+{
+  "backend/src/services/discovery-core.ts": "8fd27246be1e6710858890ebcb8574ac12d7d72c1548783fe13cabcb1b8aca2a",
+  "backend/src/services/discovery-sources.ts": "f311cb91485b8627f4d986f414129340092e70ccf5a63543534e2a5313de1198",
+  "backend/src/services/discovery.service.ts": "9d87f570b51df94028fa4d7b2fa9cfbe853ac3f7aa7ab15f2a13f89f70e89037",
+  "backend/src/routes/discovery.routes.ts": "9c9c1743a14211b0234d77c85bc5513fe7bdb8dda5d5afb2d3790eac13054d39",
+  "frontend/src/pages/OpportunitiesPage.tsx": "953f25ef0c94bafad692ec742cfbde059dbea60322698d87cbf68b99401a0cea",
+  "frontend/src/pages/opportunities.css": "a78b70eed5a368e9401c0a27e0371e34b9a41acf223762bb18e0ca04b6ba568b",
+  "frontend/src/layouts/AppLayout.tsx": "8ba0354c7146a6b40b68f5edc6632fcbb44bbc24df522f0184b206aa06a786ce",
+  "backend/tests/discovery.test.ts": "06bd20b74ec48fa556091800ffb1d10b17827f3e8080811474fd3743c30b86be"
+}

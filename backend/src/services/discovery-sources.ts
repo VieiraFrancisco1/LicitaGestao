@@ -45,7 +45,7 @@ export function parseTce(html: string): { items: Candidate[]; pages: number } {
     const amountText = text(cells[6]!).replace(/R\$|\s/g, '');
     const value = /^\d{1,3}(\.\d{3})*,\d{2}$|^\d+,\d{2}$/.test(amountText) ? Number(amountText.replace(/\./g, '').replace(',', '.')) : null;
     const key = `TCE:${link[2]}:${link[3]}`;
-    items.push({ key, sourceKeys: [key], sources: [{ source: 'TCE', url: `${TCE_ORIGIN}/index.php/licitacao/detalhes/proc/${link[2]}/licit/${link[3]}` }], municipality: text(cells[1]!), state: 'CE', reference: text(cells[0]!), processNumber: '', agency: '', modality: '', object, estimatedValue: value && Number.isFinite(value) ? value : null, sessionDate, sessionTime: null, publishedDate: brDate(text(cells[3]!)), categories: classify(object), reason: 'Objeto e dados publicados pelo TCE-CE.', aiReviewed: false });
+    items.push({ key, sourceKeys: [key], sources: [{ source: 'TCE', url: `${TCE_ORIGIN}/index.php/licitacao/detalhes/proc/${link[2]}/licit/${link[3]}` }], municipality: text(cells[1]!), state: 'CE', reference: text(cells[0]!), processNumber: '', agency: '', modality: '', object, estimatedValue: value && Number.isFinite(value) ? value : null, sessionDate, sessionTime: null, publishedDate: brDate(text(cells[3]!)), categories: classify(object), phaseStatus: 'NAO_IDENTIFICADA', reason: 'Objeto e dados publicados pelo TCE-CE.', aiReviewed: false });
   }
   if (detailRows > 0 && items.length === 0) throw new Error('Não foi possível interpretar os dados da tabela do TCE-CE.');
   const pages = Math.max(1, ...[...html.matchAll(/\/licitacao\/abertas\/page\/(\d+)/g)].map((m) => Number(m[1])));
@@ -63,7 +63,7 @@ export function parsePncp(body: unknown): { items: Candidate[]; pages: number } 
     const key = `PNCP:${String(item.numeroControlePNCP).slice(0, 100)}`;
     const amount = Number(item.valorTotalEstimado);
     const platform = platformFromOrigin(item.linkSistemaOrigem);
-    items.push({ key, sourceKeys: [key], sources: [{ source: 'PNCP', url: `https://pncp.gov.br/app/editais/${cnpj}/${item.anoCompra}/${item.sequencialCompra}` }], municipality: String(item.unidadeOrgao.municipioNome ?? ''), state: 'CE', reference: String(item.numeroCompra ?? '').slice(0, 120), processNumber: String(item.processo ?? '').slice(0, 120), agency: String(item.orgaoEntidade.razaoSocial ?? ''), modality: String(item.modalidadeNome ?? ''), object: item.objetoCompra.slice(0, 10000), estimatedValue: amount > 0 && Number.isFinite(amount) ? amount : null, sessionDate, sessionTime: /^\d\d:\d\d/.test(String(item.dataEncerramentoProposta).slice(11)) ? String(item.dataEncerramentoProposta).slice(11, 16) : null, publishedDate: validDate(String(item.dataPublicacaoPncp ?? '').slice(0, 10)), categories: classify(item.objetoCompra), reason: 'Objeto e dados publicados pelo PNCP.', aiReviewed: false, ...platform });
+    items.push({ key, sourceKeys: [key], sources: [{ source: 'PNCP', url: `https://pncp.gov.br/app/editais/${cnpj}/${item.anoCompra}/${item.sequencialCompra}` }], municipality: String(item.unidadeOrgao.municipioNome ?? ''), state: 'CE', reference: String(item.numeroCompra ?? '').slice(0, 120), processNumber: String(item.processo ?? '').slice(0, 120), agency: String(item.orgaoEntidade.razaoSocial ?? ''), modality: String(item.modalidadeNome ?? ''), object: item.objetoCompra.slice(0, 10000), estimatedValue: amount > 0 && Number.isFinite(amount) ? amount : null, sessionDate, sessionTime: /^\d\d:\d\d/.test(String(item.dataEncerramentoProposta).slice(11)) ? String(item.dataEncerramentoProposta).slice(11, 16) : null, publishedDate: validDate(String(item.dataPublicacaoPncp ?? '').slice(0, 10)), categories: classify(item.objetoCompra), phaseStatus: 'NAO_IDENTIFICADA', reason: 'Objeto e dados publicados pelo PNCP.', aiReviewed: false, ...platform });
   }
   return { items, pages: Math.max(1, Number(data.totalPaginas) || 1) };
 }
@@ -77,7 +77,7 @@ async function read(response: Response) {
   return Buffer.concat(chunks).toString('utf8');
 }
 // Somente endpoints públicos fixos. Nunca busca URLs fornecidas por usuários ou pela IA.
-export async function collectSources(sources: Source[], fetcher: typeof fetch = fetch, now = new Date(), signal = AbortSignal.timeout(240000)): Promise<Collection> {
+export async function collectSources(sources: Source[], fetcher: typeof fetch = fetch, now = new Date(), signal = AbortSignal.timeout(240000), lastDate?: string | null): Promise<Collection> {
   const items: Candidate[] = []; const reports: SourceReport[] = [];
   // Prioriza PNCP para não deixar sua busca sem resultados se o portal do TCE atrasar.
   for (const source of [...new Set(sources)].sort((a, b) => a === 'PNCP' ? -1 : b === 'PNCP' ? 1 : 0)) {
@@ -85,7 +85,7 @@ export async function collectSources(sources: Source[], fetcher: typeof fetch = 
     reports.push(report);
     try {
       if (source === 'PNCP') {
-        const end = new Date(now.getTime() + 90 * 86400000).toISOString().slice(0, 10).replace(/-/g, '');
+        const end = (lastDate && validDate(lastDate) ? lastDate : new Date(now.getTime() + 90 * 86400000).toISOString().slice(0, 10)).replace(/-/g, '');
         for (let page = 1; page <= 25; page++) {
           const url = new URL('https://pncp.gov.br/api/consulta/v1/contratacoes/proposta');
           url.search = new URLSearchParams({ dataFinal: end, uf: 'CE', pagina: String(page), tamanhoPagina: '50' }).toString();
