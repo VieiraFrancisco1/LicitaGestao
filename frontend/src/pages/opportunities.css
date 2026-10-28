@@ -161,3 +161,82 @@
 .agent-accounts-body>small {font-size:11px; color:#7a8ba1;}
 @media(max-width:1000px){.agent-account-form {grid-template-columns:repeat(2,minmax(0,1fr));}}
 @media(max-width:640px){.agent-account-list,.agent-account-form {grid-template-columns:1fr;}}
+
+/* V57 — painel focado, detalhes sob demanda */
+.discovery-page { gap: 15px; }
+.discovery-hero { padding: 20px 23px; box-shadow: none; border-radius: 14px; }
+.discovery-hero h2 { font-size: clamp(20px,2.3vw,27px); margin: 6px 0; }
+.discovery-hero p { font-size: 12px; line-height: 1.45; }
+.discovery-ce { font-size: 11px; padding: 9px 12px; }
+.discovery-filters { padding: 20px; }
+.discovery-filters .discovery-section-title { margin-bottom: 13px; }
+.discovery-filters .discovery-section-title h3 { font-size: 17px; margin: 0; }
+.agent-quick-panels { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; margin-top: 14px; }
+.agent-type-control { margin: 0; min-width: 0; }
+.agent-type-control.expanded,.agent-settings-control.expanded { grid-column: 1/-1; }
+.agent-accounts { padding: 0; overflow: hidden; }
+.agent-section-toggle { border: 1px solid #d5e2f4; border-radius: 11px; background: #fff; width: 100%; min-width: 0; padding: 12px 14px; display: flex; align-items: center; justify-content: space-between; gap: 8px; cursor: pointer; color: #1b4375; text-align: left; font: inherit; }
+.agent-accounts .agent-section-toggle { border: 0; border-radius: 11px; }
+.agent-section-toggle:hover,.agent-section-toggle:focus-visible { background: #f3f8ff; border-color: #8eafe4; outline-offset: 2px; }
+.agent-section-toggle-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.agent-section-toggle-left>svg { flex-shrink: 0; }
+.agent-section-toggle-left>span { display: grid; gap: 3px; min-width: 0; }
+.agent-section-toggle-left strong { font-size: 13px; line-height: 1.3; }
+.agent-section-toggle-left small { font-size: 11px; color: #6b7e9c; line-height: 1.3; }
+.agent-section-toggle>svg:last-child { flex-shrink: 0; }
+.agent-type-panel { margin-top: 9px; }
+.agent-settings-panel { background: #f8fbff; padding: 12px 15px 15px; border: 1px solid #d7e4f5; border-radius: 11px; margin-top: 9px; }
+.agent-settings-panel .agent-platform-filter { margin: 0; padding-top: 4px; border-top: 0; }
+.agent-settings-panel .agent-secondary-controls { margin: 12px 0 0; }
+.agent-settings-panel .discovery-footer-controls { margin-top: 10px; padding-top: 12px; }
+.agent-simple-note { font-size: 11px; margin: 12px 0 0; color: #687a96; line-height: 1.4; }
+.agent-accounts-body { padding: 0 15px 15px; }
+.agent-run-compact { padding: 12px 15px; }
+.agent-run-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.agent-run-status { display: inline-flex; align-items: center; gap: 9px; color: #28527f; font-size: 12px; }
+.agent-run-report { padding-top: 12px; display: grid; gap: 7px; }
+.agent-run-report>small { color: #70819c; font-size: 11px; }
+.agent-run-report p { color: #815d18; margin: 0; }
+.agent-platform-groups { grid-template-columns: repeat(auto-fill,minmax(165px,1fr)); gap: 10px; }
+.agent-platform-card { min-height: 100px; padding: 13px; box-shadow: none; gap: 4px; }
+.agent-platform-card.active { padding: 12px; }
+.agent-platform-card>svg:last-child { margin-top: -18px; }
+.agent-compact-results { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
+.agent-tender-card { padding: 15px; gap: 0; box-shadow: none; }
+.agent-tender-card.is-open { border-color: #83ade4; }
+.agent-tender-topline { display: flex; gap: 7px; flex-wrap: wrap; align-items: center; justify-content: space-between; }
+.agent-tender-kind { background: #eaf2ff; color: #2c5892; padding: 5px 8px; border-radius: 7px; font-size: 10px; font-weight: 800; }
+.agent-tender-location { display: inline-flex; align-items: center; gap: 4px; color: #627996; font-size: 11px; font-weight: 600; }
+.agent-tender-card h3 { font-size: 14px; line-height: 1.45; margin: 11px 0 14px; min-height: 40px; }
+.agent-tender-highlights { display: grid; grid-template-columns: 1.2fr 1fr .85fr; gap: 10px; padding: 10px 0 12px; border-top: 1px solid #e6edf7; }
+.agent-tender-highlights>div { display: grid; align-content: start; gap: 3px; min-width: 0; }
+.agent-tender-highlights small { color: #7285a0; font-size: 10px; }
+.agent-tender-highlights strong { font-size: 12px; color: #183e6e; overflow-wrap: anywhere; }
+.agent-tender-toolbar { display: flex; gap: 8px; flex-wrap: wrap; padding-top: 10px; border-top: 1px solid #e6edf7; }
+.agent-tender-toolbar .secondary-button { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; padding: 8px 10px; }
+.agent-tender-details { display: grid; gap: 12px; border-top: 1px solid #e4edf9; margin-top: 13px; padding-top: 13px; }
+.agent-tender-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.agent-tender-detail-grid>div { display: grid; gap: 4px; }
+.agent-tender-detail-grid small { font-size: 10px; color: #7285a0; }
+.agent-tender-detail-grid strong { font-size: 12px; color: #29476d; overflow-wrap: anywhere; }
+.agent-full-object,.agent-phase-evidence { font-size: 12px; line-height: 1.6; color: #415674; margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.agent-tender-links { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.agent-tender-links>a { display: inline-flex; align-items: center; gap: 6px; background: #eff5ff; color: #22518e; text-decoration: none; padding: 8px 10px; border-radius: 8px; font-size: 11px; font-weight: 700; }
+.agent-tender-links>a:hover { text-decoration: underline; }
+.agent-tender-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding-top: 10px; border-top: 1px solid #e4edf7; }
+.agent-tender-footer>small { font-size: 10px; color: #6d7f9b; }
+.agent-tender-footer>a,.agent-tender-footer>button { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
+.agent-tender-card .agent-files-panel { margin: 13px 0 0; }
+@media (max-width: 1050px) { .agent-compact-results { grid-template-columns: 1fr; } }
+@media (max-width: 720px) {
+  .agent-quick-panels { grid-template-columns: 1fr; }
+  .agent-type-control.expanded,.agent-settings-control.expanded { grid-column: auto; }
+  .discovery-hero { padding: 17px; }
+  .discovery-ce { display: none; }
+  .agent-tender-highlights { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .agent-tender-highlights>div:last-child { grid-column: 1/-1; }
+  .agent-tender-detail-grid { grid-template-columns: 1fr; }
+  .agent-compact-results { grid-template-columns: 1fr; }
+}
+
+.agent-run-warnings { color: #a46a12; font-size: 11px; background: #fff5da; border-radius: 6px; padding: 4px 7px; }
