@@ -1,4 +1,4 @@
-import { ArrowRight, BellRing, Bot, CalendarRange, ChevronDown, ChevronUp, Download, ExternalLink, FileText, FolderOpen, MapPin, Radar, RefreshCw, Save, SlidersHorizontal, Plug, Settings2 } from 'lucide-react';
+import { ArrowRight, BellRing, Bot, CalendarRange, ChevronDown, ChevronUp, Download, ExternalLink, FileText, FolderOpen, MapPin, Radar, RefreshCw, Save, SlidersHorizontal, Plug, Settings2, Eraser, MonitorPlay, X } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api, errorMessage } from '../services/api';
@@ -59,6 +59,8 @@ export function OpportunitiesPage() {
   const [loginUsername, setLoginUsername] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [loginSaving, setLoginSaving] = useState(false);
+  const [resultsCleared, setResultsCleared] = useState(false);
+  const [monitorOpen, setMonitorOpen] = useState(false);
   const running = status?.run?.status === 'RUNNING';
 
   const refresh = useCallback(async () => {
@@ -124,6 +126,7 @@ export function OpportunitiesPage() {
     if (settings.sessionFrom && settings.sessionTo && (Date.parse(settings.sessionTo) - Date.parse(settings.sessionFrom)) / 86400000 > 180) { setError('O período máximo permitido é de 180 dias.'); return; }
     if (!settings.categories.length || !settings.sources.length || !Number.isFinite(settings.minValue) || settings.minValue < 0) { setError('Selecione pelo menos um tipo de obra, uma fonte e um valor válido.'); return; }
     setBusy(true); setError(''); setMessage('');
+    if (scan) setResultsCleared(false);
     if (scan) { setShowTypes(false); setShowAdvanced(false); setLoginPanelOpen(false); }
     try {
       if (scan) {
@@ -138,10 +141,16 @@ export function OpportunitiesPage() {
       await refresh();
     } catch (err) { setError(errorMessage(err)); } finally { setBusy(false); }
   };
+  const clearSearch = () => {
+    if (busy || running) return;
+    setSettings(defaults); setResult(null); setPage(1); setActivePlatform(null);
+    setOpenFiles([]); setOpenDetails([]); setShowTypes(false); setShowAdvanced(false);
+    setResultsCleared(true); setError(''); setMessage('Busca limpa. Selecione novos filtros e clique em Agente de busca.');
+  };
   const openDraft = async (item: Opportunity) => {
     setOpening(item.id); setError('');
     try {
-      const response = await api.get<ApiResponse<Record<string, unknown>>>(`/opportunities/${item.id}/draft`);
+      const response = await api.get<ApiResponse<Record<string, unknown>>>(`/opportunities/${item.id}/draft`, { timeout: 125000 });
       navigate('/licitacoes/nova', { state: { opportunityDraft: response.data.data } });
     } catch (err) { setError(errorMessage(err)); setOpening(''); }
   };
@@ -154,8 +163,8 @@ export function OpportunitiesPage() {
   const toggleFiles = (id: string) => setOpenFiles((old) => old.includes(id) ? old.filter((v) => v !== id) : [...old, id]);
   const toggleDetails = (id: string) => setOpenDetails((old) => old.includes(id) ? old.filter((v) => v !== id) : [...old, id]);
   const counts = result?.platformCounts ?? {};
-  const count = result?.allTotal ?? 0;
-  const groups = result?.platformGroups ?? platforms.filter(([key]) => (counts[key] ?? 0) > 0).map(([key, title]) => ({ key, title, count: counts[key] ?? 0 }));
+  const count = resultsCleared ? 0 : (result?.allTotal ?? 0);
+  const groups = resultsCleared ? [] : (result?.platformGroups ?? platforms.filter(([key]) => (counts[key] ?? 0) > 0).map(([key, title]) => ({ key, title, count: counts[key] ?? 0 })));
   const selectedPlatformName = groups.find((g) => g.key === activePlatform)?.title ?? 'Plataforma não identificada';
   return (
     <div className="page-stack discovery-page">
@@ -166,7 +175,10 @@ export function OpportunitiesPage() {
           <label>Valor acima de (R$)<input type="number" min="0" step="0.01" value={settings.minValue} onChange={(e) => field('minValue', e.target.value === '' ? 0 : Number(e.target.value))} /></label>
           <label>Data inicial<input type="date" value={settings.sessionFrom ?? ''} onChange={(e) => field('sessionFrom', e.target.value || null)} /></label>
           <label>Data final<input type="date" value={settings.sessionTo ?? ''} onChange={(e) => field('sessionTo', e.target.value || null)} /></label>
-          <button type="button" className="primary-button agent-search-button" disabled={busy || running} onClick={() => void submit(true)}><Bot size={18} />{running ? 'Pesquisando...' : busy ? 'Iniciando...' : 'Agente de busca'}</button>
+          <div className="agent-search-actions">
+            <button type="button" className="primary-button agent-search-button" disabled={busy || running} onClick={() => void submit(true)}><Bot size={18} />{running ? 'Pesquisando...' : busy ? 'Iniciando...' : 'Agente de busca'}</button>
+            <button type="button" className="secondary-button" disabled={busy || running} onClick={clearSearch} title="Limpar os filtros e ocultar os resultados sem excluir licitações salvas"><Eraser size={16} />Limpar busca</button>
+          </div>
         </div>
         {message && <p className="agent-inline-feedback" role="status">{message}</p>}
         <div className="agent-quick-panels">
@@ -223,14 +235,14 @@ export function OpportunitiesPage() {
         </div>
         </div>
       </section>
-      {status?.run && <section className={`discovery-run agent-run-compact ${running ? 'running' : ''}`} role="status">
-        <div className="agent-run-top"><span className="agent-run-status"><RefreshCw size={17} className={running ? 'discovery-spin' : ''} /><strong>{status.run.progress}</strong>{status.run.warnings.length > 0 && <span className="agent-run-warnings">{status.run.warnings.length} aviso(s)</span>}</span><button type="button" className="secondary-button compact" onClick={() => setShowRunDetails((v) => !v)} aria-expanded={showRunDetails} aria-controls="agent-run-report">{showRunDetails ? 'Ocultar detalhes' : 'Ver detalhes'}{showRunDetails ? <ChevronUp size={14} /> : <ChevronDown size={14} />}</button></div>
+      {!resultsCleared && status?.run && <section className={`discovery-run agent-run-compact ${running ? 'running' : ''}`} role="status">
+        <div className="agent-run-top"><span className="agent-run-status"><RefreshCw size={17} className={running ? 'discovery-spin' : ''} /><strong>{status.run.progress}</strong>{status.run.warnings.length > 0 && <span className="agent-run-warnings">{status.run.warnings.length} aviso(s)</span>}</span><div className="agent-run-actions"><button type="button" className="secondary-button compact" onClick={() => setMonitorOpen(true)}><MonitorPlay size={15}/>Acompanhar agente</button><button type="button" className="secondary-button compact" onClick={() => setShowRunDetails((v) => !v)} aria-expanded={showRunDetails} aria-controls="agent-run-report">{showRunDetails ? 'Ocultar detalhes' : 'Ver detalhes'}{showRunDetails ? <ChevronUp size={14} /> : <ChevronDown size={14} />}</button></div></div>
         {showRunDetails && <div id="agent-run-report" className="agent-run-report"><small>Última busca: {new Date(status.run.startedAt).toLocaleString('pt-BR')}</small>{status.run.reports && <div className="discovery-source-report">{status.run.reports.map((r) => <span key={r.source}>{sourceLabel(r.source)} · {r.pages} página(s) · {r.complete ? 'concluída' : 'parcial'}</span>)}</div>}{status.run.warnings.map((w, i) => <p key={i}>{w}</p>)}</div>}
       </section>}
       <div className="discovery-results-heading"><div><h3>Resultados do agente <span>{count}</span></h3><p>Selecione uma plataforma e abra as licitações que interessam.</p></div><button type="button" className="secondary-button compact" onClick={() => void refresh()}><RefreshCw size={15} /> Atualizar</button></div>
-      {result?.limited && <div className="alert">A lista atingiu o limite de registros. Refine as regras e pesquise novamente.</div>}
+      {!resultsCleared && result?.limited && <div className="alert">A lista atingiu o limite de registros. Refine as regras e pesquise novamente.</div>}
       {groups.length > 0 && <div className="agent-platform-groups">{groups.map(({ key, title, count: groupCount }) => <button type="button" key={key} className={`agent-platform-card ${activePlatform === key ? 'active' : ''}`} onClick={() => choosePlatform(key)} aria-pressed={activePlatform === key}><span className="agent-platform-card-top"><FileText size={20} /><span className="agent-platform-count">{groupCount}</span></span><strong>{title}</strong><small>{activePlatform === key ? 'Fechar lista' : 'Ver licitações'}</small>{activePlatform === key ? <ChevronUp size={17} /> : <ChevronDown size={17} />}</button>)}</div>}
-      {!count && <div className="discovery-empty"><Radar size={35} /><h3>{running ? 'O agente está pesquisando...' : 'Nenhuma oportunidade encontrada'}</h3><p>{running ? 'As plataformas serão agrupadas quando as fontes responderem.' : 'Clique em Agente de busca e confira as datas, valor e tipos de obras selecionados.'}</p></div>}
+      {!count && <div className="discovery-empty"><Radar size={35} /><h3>{resultsCleared ? 'Busca limpa' : running ? 'O agente está pesquisando...' : 'Nenhuma oportunidade encontrada'}</h3><p>{resultsCleared ? 'Os resultados anteriores foram ocultados, sem excluir licitações já salvas.' : running ? 'As plataformas serão agrupadas quando as fontes responderem.' : 'Clique em Agente de busca e confira as datas, valor e tipos de obras selecionados.'}</p></div>}
       {count > 0 && !activePlatform && <div className="agent-select-hint"><CalendarRange size={18} /> Selecione uma plataforma acima para abrir suas licitações.</div>}
       {activePlatform && <div className="agent-selected-heading"><h3>{selectedPlatformName} <span>· {result?.total ?? 0} licitações</span></h3><button className="secondary-button compact" type="button" onClick={() => choosePlatform(activePlatform)}>Fechar</button></div>}
       {activePlatform && <div className="discovery-results agent-compact-results">
@@ -267,10 +279,25 @@ export function OpportunitiesPage() {
                 {item.sources.map((source) => <a key={source.url} href={source.url} target="_blank" rel="noopener noreferrer">Fonte {sourceLabel(source.source)} <ExternalLink size={13} /></a>)}
                 {item.platformUrl && <a href={item.platformUrl} target="_blank" rel="noopener noreferrer">{item.platformName?.trim() || selectedPlatformName} <ExternalLink size={13} /></a>}
               </div>
-              <div className="agent-tender-footer"><small>Encontrada em {new Date(item.lastSeenAt).toLocaleString('pt-BR')}</small>{item.importedTenderId ? <Link className="secondary-button compact" to={`/licitacoes/${item.importedTenderId}`}>Abrir no controle <ArrowRight size={15} /></Link> : <button type="button" className="primary-button compact" disabled={Boolean(opening)} onClick={() => void openDraft(item)}>{opening === item.id ? 'Abrindo...' : 'Adicionar ao Controle Geral'} <ArrowRight size={15} /></button>}</div>
+              <div className="agent-tender-footer"><small>Encontrada em {new Date(item.lastSeenAt).toLocaleString('pt-BR')}</small>{item.importedTenderId ? <Link className="secondary-button compact" to={`/licitacoes/${item.importedTenderId}`}>Abrir no controle <ArrowRight size={15} /></Link> : <button type="button" className="primary-button compact" disabled={Boolean(opening)} onClick={() => void openDraft(item)}>{opening === item.id ? 'Lendo edital...' : 'Adicionar ao Controle Geral'} <ArrowRight size={15} /></button>}</div>
             </div>}
           </article>;
         })}
+      </div>}
+      {monitorOpen && <div className="agent-monitor-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setMonitorOpen(false); }}>
+        <section className="agent-monitor-dialog" role="dialog" aria-modal="true" aria-labelledby="agent-monitor-title">
+          <div className="agent-monitor-header"><h3 id="agent-monitor-title"><MonitorPlay size={18}/>Acompanhar agente</h3><button type="button" className="secondary-button compact" onClick={() => setMonitorOpen(false)} aria-label="Fechar acompanhamento"><X size={17}/></button></div>
+          <div className="agent-monitor-screen">
+            <MonitorPlay size={36}/><strong>{status?.run?.progress ?? 'Nenhuma busca em andamento'}</strong>
+            <p>Progresso real da consulta às fontes PNCP e TCE-CE. A transmissão visual das abas de BLL, M2A e Licita Mais dependerá da ativação e validação dos respectivos conectores Playwright.</p>
+          </div>
+          <div className="agent-monitor-metrics">
+            <div><small>Situação</small><strong>{status?.run?.status ?? 'Sem execução'}</strong></div>
+            <div><small>Novas oportunidades</small><strong>{status?.run?.addedCount ?? 0}</strong></div>
+            <div><small>Fontes consultadas</small><strong>{status?.run?.reports?.map((x) => sourceLabel(x.source)).join(' / ') || 'Aguardando'}</strong></div>
+          </div>
+          {status?.run?.warnings?.map((warning, i) => <p key={i} className="agent-monitor-warning">{warning}</p>)}
+        </section>
       </div>}
       {activePlatform && result && result.pages > 1 && <div className="pagination"><span>{result.total} oportunidades nesta plataforma</span><div><button disabled={page === 1} onClick={() => setPage((p) => p - 1)}>Anterior</button><span>{page} de {result.pages}</span><button disabled={page === result.pages} onClick={() => setPage((p) => p + 1)}>Próxima</button></div></div>}
     </div>

@@ -8,6 +8,7 @@ import { reviewWithAi } from './discovery-ai.js';
 import { categoryNames, deduplicate, discoverySettings, fingerprint, matches, platformKey, platformGroup, type Platform, type Candidate, type DiscoverySettings, type Source } from './discovery-core.js';
 import { collectSources, validSourceLink, type Collection } from './discovery-sources.js';
 import { enrichPncpDocuments } from './discovery-documents.js';
+import { mergeOfficialEdict, readOfficialEdict } from './discovery-edital.js';
 
 const json = (value: unknown) => JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
 export function discoveryScope(auth: AuthScope) {
@@ -69,7 +70,15 @@ export async function opportunityDraft(id: string, auth: AuthScope) {
   if (row.importedTender) throw new AppError('Esta oportunidade já foi adicionada ao controle', 409);
   const data = row.data as unknown as Candidate;
   if (!data || data.state !== 'CE' || !data.sources?.length || !data.sources.every((s) => validSourceLink(s.url))) throw new AppError('Dados da fonte inválidos', 422);
-  return { opportunityId: row.id, municipality: data.municipality, modality: data.modality, noticeNumber: data.reference, processNumber: data.processNumber, sessionDate: data.sessionDate, object: data.object, estimatedValue: data.estimatedValue?.toString() ?? '', platformLink: data.platformUrl ?? data.sources[0]!.url, sourceLabel: data.sources.map((s) => s.source === 'TCE' ? 'TCE-CE' : 'PNCP').join(' / ') };
+  const base = { opportunityId: row.id, municipality: data.municipality, modality: data.modality, noticeNumber: data.reference, processNumber: data.processNumber, sessionDate: data.sessionDate, object: data.object, estimatedValue: data.estimatedValue?.toString() ?? '', platformLink: data.platformUrl ?? data.sources[0]!.url, platformName: data.platformName ?? '', sourceLabel: data.sources.map((s) => s.source === 'TCE' ? 'TCE-CE' : 'PNCP').join(' / ') };
+  // Pré-seleciona a plataforma já cadastrada quando a correspondência for inequívoca.
+  const registered = await prisma.platform.findMany({ where: { organizationId: row.organizationId, active: true }, select: { id: true, name: true } });
+  const identified = platformKey(data.platformName);
+  const matchedPlatforms = registered.filter((p) => identified !== 'NAO_INFORMADA' && identified !== 'OUTRAS' ? platformKey(p.name) === identified : Boolean(data.platformName && p.name.trim().toLowerCase() === data.platformName.trim().toLowerCase()));
+  if (matchedPlatforms.length === 1) Object.assign(base, { platformId: matchedPlatforms[0]!.id });
+  // Não bloqueia a inclusão quando a IA ou o edital estiver indisponível.
+  const reading = await readOfficialEdict(data);
+  return { ...(reading.extracted ? mergeOfficialEdict(base, reading.extracted) : base), sourceLabel: `${base.sourceLabel}. ${reading.note}`, edictDocumentUrl: reading.documentUrl, edictEvidence: reading.extracted?.evidence ?? '' };
 }
 export async function checkOpportunityPhase(id: string, auth: AuthScope) {
   const organizationId = discoveryScope(auth);
