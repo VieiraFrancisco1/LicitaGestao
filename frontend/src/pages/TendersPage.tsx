@@ -7,6 +7,7 @@ import {
   FilterX,
   FolderOpen,
   Link2,
+  ListChecks,
   Pencil,
   Plus,
   Search,
@@ -364,10 +365,10 @@ export function TendersPage({
               <h2>Licitações</h2>
               <span>Veja o controle geral ou filtre diretamente pelas empresas às quais você tem acesso.</span>
             </div>
-            <Link className="primary-button" to="/licitacoes/nova">
-              <Plus size={18} />
-              Nova licitação
-            </Link>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexWrap: 'wrap' }}>
+              {user?.role !== 'EMPRESA' && <Link className="secondary-button" to="/licitacoes/lista-semanal"><ListChecks size={17} /> Lista semanal</Link>}
+              <Link className="primary-button" to="/licitacoes/nova"><Plus size={18} /> Nova licitação</Link>
+            </div>
           </div>
         </>
       )}

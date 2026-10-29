@@ -1,4 +1,4 @@
-import { ArrowRight, BellRing, Bot, CalendarRange, ChevronDown, ChevronUp, Download, ExternalLink, FileText, FolderOpen, MapPin, Radar, RefreshCw, Save, SlidersHorizontal, Plug, Settings2, Eraser, MonitorPlay, X } from 'lucide-react';
+import { ArrowRight, BellRing, Bot, CalendarRange, ChevronDown, ChevronUp, Download, ExternalLink, FileText, FolderOpen, MapPin, Radar, RefreshCw, Save, SlidersHorizontal, Plug, Settings2, Eraser, MonitorPlay, X, ListPlus, CheckCircle2 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api, errorMessage } from '../services/api';
@@ -61,6 +61,8 @@ export function OpportunitiesPage() {
   const [loginSaving, setLoginSaving] = useState(false);
   const [resultsCleared, setResultsCleared] = useState(false);
   const [monitorOpen, setMonitorOpen] = useState(false);
+  const [queuedIds, setQueuedIds] = useState<string[]>([]);
+  const [queueSaving, setQueueSaving] = useState('');
   const running = status?.run?.status === 'RUNNING';
 
   const refresh = useCallback(async () => {
@@ -97,6 +99,23 @@ export function OpportunitiesPage() {
     }).catch(() => { if (active) setLoginStatus(null); });
     return () => { active = false; };
   }, []);
+  useEffect(() => {
+    let live = true;
+    void api.get<ApiResponse<Array<{ opportunityId: string }>>>('/weekly-list')
+      .then(({ data }) => { if (live) setQueuedIds(data.data.map((item) => item.opportunityId)); })
+      .catch(() => undefined);
+    return () => { live = false; };
+  }, []);
+  const sendToWeeklyList = async (id: string) => {
+    if (queueSaving || queuedIds.includes(id)) return;
+    setQueueSaving(id); setError('');
+    try {
+      await api.post('/weekly-list', { opportunityId: id });
+      setQueuedIds((current) => current.includes(id) ? current : [...current, id]);
+      setMessage('Licitação enviada para a lista semanal. Abra Licitações → Lista semanal para conferir.');
+    } catch (err) { setError(errorMessage(err)); }
+    finally { setQueueSaving(''); }
+  };
   const saveLogin = async () => {
     if (!loginUsername.trim() || !loginPassword || loginSaving) return;
     setLoginSaving(true); setError('');
@@ -264,6 +283,7 @@ export function OpportunitiesPage() {
             <div className="agent-tender-toolbar">
               <button type="button" className="secondary-button compact" onClick={() => toggleDetails(item.id)} aria-expanded={detailsOpen} aria-controls={`agent-details-${item.id}`}><FileText size={15} />{detailsOpen ? 'Ocultar detalhes' : 'Ver detalhes'}{detailsOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}</button>
               <button type="button" className="secondary-button compact" onClick={() => toggleFiles(item.id)} aria-expanded={filesOpen} aria-controls={`agent-files-${item.id}`}><FolderOpen size={15} />Arquivos ({item.documents?.length ?? 0}){filesOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}</button>
+              <button type="button" className="secondary-button compact" disabled={Boolean(queueSaving) || queuedIds.includes(item.id)} onClick={() => void sendToWeeklyList(item.id)}>{queuedIds.includes(item.id) ? <CheckCircle2 size={15} /> : <ListPlus size={15} />}{queuedIds.includes(item.id) ? 'Na lista semanal' : queueSaving === item.id ? 'Enviando...' : 'Enviar para lista'}</button>
             </div>
             {filesOpen && <div id={`agent-files-${item.id}`} className="agent-files-panel"><strong>Arquivos disponíveis</strong>{item.documents?.length ? item.documents.map((doc) => <a key={doc.url} href={doc.url} target="_blank" rel="noopener noreferrer"><Download size={15} />{doc.title}<ExternalLink size={13} /></a>) : <p>Nenhum arquivo acessível encontrado. Consulte o portal oficial.</p>}<small>Os documentos abrem em outra aba ou iniciam o download, conforme o portal. Não ficam armazenados no LicitaGestão.</small></div>}
             {detailsOpen && <div id={`agent-details-${item.id}`} className="agent-tender-details">

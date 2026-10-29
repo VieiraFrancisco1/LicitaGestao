@@ -129,6 +129,7 @@ model Organization {
   platformCredentials   PlatformCredential[]
   discoveryProfiles     DiscoveryProfile[]
   discoveryOpportunities DiscoveryOpportunity[]
+  weeklyTenderItems WeeklyTenderItem[]
   discoveryRuns         DiscoveryRun[]
   billingPayments       BillingPayment[]
   users                 User[]
@@ -733,10 +734,23 @@ model DiscoveryOpportunity {
   firstSeenAt DateTime @default(now()) @map("first_seen_at")
   lastSeenAt DateTime @default(now()) @map("last_seen_at")
   importedTender Tender?
+  weeklyTenderItems WeeklyTenderItem[]
   @@unique([organizationId, fingerprint])
   @@index([organizationId, lastSeenAt])
   @@map("discovery_opportunities")
 }
+model WeeklyTenderItem {
+  id String @id @default(uuid()) @db.Uuid
+  organizationId String @map("organization_id") @db.Uuid
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  opportunityId String @map("opportunity_id") @db.Uuid
+  opportunity DiscoveryOpportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at")
+  @@unique([organizationId, opportunityId])
+  @@index([organizationId, createdAt])
+  @@map("weekly_tender_items")
+}
+
 model DiscoveryRun {
   id String @id @default(uuid()) @db.Uuid
   organizationId String @map("organization_id") @db.Uuid

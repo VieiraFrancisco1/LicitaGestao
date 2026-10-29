@@ -1,0 +1,23 @@
+.weekly-list-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.weekly-heading-actions,.weekly-item-actions{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+.weekly-summary{display:flex;align-items:center;gap:10px;color:#153e7f;font-size:14px;padding:10px 4px}
+.weekly-summary strong{font-size:21px}
+.weekly-list-items{display:grid;gap:14px}
+.weekly-item{background:#fff;border:1px solid #d7e2f4;border-radius:14px;padding:18px 20px;box-shadow:0 4px 16px rgba(16,54,114,.035)}
+.weekly-item-header{display:flex;align-items:flex-start;justify-content:space-between;gap:20px}
+.weekly-item-header h3{font-size:16px;line-height:1.5;color:#173e7a;margin:7px 0 8px}
+.weekly-item-header small{display:block;color:#637693;font-size:12px}
+.weekly-item-location{font-weight:750;font-size:12px;color:#2161ac;text-transform:uppercase}
+.weekly-item-imported{white-space:nowrap;background:#eaf7ee;border-radius:9px;padding:7px 10px;color:#267344;font-size:12px;font-weight:700}
+.weekly-item-metadata{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:16px 0;border-top:1px solid #e2eaf5;border-bottom:1px solid #e2eaf5;padding:14px 0}
+.weekly-item-metadata div{display:flex;flex-direction:column;gap:5px;min-width:0}
+.weekly-item-metadata small{font-size:11px;color:#6e7b8f}
+.weekly-item-metadata strong{font-size:13px;overflow-wrap:anywhere;color:#173e7a}
+.weekly-item-actions .weekly-remove{color:#b23444}
+.weekly-links{padding-top:13px;border-top:1px solid #e2eaf5;margin-top:14px;display:flex;flex-wrap:wrap;gap:10px}
+.weekly-links a{display:inline-flex;align-items:center;gap:6px;color:#165ca4;font-size:12px;text-decoration:none;border:1px solid #d7e2f4;border-radius:8px;padding:8px}
+.weekly-links small{color:#6e7b8f}
+.weekly-empty{display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;gap:10px;padding:44px 20px;background:#fff;border:1px dashed #cad9ec;border-radius:14px;color:#506c90}
+.weekly-empty h3{color:#17427b;margin:0}
+.weekly-empty p{max-width:440px;margin:0 0 7px}
+@media(max-width:670px){.weekly-item{padding:14px}.weekly-item-header{flex-wrap:wrap}.weekly-item-metadata{grid-template-columns:1fr 1fr}.weekly-heading-actions{width:100%}.weekly-heading-actions a,.weekly-heading-actions button{flex:1}.weekly-item-actions button,.weekly-item-actions a{flex:1}}

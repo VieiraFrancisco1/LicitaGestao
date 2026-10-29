@@ -1,0 +1,8 @@
+{
+  "frontend/src/App.tsx": "df3f7bf128538b50c8fd09878c03b17d60484e17",
+  "frontend/src/pages/TendersPage.tsx": "df4f9e736d792b9d1c7cf9ff7ff33b871c348cdf",
+  "backend/src/routes/index.ts": "f432fab452543c2a14e347150b4fec3b23eb82a7",
+  "backend/prisma/schema.prisma": "753f71f27e273ef01294c98133cd5980b66a5374",
+  "backend/src/services/discovery.service.ts": "572dba87dd4334fa1cc24256cea7b961a27e666f",
+  "frontend/src/pages/OpportunitiesPage.tsx": "08906ccdbf30fa6f5c47840438b0cd35d0ea875e"
+}

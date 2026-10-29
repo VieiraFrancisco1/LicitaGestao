@@ -1,4 +1,5 @@
 import { OpportunitiesPage } from './pages/OpportunitiesPage';
+import { WeeklyListPage } from './pages/WeeklyListPage';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AuthProvider } from './contexts/AuthContext';
@@ -46,6 +47,9 @@ export default function App() { // LICITAGESTAO_SAAS_RENTAL_V1_APP LICITAGESTAO_
                 <Route path="oportunidades" element={<OpportunitiesPage />} />
               </Route>
               <Route path="licitacoes" element={<TendersPage />} />
+              <Route element={<ProtectedRoute roles={['SUPER_ADMIN', 'ADMIN', 'FUNCIONARIO']} />}>
+                <Route path="licitacoes/lista-semanal" element={<WeeklyListPage />} />
+              </Route>
               <Route path="licitacoes/nova" element={<BidFormPage />} />
               <Route path="licitacoes/:id" element={<TenderDetailsPage />} />
               <Route path="licitacoes/:id/editar" element={<BidFormPage />} />
