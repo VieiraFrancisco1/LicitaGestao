@@ -59,6 +59,8 @@ export function OpportunitiesPage() {
   const [loginUsername, setLoginUsername] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [loginSaving, setLoginSaving] = useState(false);
+  const [testingLogin, setTestingLogin] = useState<LoginPlatform | null>(null);
+  const [loginTestResults, setLoginTestResults] = useState<Partial<Record<LoginPlatform, string>>>({});
   const [resultsCleared, setResultsCleared] = useState(false);
   const [monitorOpen, setMonitorOpen] = useState(false);
   const [queuedIds, setQueuedIds] = useState<string[]>([]);
@@ -125,6 +127,14 @@ export function OpportunitiesPage() {
       setLoginStatus(response.data.data); setLoginUsername(''); setLoginPassword(''); setEditingLogin(null);
       setMessage('Credenciais protegidas e salvas. A automação de login exigirá a ativação do conector desta plataforma.');
     } catch (err) { setError(errorMessage(err)); } finally { setLoginSaving(false); }
+  };
+  const testLogin = async (p: LoginPlatform) => {
+    setTestingLogin(p); setError('');
+    try {
+      const response = await api.post<ApiResponse<{ status: string; message: string }>>(`/opportunities/platform-logins/${p}/test`, {}, { timeout: 75000 });
+      setLoginTestResults((current) => ({ ...current, [p]: `${response.data.data.status === 'VERIFIED' ? 'Acesso confirmado' : 'Teste pendente'}: ${response.data.data.message}` }));
+    } catch (err) { setLoginTestResults((current) => ({ ...current, [p]: errorMessage(err) })); }
+    finally { setTestingLogin(null); }
   };
   const removeLogin = async (p: LoginPlatform) => {
     setLoginSaving(true); setError('');
@@ -241,7 +251,7 @@ export function OpportunitiesPage() {
           {!loginStatus?.storageReady && <p className="agent-vault-warning">Antes de salvar logins, configure a variável PLATFORM_CREDENTIAL_ENCRYPTION_KEY no Render e publique o backend da V56.</p>}
           <div className="agent-account-list">{(['BLL', 'M2A', 'LICITAMAIS'] as LoginPlatform[]).map((p) => {
             const saved = loginStatus?.items.some((v) => v.platform === p);
-            return <div key={p} className="agent-login-card"><strong>{platformLabel(p)}</strong><small>{saved ? 'Credenciais cadastradas · conector não ativado' : 'Não conectada'}</small><div className="agent-login-actions"><button type="button" className="secondary-button compact" onClick={() => { setLoginPlatform(p); setEditingLogin((current) => current === p ? null : p); setLoginUsername(''); setLoginPassword(''); }} aria-expanded={editingLogin === p}>{editingLogin === p ? 'Cancelar' : saved ? 'Editar acesso' : 'Conectar'}</button>{saved && <button type="button" className="secondary-button compact" disabled={loginSaving} onClick={() => void removeLogin(p)}>Remover</button>}</div></div>;
+            return <div key={p} className="agent-login-card"><strong>{platformLabel(p)}</strong><small>{saved ? 'Credenciais cadastradas · conector não ativado' : 'Não conectada'}</small><div className="agent-login-actions"><button type="button" className="secondary-button compact" onClick={() => { setLoginPlatform(p); setEditingLogin((current) => current === p ? null : p); setLoginUsername(''); setLoginPassword(''); }} aria-expanded={editingLogin === p}>{editingLogin === p ? 'Cancelar' : saved ? 'Editar acesso' : 'Conectar'}</button>{saved && <button type="button" className="secondary-button compact" disabled={loginSaving || Boolean(testingLogin) || p === 'BLL'} title={p === 'BLL' ? 'BLL exige adaptação ao teclado virtual' : 'Testar login com credenciais salvas'} onClick={() => void testLogin(p)}>{testingLogin === p ? 'Testando...' : 'Testar acesso'}</button>}{saved && <button type="button" className="secondary-button compact" disabled={loginSaving} onClick={() => void removeLogin(p)}>Remover</button>}</div>{loginTestResults[p] && <small role="status">{loginTestResults[p]}</small>}</div>;
           })}</div>
           {editingLogin && <div className="agent-account-form">
             <strong className="agent-login-form-title">{loginStatus?.items.some((v) => v.platform === editingLogin) ? 'Atualizar' : 'Cadastrar'} — {platformLabel(editingLogin)}</strong>
