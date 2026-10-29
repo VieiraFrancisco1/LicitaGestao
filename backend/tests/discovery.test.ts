@@ -1,7 +1,7 @@
 import { UserRole } from '@prisma/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { prisma } from '../src/config/database.js';
-import { classify, deduplicate, discoverySettings, isExcludedMunicipality, isOpen, matches, platformKey, type Candidate } from '../src/services/discovery-core.js';
+import { classify, deduplicate, discoverySettings, isExcludedMunicipality, isOpen, matches, platformKey, platformGroup, type Candidate } from '../src/services/discovery-core.js';
 import { collectSources, parsePncp, parseTce, platformFromOrigin, validSourceLink } from '../src/services/discovery-sources.js';
 import { discoveryScope, getDiscoveryStatus, listOpportunities, opportunityDraft } from '../src/services/discovery.service.js';
 import { createTender } from '../src/services/tender.service.js';
@@ -235,5 +235,36 @@ describe('V56 — cofre individual das plataformas', () => {
       await expect(savePlatformLogin(auth, { platform: 'BLL', username: 'usuario', password: 'segredo' })).rejects.toThrow('PLATFORM_CREDENTIAL_ENCRYPTION_KEY');
       expect(upsert).not.toHaveBeenCalled();
     } finally { env.PLATFORM_CREDENTIAL_ENCRYPTION_KEY = old; }
+  });
+});
+
+
+describe('V58 — plataformas identificadas nominalmente', () => {
+  it('separa sites reais que antes estavam agrupados como outras plataformas', () => {
+    const a = platformGroup({ platformName: 'Portal da prefeitura de Crato' });
+    const b = platformGroup({ platformName: 'Portal da prefeitura de Sobral' });
+    expect(a.title).toBe('Portal da prefeitura de Crato');
+    expect(b.title).toBe('Portal da prefeitura de Sobral');
+    expect(a.key).toMatch(/^OUTRAS:[a-f0-9]{16}$/);
+    expect(a.key).not.toBe(b.key);
+  });
+  it('não inventa nome para uma plataforma ausente', () => {
+    expect(platformGroup({ platformName: null }).title).toBe('Plataforma não identificada');
+    expect(platformGroup({ platformName: 'Outras plataformas' }).key).toBe('NAO_INFORMADA');
+  });
+  it('retorna grupos dinâmicos com contagens e permite selecionar apenas um site', async () => {
+    vi.spyOn(prisma.discoveryOpportunity, 'findMany').mockResolvedValue([
+      { id:'r1', firstSeenAt:now, lastSeenAt:now, importedTender:null, data: { ...candidate, platformName:'Portal próprio de Crato' } },
+      { id:'r2', firstSeenAt:now, lastSeenAt:now, importedTender:null, data: { ...candidate, platformName:'Portal próprio de Sobral' } },
+      { id:'r3', firstSeenAt:now, lastSeenAt:now, importedTender:null, data: { ...candidate, platformName:'Portal próprio de Crato' } }
+    ] as never);
+    const all = await listOpportunities(auth, 1, discoverySettings.parse({}));
+    expect(all.platformGroups).toEqual(expect.arrayContaining([
+      expect.objectContaining({ title: 'Portal próprio de Crato', count: 2 }),
+      expect.objectContaining({ title: 'Portal próprio de Sobral', count: 1 })
+    ]));
+    const group = all.platformGroups.find((g) => g.title === 'Portal próprio de Crato')!;
+    const selected = await listOpportunities(auth, 1, discoverySettings.parse({}), group.key);
+    expect(selected.total).toBe(2);
   });
 });

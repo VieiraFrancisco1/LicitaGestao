@@ -240,3 +240,38 @@
 }
 
 .agent-run-warnings { color: #a46a12; font-size: 11px; background: #fff5da; border-radius: 6px; padding: 4px 7px; }
+
+/* V58 - tela enxuta, apenas informacoes importantes no primeiro nivel. */
+.discovery-page { gap: 10px; }
+.discovery-filters { padding: 15px 17px; }
+.discovery-filters .discovery-section-title { margin-bottom: 10px; }
+.discovery-filters .discovery-section-title h2 { margin: 0; color: #173c6c; font-weight: 800; font-size: clamp(17px,2.1vw,21px); }
+.agent-quick-panels { grid-template-columns: repeat(3,minmax(0,1fr)); margin-top: 11px; }
+.agent-accounts { background: transparent; border: 0; padding: 0; overflow: visible; min-width: 0; }
+.agent-type-control.expanded,.agent-settings-control.expanded,.agent-accounts.expanded { grid-column: 1/-1; }
+.agent-accounts .agent-section-toggle { border: 1px solid #d5e2f4; }
+.agent-accounts-body { border: 1px solid #d7e4f5; border-radius: 11px; background: #f8fbff; padding: 14px; margin-top: 9px; }
+.agent-inline-feedback { font-size: 11px; color: #347552; padding: 0; margin: 9px 0 0; line-height: 1.4; }
+.agent-account-list { grid-template-columns: repeat(3,minmax(0,1fr)); }
+.agent-account-list .agent-login-card { gap: 9px; }
+.agent-login-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.agent-account-form { grid-template-columns: 1fr 1fr auto; border-top: 1px solid #d5e3f5; padding-top: 12px; }
+.agent-login-form-title { grid-column: 1/-1; font-size: 13px; color: #244b7d; }
+.agent-tender-highlights:has(>div:nth-child(2):last-child) { grid-template-columns: repeat(2,minmax(0,1fr)); }
+@media(max-width: 900px) {
+ .agent-account-list { grid-template-columns: repeat(2,minmax(0,1fr)); }
+ .agent-account-form { grid-template-columns: 1fr 1fr; }
+}
+@media(max-width: 720px) {
+ .agent-quick-panels { grid-template-columns: repeat(3,minmax(0,1fr)); gap: 6px; }
+ .agent-section-toggle { padding: 10px 8px; }
+ .agent-section-toggle-left { gap: 5px; }
+ .agent-section-toggle-left > span small { display: none; }
+ .agent-section-toggle-left strong { font-size: 11px; }
+ .agent-section-toggle-left > svg { width: 14px; }
+ .agent-section-toggle > svg:last-child { width: 13px; }
+ .agent-type-control.expanded,.agent-settings-control.expanded,.agent-accounts.expanded { grid-column: 1/-1; }
+ .agent-account-list,.agent-account-form { grid-template-columns: 1fr; }
+ .agent-login-form-title { grid-column: 1; }
+ .agent-tender-highlights:has(>div:nth-child(2):last-child) > div:last-child { grid-column: auto; }
+}

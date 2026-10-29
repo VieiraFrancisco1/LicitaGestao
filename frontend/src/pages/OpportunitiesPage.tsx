@@ -1,4 +1,4 @@
-import { ArrowRight, BellRing, Bot, CalendarRange, ChevronDown, ChevronUp, Download, ExternalLink, FileText, FolderOpen, MapPin, Radar, RefreshCw, Save, SlidersHorizontal, Sparkles } from 'lucide-react';
+import { ArrowRight, BellRing, Bot, CalendarRange, ChevronDown, ChevronUp, Download, ExternalLink, FileText, FolderOpen, MapPin, Radar, RefreshCw, Save, SlidersHorizontal, Plug, Settings2 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api, errorMessage } from '../services/api';
@@ -12,7 +12,7 @@ type Source = 'PNCP' | 'TCE';
 type Settings = { minValue: number; categories: Category[]; sources: Source[]; platforms: Platform[]; sessionFrom: string | null; sessionTo: string | null; municipality: string; keywords: string; includeUnknownValue: boolean; useAi: boolean; enabled: boolean; intervalHours: number };
 type Run = { id: string; status: string; progress: string; warnings: string[]; addedCount: number; startedAt: string; reports?: Array<{ source: Source; pages: number; records: number; complete: boolean; message: string }> };
 type Opportunity = { id: string; municipality: string; reference: string; agency: string; object: string; estimatedValue: number | null; sessionDate: string; sessionTime: string | null; categories: Category[]; sources: Array<{ source: Source; url: string }>; platformName?: string | null; platformUrl?: string | null; phaseStatus?: 'SIM' | 'NAO' | 'NAO_IDENTIFICADA'; phaseEvidence?: string; documents?: Array<{ title: string; url: string; type: string }>; reason: string; aiReviewed: boolean; lastSeenAt: string; importedTenderId: string | null };
-type Result = { items: Opportunity[]; total: number; allTotal: number; platformCounts: Partial<Record<Platform, number>>; page: number; pages: number; limited: boolean };
+type Result = { items: Opportunity[]; total: number; allTotal: number; platformGroups?: Array<{ key: string; title: string; count: number }>; platformCounts: Partial<Record<Platform, number>>; page: number; pages: number; limited: boolean };
 type Status = { settings: Settings; run: Run | null; aiAvailable: boolean };
 type LoginPlatform = 'BLL' | 'M2A' | 'LICITAMAIS';
 type LoginStatus = { storageReady: boolean; automationReady: boolean; items: Array<{ platform: LoginPlatform; saved: boolean; updatedAt: string }> };
@@ -28,8 +28,8 @@ const categories: Array<[Category, string]> = [
 const platforms: Array<[Platform, string]> = [
   ['BLL', 'BLL Compras'], ['M2A', 'M2A Compras'], ['LICITAMAIS', 'Licita Mais'],
   ['COMPRASGOV', 'Compras.gov.br'], ['PORTALCOMPRAS', 'Portal de Compras Públicas'],
-  ['LICITANET', 'Licitanet'], ['BBMNET', 'BBMNET'], ['OUTRAS', 'Outras plataformas'],
-  ['NAO_INFORMADA', 'Plataforma não informada']
+  ['LICITANET', 'Licitanet'], ['BBMNET', 'BBMNET'],
+  ['NAO_INFORMADA', 'Plataforma não identificada']
 ];
 const labels: Record<Category, string> = { ...Object.fromEntries(categories), CALCAMENTO: 'Calçamento', OBRAS_GERAIS: 'Obras em geral' } as Record<Category, string>;
 const defaults: Settings = { minValue: 1000000, categories: categories.map(([c]) => c), sources: ['TCE', 'PNCP'], platforms: [], sessionFrom: null, sessionTo: null, municipality: '', keywords: '', includeUnknownValue: false, useAi: true, enabled: false, intervalHours: 6 };
@@ -42,7 +42,7 @@ export function OpportunitiesPage() {
   const [status, setStatus] = useState<Status | null>(null);
   const [result, setResult] = useState<Result | null>(null);
   const [page, setPage] = useState(1);
-  const [activePlatform, setActivePlatform] = useState<Platform | null>(null);
+  const [activePlatform, setActivePlatform] = useState<string | null>(null);
   const [showTypes, setShowTypes] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showRunDetails, setShowRunDetails] = useState(false);
@@ -50,12 +50,12 @@ export function OpportunitiesPage() {
   const [openFiles, setOpenFiles] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [opening, setOpening] = useState('');
-  const [phaseChecking, setPhaseChecking] = useState('');
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [loginPanelOpen, setLoginPanelOpen] = useState(false);
   const [loginStatus, setLoginStatus] = useState<LoginStatus | null>(null);
   const [loginPlatform, setLoginPlatform] = useState<LoginPlatform>('BLL');
+  const [editingLogin, setEditingLogin] = useState<LoginPlatform | null>(null);
   const [loginUsername, setLoginUsername] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [loginSaving, setLoginSaving] = useState(false);
@@ -101,7 +101,7 @@ export function OpportunitiesPage() {
     try {
       await api.post('/opportunities/platform-logins', { platform: loginPlatform, username: loginUsername, password: loginPassword });
       const response = await api.get<ApiResponse<LoginStatus>>('/opportunities/platform-logins');
-      setLoginStatus(response.data.data); setLoginUsername(''); setLoginPassword('');
+      setLoginStatus(response.data.data); setLoginUsername(''); setLoginPassword(''); setEditingLogin(null);
       setMessage('Credenciais protegidas e salvas. A automação de login exigirá a ativação do conector desta plataforma.');
     } catch (err) { setError(errorMessage(err)); } finally { setLoginSaving(false); }
   };
@@ -145,12 +145,7 @@ export function OpportunitiesPage() {
       navigate('/licitacoes/nova', { state: { opportunityDraft: response.data.data } });
     } catch (err) { setError(errorMessage(err)); setOpening(''); }
   };
-  const checkPhase = async (item: Opportunity) => {
-    setPhaseChecking(item.id); setError('');
-    try { await api.post(`/opportunities/${item.id}/check-phase`, {}); await refresh(); setMessage('Análise atualizada. Confira o trecho citado no edital.'); }
-    catch (err) { setError(errorMessage(err)); } finally { setPhaseChecking(''); }
-  };
-  const choosePlatform = (value: Platform) => {
+  const choosePlatform = (value: string) => {
     setPage(1);
     setActivePlatform((old) => old === value ? null : value);
     setOpenFiles([]);
@@ -160,26 +155,23 @@ export function OpportunitiesPage() {
   const toggleDetails = (id: string) => setOpenDetails((old) => old.includes(id) ? old.filter((v) => v !== id) : [...old, id]);
   const counts = result?.platformCounts ?? {};
   const count = result?.allTotal ?? 0;
-  const groups = platforms.filter(([p]) => (counts[p] ?? 0) > 0);
+  const groups = result?.platformGroups ?? platforms.filter(([key]) => (counts[key] ?? 0) > 0).map(([key, title]) => ({ key, title, count: counts[key] ?? 0 }));
+  const selectedPlatformName = groups.find((g) => g.key === activePlatform)?.title ?? 'Plataforma não identificada';
   return (
     <div className="page-stack discovery-page">
-      <section className="discovery-hero">
-        <div><span className="discovery-eyebrow"><Bot size={17} /> AGENTE DE MONITORAMENTO</span><h2>Encontre obras no Ceará</h2><p>Escolha o período, informe o valor e inicie a busca. Resultados organizados por plataforma.</p></div>
-        <span className="discovery-ce"><MapPin size={18} /> Ceará · interior e demais municípios</span>
-      </section>
       {error && <div className="alert alert-error" role="alert">{error}</div>}
-      {message && <div className="discovery-message" role="status">{message}</div>}
       <section className="discovery-filters">
-        <div className="discovery-section-title"><div><h3>Nova busca</h3></div><span className="discovery-ai-state"><Sparkles size={15} /> {status?.aiAvailable ? 'IA disponível' : 'Busca por filtros'}</span></div>
+        <div className="discovery-section-title"><h2>Agente de Monitoramento</h2></div>
         <div className="agent-primary-controls">
           <label>Valor acima de (R$)<input type="number" min="0" step="0.01" value={settings.minValue} onChange={(e) => field('minValue', e.target.value === '' ? 0 : Number(e.target.value))} /></label>
           <label>Data inicial<input type="date" value={settings.sessionFrom ?? ''} onChange={(e) => field('sessionFrom', e.target.value || null)} /></label>
           <label>Data final<input type="date" value={settings.sessionTo ?? ''} onChange={(e) => field('sessionTo', e.target.value || null)} /></label>
           <button type="button" className="primary-button agent-search-button" disabled={busy || running} onClick={() => void submit(true)}><Bot size={18} />{running ? 'Pesquisando...' : busy ? 'Iniciando...' : 'Agente de busca'}</button>
         </div>
+        {message && <p className="agent-inline-feedback" role="status">{message}</p>}
         <div className="agent-quick-panels">
         <div className={`agent-type-control ${showTypes ? 'expanded' : ''}`}>
-          <button type="button" className="agent-section-toggle" onClick={() => { setShowTypes((v) => !v); setShowAdvanced(false); }} aria-expanded={showTypes} aria-controls="agent-work-types"><span className="agent-section-toggle-left"><SlidersHorizontal size={18} /><span><strong>Filtros de obras</strong><small>{settings.categories.includes('OBRAS_GERAIS') ? 'Todas as obras selecionadas' : `${settings.categories.length} tipo(s) selecionado(s)`}</small></span></span>{showTypes ? <ChevronUp size={18} /> : <ChevronDown size={18} />}</button>
+          <button type="button" className="agent-section-toggle" onClick={() => { setShowTypes((v) => !v); setShowAdvanced(false); setLoginPanelOpen(false); }} aria-expanded={showTypes} aria-controls="agent-work-types"><span className="agent-section-toggle-left"><SlidersHorizontal size={18} /><span><strong>Filtros de obras</strong><small>{settings.categories.includes('OBRAS_GERAIS') ? 'Todas as obras selecionadas' : `${settings.categories.length} tipo(s) selecionado(s)`}</small></span></span>{showTypes ? <ChevronUp size={18} /> : <ChevronDown size={18} />}</button>
           {showTypes && <div id="agent-work-types" className="agent-type-panel">
             <div className="agent-type-header"><strong>Tipos de obras</strong><div><button type="button" className="secondary-button compact" onClick={() => field('categories', categories.map(([p]) => p))}>Marcar todos</button><button type="button" className="secondary-button compact" onClick={() => field('categories', [])}>Limpar</button></div></div>
             <div className="agent-type-list">{categories.map(([c, title]) => <label key={c} className={settings.categories.includes(c) || settings.categories.includes('OBRAS_GERAIS') ? 'selected' : ''}><input type="checkbox" checked={settings.categories.includes(c) || settings.categories.includes('OBRAS_GERAIS')} onChange={() => { const current = settings.categories.includes('OBRAS_GERAIS') ? categories.map(([x]) => x) : settings.categories; field('categories', current.includes(c) ? current.filter((x) => x !== c) : [...current, c]); }} />{title}</label>)}</div>
@@ -187,14 +179,14 @@ export function OpportunitiesPage() {
           </div>}
         </div>
         <div className={`agent-settings-control ${showAdvanced ? 'expanded' : ''}`}>
-          <button type="button" className="agent-section-toggle" onClick={() => { setShowAdvanced((v) => !v); setShowTypes(false); }} aria-expanded={showAdvanced} aria-controls="agent-extra-settings">
-            <span className="agent-section-toggle-left"><SlidersHorizontal size={18} /><span><strong>Mais opções</strong><small>Plataformas, município, monitoramento e IA</small></span></span>
+          <button type="button" className="agent-section-toggle" onClick={() => { setShowAdvanced((v) => !v); setShowTypes(false); setLoginPanelOpen(false); }} aria-expanded={showAdvanced} aria-controls="agent-extra-settings">
+            <span className="agent-section-toggle-left"><Settings2 size={18} /><span><strong>Mais opções</strong><small>Pesquisa e monitoramento</small></span></span>
             {showAdvanced ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
           </button>
           {showAdvanced && <div id="agent-extra-settings" className="agent-settings-panel">
-        <fieldset className="agent-platform-filter"><legend>Plataformas a considerar</legend><div className="discovery-choice-list">{platforms.map(([p, title]) => <label key={p} className={settings.platforms.includes(p) ? 'selected' : ''}><input type="checkbox" checked={settings.platforms.includes(p)} onChange={() => toggle('platforms', p)} />{title}</label>)}</div><small>Nenhuma marcada = todas. Esta versão consulta PNCP e TCE-CE e identifica a plataforma indicada nos dados. A navegação autenticada por Playwright precisa de conectores próprios.</small></fieldset>
+        <fieldset className="agent-platform-filter"><legend>Plataformas a considerar</legend><div className="discovery-choice-list">{platforms.map(([p, title]) => <label key={p} className={settings.platforms.includes(p) ? 'selected' : ''}><input type="checkbox" checked={settings.platforms.includes(p)} onChange={() => toggle('platforms', p)} />{title}</label>)}<button type="button" className="secondary-button compact" onClick={() => field('platforms', [])}>Todas</button></div><small>Nenhuma marcada = todas. Esta versão consulta PNCP e TCE-CE e identifica a plataforma indicada nos dados. A navegação autenticada por Playwright precisa de conectores próprios.</small></fieldset>
         <div className="agent-secondary-controls">
-          <label>Município (opcional)<input placeholder="Qualquer, exceto Fortaleza e Eusébio" value={settings.municipality} onChange={(e) => field('municipality', e.target.value)} maxLength={120} /></label>
+          <label>Município (opcional)<input placeholder="Qualquer município" value={settings.municipality} onChange={(e) => field('municipality', e.target.value)} maxLength={120} /></label>
           <label>Palavras adicionais (opcional)<input placeholder="Ex.: zona rural" value={settings.keywords} onChange={(e) => field('keywords', e.target.value)} maxLength={180} /></label>
         </div>
         <div className="agent-advanced-controls">
@@ -208,26 +200,28 @@ export function OpportunitiesPage() {
         <small className="discovery-footnote">O monitoramento exige servidor ativo. Confira no edital o local onde a obra será executada.</small>
           </div>}
         </div>
-        </div>
-        <p className="agent-simple-note">Fortaleza e Eusébio não aparecem nos resultados. Sem datas informadas, a busca considera os próximos 90 dias.</p>
-      </section>
-      <section className="agent-accounts">
-        <button type="button" className="agent-section-toggle" onClick={() => setLoginPanelOpen((v) => !v)} aria-expanded={loginPanelOpen} aria-controls="agent-saved-logins">
-          <span className="agent-section-toggle-left"><FolderOpen size={18} /><span><strong>Contas das plataformas</strong><small>{loginStatus?.items.length ? `${loginStatus.items.length} credencial(is) salva(s)` : 'Configure logins quando necessário'}</small></span></span>
+        <div className={`agent-accounts ${loginPanelOpen ? 'expanded' : ''}`}>
+        <button type="button" className="agent-section-toggle" onClick={() => { setLoginPanelOpen((v) => !v); setShowTypes(false); setShowAdvanced(false); }} aria-expanded={loginPanelOpen} aria-controls="agent-saved-logins">
+          <span className="agent-section-toggle-left"><Plug size={17} /><span><strong>Plataformas</strong><small>{loginStatus?.items.length ? `${loginStatus.items.length} cadastrada(s)` : 'Conectar contas'}</small></span></span>
           {loginPanelOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
         </button>
         {loginPanelOpen && <div id="agent-saved-logins" className="agent-accounts-body">
           <p>Cadastre usuário e senha somente nesta área protegida do LicitaGestão. As senhas são criptografadas no banco e nunca retornam ao navegador. <strong>Os conectores de navegação automática ainda estão em validação:</strong> credenciais salvas não significam acesso automatizado ativo.</p>
           {!loginStatus?.storageReady && <p className="agent-vault-warning">Antes de salvar logins, configure a variável PLATFORM_CREDENTIAL_ENCRYPTION_KEY no Render e publique o backend da V56.</p>}
-          <div className="agent-account-list">{(['BLL', 'M2A', 'LICITAMAIS'] as LoginPlatform[]).map((p) => <div key={p}><strong>{platformLabel(p)}</strong><small>{loginStatus?.items.some((v) => v.platform === p) ? 'Credenciais salvas · conector em preparação' : 'Sem credenciais'}</small>{loginStatus?.items.some((v) => v.platform === p) && <button type="button" className="secondary-button compact" disabled={loginSaving} onClick={() => void removeLogin(p)}>Remover</button>}</div>)}</div>
-          <div className="agent-account-form">
-            <label>Plataforma<select value={loginPlatform} onChange={(e) => setLoginPlatform(e.target.value as LoginPlatform)}><option value="BLL">BLL Compras</option><option value="M2A">M2A Compras</option><option value="LICITAMAIS">Licita Mais</option></select></label>
+          <div className="agent-account-list">{(['BLL', 'M2A', 'LICITAMAIS'] as LoginPlatform[]).map((p) => {
+            const saved = loginStatus?.items.some((v) => v.platform === p);
+            return <div key={p} className="agent-login-card"><strong>{platformLabel(p)}</strong><small>{saved ? 'Credenciais cadastradas · conector não ativado' : 'Não conectada'}</small><div className="agent-login-actions"><button type="button" className="secondary-button compact" onClick={() => { setLoginPlatform(p); setEditingLogin((current) => current === p ? null : p); setLoginUsername(''); setLoginPassword(''); }} aria-expanded={editingLogin === p}>{editingLogin === p ? 'Cancelar' : saved ? 'Editar acesso' : 'Conectar'}</button>{saved && <button type="button" className="secondary-button compact" disabled={loginSaving} onClick={() => void removeLogin(p)}>Remover</button>}</div></div>;
+          })}</div>
+          {editingLogin && <div className="agent-account-form">
+            <strong className="agent-login-form-title">{loginStatus?.items.some((v) => v.platform === editingLogin) ? 'Atualizar' : 'Cadastrar'} — {platformLabel(editingLogin)}</strong>
             <label>Login<input autoComplete="off" value={loginUsername} onChange={(e) => setLoginUsername(e.target.value)} placeholder="Usuário ou e-mail" /></label>
             <label>Senha<input type="password" autoComplete="new-password" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} placeholder="Senha da plataforma" /></label>
-            <button type="button" className="secondary-button" disabled={!loginStatus?.storageReady || loginSaving || !loginUsername.trim() || !loginPassword} onClick={() => void saveLogin()}>{loginSaving ? 'Salvando...' : 'Salvar credenciais'}</button>
-          </div>
+            <button type="button" className="secondary-button" disabled={!loginStatus?.storageReady || loginSaving || !loginUsername.trim() || !loginPassword} onClick={() => void saveLogin()}>{loginSaving ? 'Salvando...' : 'Salvar acesso'}</button>
+          </div>}
           <small>Não envie senhas por mensagens. O sistema não solicita nem contorna CAPTCHA, 2FA ou bloqueios da plataforma.</small>
         </div>}
+        </div>
+        </div>
       </section>
       {status?.run && <section className={`discovery-run agent-run-compact ${running ? 'running' : ''}`} role="status">
         <div className="agent-run-top"><span className="agent-run-status"><RefreshCw size={17} className={running ? 'discovery-spin' : ''} /><strong>{status.run.progress}</strong>{status.run.warnings.length > 0 && <span className="agent-run-warnings">{status.run.warnings.length} aviso(s)</span>}</span><button type="button" className="secondary-button compact" onClick={() => setShowRunDetails((v) => !v)} aria-expanded={showRunDetails} aria-controls="agent-run-report">{showRunDetails ? 'Ocultar detalhes' : 'Ver detalhes'}{showRunDetails ? <ChevronUp size={14} /> : <ChevronDown size={14} />}</button></div>
@@ -235,10 +229,10 @@ export function OpportunitiesPage() {
       </section>}
       <div className="discovery-results-heading"><div><h3>Resultados do agente <span>{count}</span></h3><p>Selecione uma plataforma e abra as licitações que interessam.</p></div><button type="button" className="secondary-button compact" onClick={() => void refresh()}><RefreshCw size={15} /> Atualizar</button></div>
       {result?.limited && <div className="alert">A lista atingiu o limite de registros. Refine as regras e pesquise novamente.</div>}
-      {groups.length > 0 && <div className="agent-platform-groups">{groups.map(([key, title]) => <button type="button" key={key} className={`agent-platform-card ${activePlatform === key ? 'active' : ''}`} onClick={() => choosePlatform(key)} aria-pressed={activePlatform === key}><span className="agent-platform-card-top"><FileText size={20} /><span className="agent-platform-count">{counts[key]}</span></span><strong>{title}</strong><small>{activePlatform === key ? 'Fechar lista' : 'Ver licitações'}</small>{activePlatform === key ? <ChevronUp size={17} /> : <ChevronDown size={17} />}</button>)}</div>}
+      {groups.length > 0 && <div className="agent-platform-groups">{groups.map(({ key, title, count: groupCount }) => <button type="button" key={key} className={`agent-platform-card ${activePlatform === key ? 'active' : ''}`} onClick={() => choosePlatform(key)} aria-pressed={activePlatform === key}><span className="agent-platform-card-top"><FileText size={20} /><span className="agent-platform-count">{groupCount}</span></span><strong>{title}</strong><small>{activePlatform === key ? 'Fechar lista' : 'Ver licitações'}</small>{activePlatform === key ? <ChevronUp size={17} /> : <ChevronDown size={17} />}</button>)}</div>}
       {!count && <div className="discovery-empty"><Radar size={35} /><h3>{running ? 'O agente está pesquisando...' : 'Nenhuma oportunidade encontrada'}</h3><p>{running ? 'As plataformas serão agrupadas quando as fontes responderem.' : 'Clique em Agente de busca e confira as datas, valor e tipos de obras selecionados.'}</p></div>}
       {count > 0 && !activePlatform && <div className="agent-select-hint"><CalendarRange size={18} /> Selecione uma plataforma acima para abrir suas licitações.</div>}
-      {activePlatform && <div className="agent-selected-heading"><h3>{platformLabel(activePlatform)} <span>· {result?.total ?? 0} licitações</span></h3><button className="secondary-button compact" type="button" onClick={() => choosePlatform(activePlatform)}>Fechar</button></div>}
+      {activePlatform && <div className="agent-selected-heading"><h3>{selectedPlatformName} <span>· {result?.total ?? 0} licitações</span></h3><button className="secondary-button compact" type="button" onClick={() => choosePlatform(activePlatform)}>Fechar</button></div>}
       {activePlatform && <div className="discovery-results agent-compact-results">
         {result?.items.map((item) => {
           const detailsOpen = openDetails.includes(item.id);
@@ -253,7 +247,7 @@ export function OpportunitiesPage() {
             <div className="agent-tender-highlights">
               <div><small>Valor estimado</small><strong>{item.estimatedValue === null ? 'Não informado' : formatCurrency(String(item.estimatedValue))}</strong></div>
               <div><small>Sessão</small><strong>{formatDate(item.sessionDate)}{item.sessionTime ? ` · ${item.sessionTime}` : ''}</strong></div>
-              <div><small>Fase inversa</small><strong className={`agent-phase-label ${item.phaseStatus === 'SIM' ? 'yes' : item.phaseStatus === 'NAO' ? 'no' : ''}`}>{item.phaseStatus === 'SIM' ? 'Sim' : item.phaseStatus === 'NAO' ? 'Não' : 'A confirmar'}</strong></div>
+              {activePlatform === 'M2A' && <div><small>Fase inversa · M2A</small><strong className="agent-phase-label">Aguardando consulta à M2A</strong></div>}
             </div>
             <div className="agent-tender-toolbar">
               <button type="button" className="secondary-button compact" onClick={() => toggleDetails(item.id)} aria-expanded={detailsOpen} aria-controls={`agent-details-${item.id}`}><FileText size={15} />{detailsOpen ? 'Ocultar detalhes' : 'Ver detalhes'}{detailsOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}</button>
@@ -263,17 +257,15 @@ export function OpportunitiesPage() {
             {detailsOpen && <div id={`agent-details-${item.id}`} className="agent-tender-details">
               <div className="agent-tender-detail-grid">
                 <div><small>Número do edital</small><strong>{item.reference || 'Não informado'}</strong></div>
-                <div><small>Plataforma</small><strong>{platformLabel(activePlatform)}</strong></div>
+                <div><small>Plataforma</small><strong>{item.platformName?.trim() || selectedPlatformName}</strong></div>
                 <div><small>Órgão responsável</small><strong>{item.agency || 'Não informado'}</strong></div>
                 <div><small>Análise</small><strong>{item.aiReviewed ? 'Revisada por IA' : 'Classificação por filtros'}</strong></div>
               </div>
               <p className="agent-full-object"><strong>Objeto:</strong> {item.object}</p>
-              {item.phaseEvidence && <p className="agent-phase-evidence"><strong>Justificativa da fase:</strong> {item.phaseEvidence}</p>}
               <div className="discovery-tags">{item.categories.filter((c) => c !== 'OBRAS_GERAIS').slice(0, 5).map((c) => <span key={c}>{labels[c]}</span>)}</div>
               <div className="agent-tender-links">
                 {item.sources.map((source) => <a key={source.url} href={source.url} target="_blank" rel="noopener noreferrer">Fonte {sourceLabel(source.source)} <ExternalLink size={13} /></a>)}
-                {item.platformUrl && <a href={item.platformUrl} target="_blank" rel="noopener noreferrer">Acessar plataforma <ExternalLink size={13} /></a>}
-                {Boolean(status?.aiAvailable && item.documents?.some((d) => /edital/i.test(d.title + d.type))) && <button type="button" className="secondary-button compact" disabled={Boolean(phaseChecking) || running} onClick={() => void checkPhase(item)}><Sparkles size={15} />{phaseChecking === item.id ? 'Analisando...' : 'Analisar fase com IA'}</button>}
+                {item.platformUrl && <a href={item.platformUrl} target="_blank" rel="noopener noreferrer">{item.platformName?.trim() || selectedPlatformName} <ExternalLink size={13} /></a>}
               </div>
               <div className="agent-tender-footer"><small>Encontrada em {new Date(item.lastSeenAt).toLocaleString('pt-BR')}</small>{item.importedTenderId ? <Link className="secondary-button compact" to={`/licitacoes/${item.importedTenderId}`}>Abrir no controle <ArrowRight size={15} /></Link> : <button type="button" className="primary-button compact" disabled={Boolean(opening)} onClick={() => void openDraft(item)}>{opening === item.id ? 'Abrindo...' : 'Adicionar ao Controle Geral'} <ArrowRight size={15} /></button>}</div>
             </div>}

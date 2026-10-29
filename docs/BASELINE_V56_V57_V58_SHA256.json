@@ -1,0 +1,16 @@
+{
+  "backend": {
+    "backend/src/services/discovery-core.ts": "52d57cb602f1cee7ce4fe59046b13c0ed8334c69462b70ef0b33b100c2d2479b",
+    "backend/src/services/discovery.service.ts": "962b1e907eb8adc40676eb82e7ae0d559de03a13d45702ae6918b2ef854602e2",
+    "backend/src/routes/discovery.routes.ts": "93b7c9a8cae7da5e9fe80976a9ae9ffa3e4be30527a1ca5e94ab73bb045cb95e",
+    "backend/tests/discovery.test.ts": "13d14022cd434445a002e8edc8fd5d77e0f9e3d7f83a068a8b29f59ced553b44"
+  },
+  "frontend_v56": {
+    "frontend/src/pages/OpportunitiesPage.tsx": "cac2ebba3bb2a1d095b2ba3ac7556dd50a0c2435264cf1ceb6941ee706157650",
+    "frontend/src/pages/opportunities.css": "06f061948b4a35417ee2be2ff7cc8505a1c109cb93b73a595abe350fe7f6beac"
+  },
+  "frontend_v57": {
+    "frontend/src/pages/OpportunitiesPage.tsx": "74017d700dedbd4a06d4e3d46ea7199ba31fac2ef015cc78cace089ef1f1fea1",
+    "frontend/src/pages/opportunities.css": "83f6e15336699a7b297aaeb97e66ee125e35e5b10868ac40973ca4d13e57b9d9"
+  }
+}

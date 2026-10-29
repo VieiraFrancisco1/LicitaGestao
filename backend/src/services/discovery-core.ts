@@ -107,7 +107,7 @@ export function isOpen(item: Candidate, now = new Date()) {
 }
 export function platformKey(name: string | null | undefined): Platform {
   const n = normalize(name ?? '');
-  if (!n) return 'NAO_INFORMADA';
+  if (!n || ['outras plataformas', 'outra plataforma', 'plataforma nao informada', 'plataforma nao identificada', 'nao informada', 'nao identificado', 'desconhecida'].includes(n)) return 'NAO_INFORMADA';
   if (n.includes('bll')) return 'BLL';
   if (n.includes('m2a')) return 'M2A';
   if (n.includes('licita mais') || n.includes('licitamais')) return 'LICITAMAIS';
@@ -116,6 +116,22 @@ export function platformKey(name: string | null | undefined): Platform {
   if (n.includes('licitanet')) return 'LICITANET';
   if (n.includes('bbmnet')) return 'BBMNET';
   return 'OUTRAS';
+}
+// Cada grupo exibido recebe o nome confirmado nos dados da publicacao.
+// Nomes desconhecidos nao sao rotulados como uma plataforma inventada.
+export function platformGroup(item: Pick<Candidate, 'platformName'>) {
+  const known: Record<Exclude<Platform, 'OUTRAS'>, string> = {
+    BLL: 'BLL Compras', M2A: 'M2A Compras', LICITAMAIS: 'Licita Mais',
+    COMPRASGOV: 'Compras.gov.br', PORTALCOMPRAS: 'Portal de Compras Públicas',
+    LICITANET: 'Licitanet', BBMNET: 'BBMNET', NAO_INFORMADA: 'Plataforma não identificada'
+  };
+  const key = platformKey(item.platformName);
+  if (key !== 'OUTRAS') return { key, title: known[key] };
+  const name = (item.platformName ?? '').trim().slice(0, 110);
+  if (!name || /^(outra(s)? plataforma(s)?|plataforma n[aã]o (informada|identificada)|n[aã]o informado|n[aã]o identificada|desconhecida)$/i.test(name)) {
+    return { key: 'NAO_INFORMADA', title: known.NAO_INFORMADA };
+  }
+  return { key: `OUTRAS:${createHash('sha256').update(normalize(name)).digest('hex').slice(0, 16)}`, title: name };
 }
 export function matches(item: Candidate, settings: DiscoverySettings, now = new Date()) {
   return isOpen(item, now)

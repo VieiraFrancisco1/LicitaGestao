@@ -5,10 +5,9 @@ import { AppError } from '../utils/app-error.js';
 import { requireOrganizationId, type AuthScope } from './access.service.js';
 import { organizationHasPaidAccess } from './billing.service.js';
 import { reviewWithAi } from './discovery-ai.js';
-import { categoryNames, deduplicate, discoverySettings, fingerprint, matches, platformKey, type Platform, type Candidate, type DiscoverySettings, type Source } from './discovery-core.js';
+import { categoryNames, deduplicate, discoverySettings, fingerprint, matches, platformKey, platformGroup, type Platform, type Candidate, type DiscoverySettings, type Source } from './discovery-core.js';
 import { collectSources, validSourceLink, type Collection } from './discovery-sources.js';
 import { enrichPncpDocuments } from './discovery-documents.js';
-import { analyzePhaseDocument } from './discovery-phase.js';
 
 const json = (value: unknown) => JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
 export function discoveryScope(auth: AuthScope) {
@@ -44,19 +43,25 @@ export async function saveDiscoverySettings(input: DiscoverySettings, auth: Auth
   await prisma.discoveryProfile.upsert({ where: { userId: auth.userId }, create: { organizationId, userId: auth.userId, settings: json(settings), enabled: settings.enabled }, update: { organizationId, settings: json(settings), enabled: settings.enabled } });
   return settings;
 }
-export async function listOpportunities(auth: AuthScope, page = 1, settings?: DiscoverySettings, platform?: Platform) {
+export async function listOpportunities(auth: AuthScope, page = 1, settings?: DiscoverySettings, platform?: string) {
   const organizationId = discoveryScope(auth);
   const filter = settings ?? (await getDiscoveryStatus(auth)).settings;
   const rows = await prisma.discoveryOpportunity.findMany({ where: { organizationId, active: true }, include: { importedTender: { select: { id: true } } }, orderBy: { lastSeenAt: 'desc' }, take: 3000 });
   const matched = rows.map((row) => ({ ...(row.data as unknown as Candidate), id: row.id, firstSeenAt: row.firstSeenAt, lastSeenAt: row.lastSeenAt, importedTenderId: row.importedTender?.id ?? null })).filter((row) => matches(row, filter));
   const platformCounts: Partial<Record<Platform, number>> = {};
+  const grouped = new Map<string, { key: string; title: string; count: number }>();
   for (const item of matched) {
-    const key = platformKey(item.platformName);
-    platformCounts[key] = (platformCounts[key] ?? 0) + 1;
+    const legacy = platformKey(item.platformName);
+    platformCounts[legacy] = (platformCounts[legacy] ?? 0) + 1;
+    const group = platformGroup(item);
+    const entry = grouped.get(group.key);
+    if (entry) entry.count++;
+    else grouped.set(group.key, { ...group, count: 1 });
   }
-  const items = platform ? matched.filter((item) => platformKey(item.platformName) === platform) : matched;
+  const platformGroups = [...grouped.values()].sort((a, b) => b.count - a.count || a.title.localeCompare(b.title, 'pt-BR'));
+  const items = platform ? matched.filter((item) => platformGroup(item).key === platform) : matched;
   items.sort((a, b) => a.sessionDate.localeCompare(b.sessionDate) || a.municipality.localeCompare(b.municipality));
-  return { items: items.slice((page - 1) * 20, page * 20), total: items.length, allTotal: matched.length, platformCounts, page, pages: Math.ceil(items.length / 20), limited: rows.length === 3000 };
+  return { items: items.slice((page - 1) * 20, page * 20), total: items.length, allTotal: matched.length, platformCounts, platformGroups, page, pages: Math.ceil(items.length / 20), limited: rows.length === 3000 };
 }
 export async function opportunityDraft(id: string, auth: AuthScope) {
   const row = await prisma.discoveryOpportunity.findFirst({ where: { id, organizationId: discoveryScope(auth), active: true }, include: { importedTender: { select: { id: true } } } });
@@ -70,13 +75,11 @@ export async function checkOpportunityPhase(id: string, auth: AuthScope) {
   const organizationId = discoveryScope(auth);
   const row = await prisma.discoveryOpportunity.findFirst({ where: { id, organizationId, active: true } });
   if (!row) throw new AppError('Oportunidade não encontrada nesta conta', 404);
+  // A verificacao deve ler a informacao diretamente na tela inicial da M2A.
+  // A antiga analise de PDFs nao satisfaz essa regra e foi desativada.
   const item = row.data as unknown as Candidate;
-  if (item.phaseCheckedAt && Date.now() - new Date(item.phaseCheckedAt).getTime() < 30 * 60000) {
-    throw new AppError('Este edital foi analisado recentemente. Aguarde 30 minutos para uma nova análise.', 429);
-  }
-  const phase = await analyzePhaseDocument(item);
-  await prisma.discoveryOpportunity.update({ where: { id: row.id }, data: { data: json({ ...item, phaseStatus: phase.status, phaseEvidence: phase.evidence, phaseCheckedAt: new Date().toISOString() }) } });
-  return phase;
+  if (platformKey(item.platformName) !== 'M2A') throw new AppError('A fase inversa será consultada apenas na M2A.', 422);
+  throw new AppError('A consulta de fase inversa na M2A ainda depende da ativação do conector autorizado.', 501);
 }
 export async function startDiscoveryScan(auth: AuthScope, input?: DiscoverySettings) {
   const organizationId = discoveryScope(auth);
