@@ -223,7 +223,7 @@ export function OpportunitiesPage() {
             <div className="agent-tender-highlights">
               <div><small>Valor estimado</small><strong>{item.estimatedValue === null ? 'Não informado' : formatCurrency(String(item.estimatedValue))}</strong></div>
               <div><small>Sessão</small><strong>{formatDate(item.sessionDate)}{item.sessionTime ? ` · ${item.sessionTime}` : ''}</strong></div>
-              {activePlatform === 'M2A' && <div><small>Fase inversa · M2A</small><strong className="agent-phase-label">Aguardando consulta à M2A</strong></div>}
+              
             </div>
             <div className="agent-tender-toolbar">
               <button type="button" className="secondary-button compact" onClick={() => toggleDetails(item.id)} aria-expanded={detailsOpen} aria-controls={`agent-details-${item.id}`}><FileText size={15} />{detailsOpen ? 'Ocultar detalhes' : 'Ver detalhes'}{detailsOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}</button>
