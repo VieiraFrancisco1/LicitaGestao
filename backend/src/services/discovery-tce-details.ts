@@ -21,7 +21,6 @@ export function parseTcePublicDetails(html: string, item: Candidate): Candidate 
   const modality = field(/\bModalidade\s*:\s*/i, /\bCrit[eé]rio de julgamento\b|\bSitua[cç][aã]o\s*:/i, 140);
   const openDate = field(/\bData de Abertura\s*:\s*/i, /\bHora da Abertura\b|\bLocal\s*:/i, 90);
   const time = readable.match(/\bHora da Abertura\s*:\s*(\d{1,2}:\d{2})/i)?.[1] ?? null;
-  const local = section(/\bLocal\s*:\s*/i, /\bForma de Publica[cç][aã]o\b|\b[oó]rg[aã]os\b/i, 600);
   const platform = identifyTcePlatform(html);
   const link = platform?.platformUrl ?? null;
   const directUrl = item.sources.find((s) => s.source === 'TCE')?.url ?? '';
