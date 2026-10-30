@@ -41,7 +41,8 @@ describe('M2A fornecedor seguro', () => {
     const test = fakePage();
     const progress = vi.fn();
     await openM2aSupplierLogin(test.page, progress);
-    expect(test.page.goto).toHaveBeenCalledExactlyOnceWith(CHOICE, { waitUntil: 'commit', timeout: 20000 });
+    expect(test.page.goto).toHaveBeenCalledTimes(1);
+    expect(test.page.goto).toHaveBeenCalledWith(CHOICE, { waitUntil: 'commit', timeout: 20000 });
     expect(test.page.getByText).toHaveBeenCalledWith('Fornecedor', { exact: true });
     expect(test.page.getByRole).toHaveBeenCalledWith('button', { name: /^acessar$/i });
     expect(test.supplier.click).toHaveBeenCalledTimes(1);
