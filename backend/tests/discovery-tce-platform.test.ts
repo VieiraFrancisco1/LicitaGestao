@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { discoverySettings, matches, type Candidate } from '../src/services/discovery-core.js';
-import { identifyTcePlatform, enrichTcePlatforms } from '../src/services/discovery-tce-platform.js';
+import { identifyTcePlatform, enrichTcePlatforms, extractTceDocuments, fetchTceDocuments } from '../src/services/discovery-tce-platform.js';
 
 const tceUrl = 'https://municipios-licitacoes.tce.ce.gov.br/index.php/licitacao/detalhes/proc/276058/licit/190713';
 const base: Candidate = {
@@ -74,5 +74,59 @@ describe('identificação avançada da plataforma nos detalhes do TCE-CE', () =>
     const result = await enrichTcePlatforms([item], setting, fetcher);
     expect(result.failed).toBe(1);
     expect(item.platformName).toBeUndefined();
+  });
+});
+
+
+describe('arquivos publicados no TCE-CE', () => {
+  const detailsUrl = 'https://municipios-licitacoes.tce.ce.gov.br/index.php/licitacao/detalhes/proc/276296/licit/190835';
+  const html = `<div class="detalhes"><h3>Detalhamento sobre a licitação</h3>
+    <p>Objeto: construção de habitações</p></div>
+    <aside><div class="box"><h4>Arquivos</h4><ul>
+      <li><a href="/index.php/licitacao/arquivo/001">EDITAL PARTE 01</a></li>
+      <li><a href="/index.php/licitacao/arquivo/002">EDITAL PARTE 02</a></li>
+      <li><a href="/index.php/licitacao/arquivo/003">EDITAL PARTE 03</a></li>
+      <li><a href="/index.php/licitacao/arquivo/004">PUBLICAÇÕES</a><span class="label">Excluído</span></li>
+      <li><a href="/index.php/licitacao/arquivo/005?tipo=publicacao&amp;v=1">PUBLICAÇÕES</a></li>
+    </ul></div><p>Dúvidas? Contate a Ouvidoria</p></aside>`;
+  it('identifica os três editais e a publicação válida, ignorando a excluída', () => {
+    const docs = extractTceDocuments(html, detailsUrl);
+    expect(docs.map((d) => d.title)).toEqual(['EDITAL PARTE 01', 'EDITAL PARTE 02', 'EDITAL PARTE 03', 'PUBLICAÇÕES']);
+    expect(docs[0]?.url).toBe('https://municipios-licitacoes.tce.ce.gov.br/index.php/licitacao/arquivo/001');
+    expect(docs[3]?.url).toContain('?tipo=publicacao&v=1');
+  });
+  it('aceita documentos em outros subdomínios oficiais do TCE-CE', () => {
+    const html = '<h4>Arquivos</h4><li><a href="https://arquivos.tce.ce.gov.br/licitacoes/edital.pdf">EDITAL COMPLETO</a></li>';
+    const docs = extractTceDocuments(html, detailsUrl);
+    expect(docs).toEqual([{ title: 'EDITAL COMPLETO', type: 'Edital', url: 'https://arquivos.tce.ce.gov.br/licitacoes/edital.pdf' }]);
+  });
+  it('não aceita anexos de domínios externos, javascript ou páginas de navegação', () => {
+    const unsafe = `<h4>Arquivos</h4>
+      <a href="https://example.org/edital.pdf">Documento externo</a>
+      <a href="javascript:alert(1)">Script</a>
+      <a href="/index.php/licitacao/abertas">Lista</a>
+      <a href="/index.php/licitacao/arquivo/008">EDITAL</a>`;
+    const docs = extractTceDocuments(unsafe, detailsUrl);
+    expect(docs.map((doc) => doc.title)).toEqual(['EDITAL']);
+  });
+  it('não extrai arquivos quando a origem não é um detalhe autorizado do TCE', () => {
+    expect(extractTceDocuments(html, 'https://example.org/')).toEqual([]);
+    expect(extractTceDocuments(html, detailsUrl + '?other=1')).toEqual([]);
+  });
+  it('lê arquivos na mesma consulta que identifica a plataforma', async () => {
+    const withPlatform = html + '<h4>Forma de Publicação</h4><p>Especificação: M2A Compras</p>';
+    const candidate = { ...structuredClone(base), sources: [{ source: 'TCE' as const, url: detailsUrl }] };
+    const fetcher = vi.fn().mockResolvedValue(new Response(withPlatform, { status: 200 }));
+    const result = await enrichTcePlatforms([candidate], discoverySettings.parse({ sources: ['TCE'], sessionTo: '2099-12-31' }), fetcher);
+    expect(result.checked).toBe(1);
+    expect(candidate.documents?.length).toBe(4);
+  });
+  it('consulta anexos sob demanda fora do limite de 90 detalhes', async () => {
+    const candidate = { ...structuredClone(base), sources: [{ source: 'TCE' as const, url: detailsUrl }] };
+    const fetcher = vi.fn().mockResolvedValue(new Response(html, { status: 200 }));
+    const docs = await fetchTceDocuments(candidate, fetcher);
+    expect(docs.available).toBe(true);
+    expect(docs.documents).toHaveLength(4);
+    expect(fetcher).toHaveBeenCalledTimes(1);
   });
 });

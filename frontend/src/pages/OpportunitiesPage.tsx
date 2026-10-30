@@ -45,6 +45,7 @@ export function OpportunitiesPage() {
   const [showRunDetails, setShowRunDetails] = useState(false);
   const [openDetails, setOpenDetails] = useState<string[]>([]);
   const [openFiles, setOpenFiles] = useState<string[]>([]);
+  const [loadingFiles, setLoadingFiles] = useState('');
   const [busy, setBusy] = useState(false);
   const [opening, setOpening] = useState('');
   const [error, setError] = useState('');
@@ -144,7 +145,18 @@ export function OpportunitiesPage() {
     setOpenFiles([]);
     setOpenDetails([]);
   };
-  const toggleFiles = (id: string) => setOpenFiles((old) => old.includes(id) ? old.filter((v) => v !== id) : [...old, id]);
+  const toggleFiles = async (id: string) => {
+    if (openFiles.includes(id)) { setOpenFiles((old) => old.filter((v) => v !== id)); return; }
+    setOpenFiles((old) => [...old, id]);
+    setLoadingFiles(id); setError('');
+    try {
+      const response = await api.get<ApiResponse<{ documents: NonNullable<Opportunity['documents']>; sourceUrl: string }>>(`/opportunities/${id}/documents`, { timeout: 18000 });
+      setResult((current) => current ? { ...current, items: current.items.map((item) =>
+        item.id === id ? { ...item, documents: response.data.data.documents } : item
+      ) } : current);
+    } catch (err) { setError(errorMessage(err)); }
+    finally { setLoadingFiles((current) => current === id ? '' : current); }
+  };
   const toggleDetails = (id: string) => setOpenDetails((old) => old.includes(id) ? old.filter((v) => v !== id) : [...old, id]);
   const counts = result?.platformCounts ?? {};
   const count = resultsCleared ? 0 : (result?.allTotal ?? 0);
@@ -216,7 +228,7 @@ export function OpportunitiesPage() {
           return <article key={item.id} className={`discovery-result agent-tender-card ${detailsOpen ? 'is-open' : ''}`}>
             <div className="agent-tender-topline">
               <span className="agent-tender-kind">{mainCategory ? labels[mainCategory] : 'Obra pública'}</span>
-              <span className="agent-tender-location"><MapPin size={13} />{item.municipality} / CE</span>
+              <span className="agent-tender-location"><MapPin size={17} />{item.municipality} / CE</span>
             </div>
             <h3>{item.object.length > 115 ? `${item.object.slice(0, 115).trimEnd()}…` : item.object}</h3>
             <div className="agent-tender-highlights">
@@ -225,11 +237,12 @@ export function OpportunitiesPage() {
               
             </div>
             <div className="agent-tender-toolbar">
+              {item.sources.find((source) => source.source === 'TCE') && <a className="secondary-button compact agent-tce-direct-link" href={item.sources.find((source) => source.source === 'TCE')!.url} target="_blank" rel="noopener noreferrer"><ExternalLink size={15} />Abrir no TCE-CE</a>}
               <button type="button" className="secondary-button compact" onClick={() => toggleDetails(item.id)} aria-expanded={detailsOpen} aria-controls={`agent-details-${item.id}`}><FileText size={15} />{detailsOpen ? 'Ocultar detalhes' : 'Ver detalhes'}{detailsOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}</button>
-              <button type="button" className="secondary-button compact" onClick={() => toggleFiles(item.id)} aria-expanded={filesOpen} aria-controls={`agent-files-${item.id}`}><FolderOpen size={15} />Arquivos ({item.documents?.length ?? 0}){filesOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}</button>
+              <button type="button" className="secondary-button compact" disabled={loadingFiles === item.id} onClick={() => void toggleFiles(item.id)} aria-expanded={filesOpen} aria-controls={`agent-files-${item.id}`}><FolderOpen size={15} />{loadingFiles === item.id ? "Consultando arquivos..." : `Arquivos (${item.documents?.length ?? 0})`}{filesOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}</button>
               <button type="button" className="secondary-button compact" disabled={Boolean(queueSaving) || queuedIds.includes(item.id)} onClick={() => void sendToWeeklyList(item.id)}>{queuedIds.includes(item.id) ? <CheckCircle2 size={15} /> : <ListPlus size={15} />}{queuedIds.includes(item.id) ? 'Na lista semanal' : queueSaving === item.id ? 'Enviando...' : 'Enviar para lista'}</button>
             </div>
-            {filesOpen && <div id={`agent-files-${item.id}`} className="agent-files-panel"><strong>Arquivos disponíveis</strong>{item.documents?.length ? item.documents.map((doc) => <a key={doc.url} href={doc.url} target="_blank" rel="noopener noreferrer"><Download size={15} />{doc.title}<ExternalLink size={13} /></a>) : <p>Nenhum arquivo acessível encontrado. Consulte o portal oficial.</p>}<small>Os documentos abrem em outra aba ou iniciam o download, conforme o portal. Não ficam armazenados no LicitaGestão.</small></div>}
+            {filesOpen && <div id={`agent-files-${item.id}`} className="agent-files-panel"><strong>Arquivos disponíveis</strong>{item.documents?.length ? item.documents.map((doc) => <a key={doc.url} href={doc.url} target="_blank" rel="noopener noreferrer"><Download size={15} />{doc.title}<ExternalLink size={13} /></a>) : <p>Não encontramos links de arquivos disponíveis. Confira a página oficial do TCE-CE.</p>}<small>Os documentos abrem em outra aba ou iniciam o download, conforme o portal. Não ficam armazenados no LicitaGestão.</small></div>}
             {detailsOpen && <div id={`agent-details-${item.id}`} className="agent-tender-details">
               <div className="agent-tender-detail-grid">
                 <div><small>Número do edital</small><strong>{item.reference || 'Não informado'}</strong></div>
