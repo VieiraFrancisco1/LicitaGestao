@@ -1,4 +1,4 @@
-import { ArrowRight, BellRing, Bot, CalendarRange, ChevronDown, ChevronUp, Download, ExternalLink, FileText, FolderOpen, MapPin, Radar, RefreshCw, Save, SlidersHorizontal, Plug, Settings2, Eraser, MonitorPlay, X, ListPlus, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, BellRing, Bot, CalendarRange, ChevronDown, ChevronUp, Download, ExternalLink, FileText, FolderOpen, MapPin, Radar, RefreshCw, Save, SlidersHorizontal, Settings2, Eraser, MonitorPlay, X, ListPlus, CheckCircle2 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api, errorMessage } from '../services/api';
@@ -11,11 +11,9 @@ type Platform = 'BLL' | 'M2A' | 'LICITAMAIS' | 'COMPRASGOV' | 'PORTALCOMPRAS' | 
 type Source = 'PNCP' | 'TCE' | 'PORTAL';
 type Settings = { minValue: number; categories: Category[]; sources: Source[]; platforms: Platform[]; sessionFrom: string | null; sessionTo: string | null; municipality: string; keywords: string; includeUnknownValue: boolean; useAi: boolean; enabled: boolean; intervalHours: number };
 type Run = { id: string; status: string; progress: string; warnings: string[]; addedCount: number; startedAt: string; reports?: Array<{ source: Source; pages: number; records: number; complete: boolean; message: string }> };
-type Opportunity = { id: string; municipality: string; reference: string; agency: string; object: string; estimatedValue: number | null; sessionDate: string; sessionTime: string | null; categories: Category[]; sources: Array<{ source: Source; url: string }>; platformName?: string | null; platformUrl?: string | null; phaseStatus?: 'SIM' | 'NAO' | 'NAO_IDENTIFICADA'; phaseEvidence?: string; documents?: Array<{ title: string; url: string; type: string }>; reason: string; aiReviewed: boolean; lastSeenAt: string; importedTenderId: string | null };
+type Opportunity = { platformEvidence?: string | null; id: string; municipality: string; reference: string; agency: string; object: string; estimatedValue: number | null; sessionDate: string; sessionTime: string | null; categories: Category[]; sources: Array<{ source: Source; url: string }>; platformName?: string | null; platformUrl?: string | null; phaseStatus?: 'SIM' | 'NAO' | 'NAO_IDENTIFICADA'; phaseEvidence?: string; documents?: Array<{ title: string; url: string; type: string }>; reason: string; aiReviewed: boolean; lastSeenAt: string; importedTenderId: string | null };
 type Result = { items: Opportunity[]; total: number; allTotal: number; platformGroups?: Array<{ key: string; title: string; count: number }>; platformCounts: Partial<Record<Platform, number>>; page: number; pages: number; limited: boolean };
 type Status = { settings: Settings; run: Run | null; aiAvailable: boolean };
-type LoginPlatform = 'BLL' | 'M2A' | 'LICITAMAIS';
-type LoginStatus = { storageReady: boolean; automationReady: boolean; items: Array<{ platform: LoginPlatform; saved: boolean; updatedAt: string }> };
 
 const categories: Array<[Category, string]> = [
   ['UBS', 'UBS'], ['CRECHES', 'Creches'], ['INTERTRAVADO', 'Intertravado'], ['PAVIMENTACAO', 'Pavimentação'],
@@ -32,7 +30,7 @@ const platforms: Array<[Platform, string]> = [
   ['NAO_INFORMADA', 'Plataforma não identificada']
 ];
 const labels: Record<Category, string> = { ...Object.fromEntries(categories), CALCAMENTO: 'Calçamento', OBRAS_GERAIS: 'Obras em geral' } as Record<Category, string>;
-const defaults: Settings = { minValue: 1000000, categories: categories.map(([c]) => c), sources: ['TCE', 'PNCP'], platforms: [], sessionFrom: null, sessionTo: null, municipality: '', keywords: '', includeUnknownValue: false, useAi: true, enabled: false, intervalHours: 6 };
+const defaults: Settings = { minValue: 1000000, categories: categories.map(([c]) => c), sources: ['TCE'], platforms: [], sessionFrom: null, sessionTo: null, municipality: '', keywords: '', includeUnknownValue: false, useAi: true, enabled: false, intervalHours: 6 };
 const sourceLabel = (source: Source) => source === 'TCE' ? 'TCE-CE' : source === 'PORTAL' ? 'Plataforma' : 'PNCP';
 const platformLabel = (key: Platform) => platforms.find(([p]) => p === key)?.[1] ?? key;
 
@@ -52,15 +50,6 @@ export function OpportunitiesPage() {
   const [opening, setOpening] = useState('');
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
-  const [loginPanelOpen, setLoginPanelOpen] = useState(false);
-  const [loginStatus, setLoginStatus] = useState<LoginStatus | null>(null);
-  const [loginPlatform, setLoginPlatform] = useState<LoginPlatform>('BLL');
-  const [editingLogin, setEditingLogin] = useState<LoginPlatform | null>(null);
-  const [loginUsername, setLoginUsername] = useState('');
-  const [loginPassword, setLoginPassword] = useState('');
-  const [loginSaving, setLoginSaving] = useState(false);
-  const [testingLogin, setTestingLogin] = useState<LoginPlatform | null>(null);
-  const [loginTestResults, setLoginTestResults] = useState<Partial<Record<LoginPlatform, string>>>({});
   const [resultsCleared, setResultsCleared] = useState(false);
   const [monitorOpen, setMonitorOpen] = useState(false);
   const [queuedIds, setQueuedIds] = useState<string[]>([]);
@@ -95,13 +84,6 @@ export function OpportunitiesPage() {
     return () => window.clearInterval(timer);
   }, [running, refresh]);
   useEffect(() => {
-    let active = true;
-    void api.get<ApiResponse<LoginStatus>>('/opportunities/platform-logins').then((r) => {
-      if (active) setLoginStatus(r.data.data);
-    }).catch(() => { if (active) setLoginStatus(null); });
-    return () => { active = false; };
-  }, []);
-  useEffect(() => {
     let live = true;
     void api.get<ApiResponse<Array<{ opportunityId: string }>>>('/weekly-list')
       .then(({ data }) => { if (live) setQueuedIds(data.data.map((item) => item.opportunityId)); })
@@ -118,34 +100,8 @@ export function OpportunitiesPage() {
     } catch (err) { setError(errorMessage(err)); }
     finally { setQueueSaving(''); }
   };
-  const saveLogin = async () => {
-    if (!loginUsername.trim() || !loginPassword || loginSaving) return;
-    setLoginSaving(true); setError('');
-    try {
-      await api.post('/opportunities/platform-logins', { platform: loginPlatform, username: loginUsername, password: loginPassword });
-      const response = await api.get<ApiResponse<LoginStatus>>('/opportunities/platform-logins');
-      setLoginStatus(response.data.data); setLoginUsername(''); setLoginPassword(''); setEditingLogin(null);
-      setMessage('Credenciais protegidas e salvas. A automação de login exigirá a ativação do conector desta plataforma.');
-    } catch (err) { setError(errorMessage(err)); } finally { setLoginSaving(false); }
-  };
-  const testLogin = async (p: LoginPlatform) => {
-    setTestingLogin(p); setError('');
-    try {
-      const response = await api.post<ApiResponse<{ status: string; message: string }>>(`/opportunities/platform-logins/${p}/test`, {}, { timeout: 75000 });
-      setLoginTestResults((current) => ({ ...current, [p]: `${response.data.data.status === 'VERIFIED' ? 'Acesso confirmado' : 'Teste pendente'}: ${response.data.data.message}` }));
-    } catch (err) { setLoginTestResults((current) => ({ ...current, [p]: errorMessage(err) })); }
-    finally { setTestingLogin(null); }
-  };
-  const removeLogin = async (p: LoginPlatform) => {
-    setLoginSaving(true); setError('');
-    try {
-      await api.delete(`/opportunities/platform-logins/${p}`);
-      const response = await api.get<ApiResponse<LoginStatus>>('/opportunities/platform-logins');
-      setLoginStatus(response.data.data); setMessage('Credenciais removidas desta plataforma.');
-    } catch (err) { setError(errorMessage(err)); } finally { setLoginSaving(false); }
-  };
   const field = <K extends keyof Settings>(key: K, value: Settings[K]) => setSettings((s) => ({ ...s, [key]: value }));
-  const toggle = (key: 'categories' | 'sources' | 'platforms', value: Category | Source | Platform) => setSettings((s) => {
+  const toggle = (key: 'categories' | 'platforms', value: Category | Platform) => setSettings((s) => {
     const next = (s[key] as string[]).includes(value) ? (s[key] as string[]).filter((v) => v !== value) : [...s[key], value];
     return { ...s, [key]: next };
   });
@@ -153,10 +109,10 @@ export function OpportunitiesPage() {
     if (busy || running) return;
     if (settings.sessionFrom && settings.sessionTo && settings.sessionFrom > settings.sessionTo) { setError('A data inicial precisa ser anterior à final.'); return; }
     if (settings.sessionFrom && settings.sessionTo && (Date.parse(settings.sessionTo) - Date.parse(settings.sessionFrom)) / 86400000 > 180) { setError('O período máximo permitido é de 180 dias.'); return; }
-    if (!settings.categories.length || !settings.sources.length || !Number.isFinite(settings.minValue) || settings.minValue < 0) { setError('Selecione pelo menos um tipo de obra, uma fonte e um valor válido.'); return; }
+    if (!settings.categories.length || !settings.sources.length || !Number.isFinite(settings.minValue) || settings.minValue < 0) { setError('Selecione ao menos um tipo de obra e um valor válido.'); return; }
     setBusy(true); setError(''); setMessage('');
     if (scan) setResultsCleared(false);
-    if (scan) { setShowTypes(false); setShowAdvanced(false); setLoginPanelOpen(false); }
+    if (scan) { setShowTypes(false); setShowAdvanced(false);  }
     try {
       if (scan) {
         const response = await api.post<ApiResponse<Run>>('/opportunities/scan', settings);
@@ -212,7 +168,7 @@ export function OpportunitiesPage() {
         {message && <p className="agent-inline-feedback" role="status">{message}</p>}
         <div className="agent-quick-panels">
         <div className={`agent-type-control ${showTypes ? 'expanded' : ''}`}>
-          <button type="button" className="agent-section-toggle" onClick={() => { setShowTypes((v) => !v); setShowAdvanced(false); setLoginPanelOpen(false); }} aria-expanded={showTypes} aria-controls="agent-work-types"><span className="agent-section-toggle-left"><SlidersHorizontal size={18} /><span><strong>Filtros de obras</strong><small>{settings.categories.includes('OBRAS_GERAIS') ? 'Todas as obras selecionadas' : `${settings.categories.length} tipo(s) selecionado(s)`}</small></span></span>{showTypes ? <ChevronUp size={18} /> : <ChevronDown size={18} />}</button>
+          <button type="button" className="agent-section-toggle" onClick={() => { setShowTypes((v) => !v); setShowAdvanced(false);  }} aria-expanded={showTypes} aria-controls="agent-work-types"><span className="agent-section-toggle-left"><SlidersHorizontal size={18} /><span><strong>Filtros de obras</strong><small>{settings.categories.includes('OBRAS_GERAIS') ? 'Todas as obras selecionadas' : `${settings.categories.length} tipo(s) selecionado(s)`}</small></span></span>{showTypes ? <ChevronUp size={18} /> : <ChevronDown size={18} />}</button>
           {showTypes && <div id="agent-work-types" className="agent-type-panel">
             <div className="agent-type-header"><strong>Tipos de obras</strong><div><button type="button" className="secondary-button compact" onClick={() => field('categories', categories.map(([p]) => p))}>Marcar todos</button><button type="button" className="secondary-button compact" onClick={() => field('categories', [])}>Limpar</button></div></div>
             <div className="agent-type-list">{categories.map(([c, title]) => <label key={c} className={settings.categories.includes(c) || settings.categories.includes('OBRAS_GERAIS') ? 'selected' : ''}><input type="checkbox" checked={settings.categories.includes(c) || settings.categories.includes('OBRAS_GERAIS')} onChange={() => { const current = settings.categories.includes('OBRAS_GERAIS') ? categories.map(([x]) => x) : settings.categories; field('categories', current.includes(c) ? current.filter((x) => x !== c) : [...current, c]); }} />{title}</label>)}</div>
@@ -220,12 +176,12 @@ export function OpportunitiesPage() {
           </div>}
         </div>
         <div className={`agent-settings-control ${showAdvanced ? 'expanded' : ''}`}>
-          <button type="button" className="agent-section-toggle" onClick={() => { setShowAdvanced((v) => !v); setShowTypes(false); setLoginPanelOpen(false); }} aria-expanded={showAdvanced} aria-controls="agent-extra-settings">
+          <button type="button" className="agent-section-toggle" onClick={() => { setShowAdvanced((v) => !v); setShowTypes(false);  }} aria-expanded={showAdvanced} aria-controls="agent-extra-settings">
             <span className="agent-section-toggle-left"><Settings2 size={18} /><span><strong>Mais opções</strong><small>Pesquisa e monitoramento</small></span></span>
             {showAdvanced ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
           </button>
           {showAdvanced && <div id="agent-extra-settings" className="agent-settings-panel">
-        <fieldset className="agent-platform-filter"><legend>Plataformas a considerar</legend><div className="discovery-choice-list">{platforms.map(([p, title]) => <label key={p} className={settings.platforms.includes(p) ? 'selected' : ''}><input type="checkbox" checked={settings.platforms.includes(p)} onChange={() => toggle('platforms', p)} />{title}</label>)}<button type="button" className="secondary-button compact" onClick={() => field('platforms', [])}>Todas</button></div><small>Nenhuma marcada = todas. Esta versão consulta PNCP e TCE-CE e identifica a plataforma indicada nos dados. A navegação autenticada por Playwright precisa de conectores próprios.</small></fieldset>
+        <fieldset className="agent-platform-filter"><legend>Plataformas a considerar</legend><div className="discovery-choice-list">{platforms.map(([p, title]) => <label key={p} className={settings.platforms.includes(p) ? 'selected' : ''}><input type="checkbox" checked={settings.platforms.includes(p)} onChange={() => toggle('platforms', p)} />{title}</label>)}<button type="button" className="secondary-button compact" onClick={() => field('platforms', [])}>Todas</button></div><small>Nenhuma marcada = todas. O TCE-CE é a única fonte; o agente verifica o campo Local e a forma de publicação nos detalhes para identificar a plataforma.</small></fieldset>
         <div className="agent-secondary-controls">
           <label>Município (opcional)<input placeholder="Qualquer município" value={settings.municipality} onChange={(e) => field('municipality', e.target.value)} maxLength={120} /></label>
           <label>Palavras adicionais (opcional)<input placeholder="Ex.: zona rural" value={settings.keywords} onChange={(e) => field('keywords', e.target.value)} maxLength={180} /></label>
@@ -235,32 +191,11 @@ export function OpportunitiesPage() {
             <label><input type="checkbox" checked={settings.includeUnknownValue} onChange={(e) => field('includeUnknownValue', e.target.checked)} /> Incluir obras sem valor informado</label>
             <label><input type="checkbox" checked={settings.useAi && Boolean(status?.aiAvailable)} disabled={!status?.aiAvailable} onChange={(e) => field('useAi', e.target.checked)} /> Usar IA na classificação dos primeiros 20 resultados</label>
           </div>
-          <div className="agent-source-control"><strong>Fontes</strong>{(['TCE', 'PNCP'] as Source[]).map((source) => <label key={source}><input type="checkbox" checked={settings.sources.includes(source)} onChange={() => toggle('sources', source)} />{sourceLabel(source)}</label>)}</div>
+          <div className="agent-source-control"><strong>Fonte:</strong> TCE-CE · Consulta de obras e identificação da plataforma sem login.</div>
         </div>
         <div className="discovery-footer-controls"><div className="discovery-monitor"><BellRing size={18} /><label><input type="checkbox" checked={settings.enabled} onChange={(e) => field('enabled', e.target.checked)} /> Monitorar automaticamente as fontes públicas</label><select aria-label="Intervalo" value={settings.intervalHours} onChange={(e) => field('intervalHours', Number(e.target.value))}>{[1, 3, 6, 12, 24].map((n) => <option key={n} value={n}>A cada {n}h</option>)}</select></div><button type="button" className="secondary-button" disabled={busy || running} onClick={() => void submit(false)}><Save size={15} /> Salvar regras</button></div>
         <small className="discovery-footnote">O monitoramento exige servidor ativo. Confira no edital o local onde a obra será executada.</small>
           </div>}
-        </div>
-        <div className={`agent-accounts ${loginPanelOpen ? 'expanded' : ''}`}>
-        <button type="button" className="agent-section-toggle" onClick={() => { setLoginPanelOpen((v) => !v); setShowTypes(false); setShowAdvanced(false); }} aria-expanded={loginPanelOpen} aria-controls="agent-saved-logins">
-          <span className="agent-section-toggle-left"><Plug size={17} /><span><strong>Plataformas</strong><small>{loginStatus?.items.length ? `${loginStatus.items.length} cadastrada(s)` : 'Conectar contas'}</small></span></span>
-          {loginPanelOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-        </button>
-        {loginPanelOpen && <div id="agent-saved-logins" className="agent-accounts-body">
-          <p>Cadastre usuário e senha somente nesta área protegida do LicitaGestão. As senhas são criptografadas no banco e nunca retornam ao navegador. <strong>Os conectores de navegação automática ainda estão em validação:</strong> credenciais salvas não significam acesso automatizado ativo.</p>
-          {!loginStatus?.storageReady && <p className="agent-vault-warning">Antes de salvar logins, configure a variável PLATFORM_CREDENTIAL_ENCRYPTION_KEY no Render e publique o backend da V56.</p>}
-          <div className="agent-account-list">{(['BLL', 'M2A', 'LICITAMAIS'] as LoginPlatform[]).map((p) => {
-            const saved = loginStatus?.items.some((v) => v.platform === p);
-            return <div key={p} className="agent-login-card"><strong>{platformLabel(p)}</strong><small>{saved ? 'Credenciais salvas · autenticação em testes' : 'Não conectada'}</small><div className="agent-login-actions"><button type="button" className="secondary-button compact" onClick={() => { setLoginPlatform(p); setEditingLogin((current) => current === p ? null : p); setLoginUsername(''); setLoginPassword(''); }} aria-expanded={editingLogin === p}>{editingLogin === p ? 'Cancelar' : saved ? 'Editar acesso' : 'Conectar'}</button>{saved && <button type="button" className="secondary-button compact" disabled={loginSaving || Boolean(testingLogin) || p === 'BLL'} title={p === 'BLL' ? 'BLL exige adaptação ao teclado virtual' : 'Testar login com credenciais salvas'} onClick={() => void testLogin(p)}>{testingLogin === p ? 'Testando...' : 'Testar acesso'}</button>}{saved && <button type="button" className="secondary-button compact" disabled={loginSaving} onClick={() => void removeLogin(p)}>Remover</button>}</div>{loginTestResults[p] && <small role="status">{loginTestResults[p]}</small>}</div>;
-          })}</div>
-          {editingLogin && <div className="agent-account-form">
-            <strong className="agent-login-form-title">{loginStatus?.items.some((v) => v.platform === editingLogin) ? 'Atualizar' : 'Cadastrar'} — {platformLabel(editingLogin)}</strong>
-            <label>Login<input autoComplete="off" value={loginUsername} onChange={(e) => setLoginUsername(e.target.value)} placeholder="Usuário ou e-mail" /></label>
-            <label>Senha<input type="password" autoComplete="new-password" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} placeholder="Senha da plataforma" /></label>
-            <button type="button" className="secondary-button" disabled={!loginStatus?.storageReady || loginSaving || !loginUsername.trim() || !loginPassword} onClick={() => void saveLogin()}>{loginSaving ? 'Salvando...' : 'Salvar acesso'}</button>
-          </div>}
-          <small>Não envie senhas por mensagens. O sistema não solicita nem contorna CAPTCHA, 2FA ou bloqueios da plataforma.</small>
-        </div>}
         </div>
         </div>
       </section>
@@ -271,7 +206,7 @@ export function OpportunitiesPage() {
       <div className="discovery-results-heading"><div><h3>Resultados do agente <span>{count}</span></h3><p>Selecione uma plataforma e abra as licitações que interessam.</p></div><button type="button" className="secondary-button compact" onClick={() => void refresh()}><RefreshCw size={15} /> Atualizar</button></div>
       {!resultsCleared && result?.limited && <div className="alert">A lista atingiu o limite de registros. Refine as regras e pesquise novamente.</div>}
       {groups.length > 0 && <div className="agent-platform-groups">{groups.map(({ key, title, count: groupCount }) => <button type="button" key={key} className={`agent-platform-card ${activePlatform === key ? 'active' : ''}`} onClick={() => choosePlatform(key)} aria-pressed={activePlatform === key}><span className="agent-platform-card-top"><FileText size={20} /><span className="agent-platform-count">{groupCount}</span></span><strong>{title}</strong><small>{activePlatform === key ? 'Fechar lista' : 'Ver licitações'}</small>{activePlatform === key ? <ChevronUp size={17} /> : <ChevronDown size={17} />}</button>)}</div>}
-      {!count && <div className="discovery-empty"><Radar size={35} /><h3>{resultsCleared ? 'Busca limpa' : running ? 'O agente está pesquisando...' : 'Nenhuma oportunidade encontrada'}</h3><p>{resultsCleared ? 'Os resultados anteriores foram ocultados, sem excluir licitações já salvas.' : running ? 'As plataformas serão agrupadas quando as fontes responderem.' : 'Clique em Agente de busca e confira as datas, valor e tipos de obras selecionados.'}</p></div>}
+      {!count && <div className="discovery-empty"><Radar size={35} /><h3>{resultsCleared ? 'Busca limpa' : running ? 'O agente está pesquisando...' : 'Nenhuma oportunidade encontrada'}</h3><p>{resultsCleared ? 'Os resultados anteriores foram ocultados, sem excluir licitações já salvas.' : running ? 'As plataformas serão identificadas a partir dos detalhes do TCE-CE.' : 'Clique em Agente de busca e confira as datas, valor e tipos de obras selecionados.'}</p></div>}
       {count > 0 && !activePlatform && <div className="agent-select-hint"><CalendarRange size={18} /> Selecione uma plataforma acima para abrir suas licitações.</div>}
       {activePlatform && <div className="agent-selected-heading"><h3>{selectedPlatformName} <span>· {result?.total ?? 0} licitações</span></h3><button className="secondary-button compact" type="button" onClick={() => choosePlatform(activePlatform)}>Fechar</button></div>}
       {activePlatform && <div className="discovery-results agent-compact-results">
@@ -301,7 +236,7 @@ export function OpportunitiesPage() {
                 <div><small>Número do edital</small><strong>{item.reference || 'Não informado'}</strong></div>
                 <div><small>Plataforma</small><strong>{item.platformName?.trim() || selectedPlatformName}</strong></div>
                 <div><small>Órgão responsável</small><strong>{item.agency || 'Não informado'}</strong></div>
-                <div><small>Análise</small><strong>{item.aiReviewed ? 'Revisada por IA' : 'Classificação por filtros'}</strong></div>
+                <div><small>Identificação da plataforma</small><strong>{item.platformEvidence || 'Não consta nos detalhes verificados do TCE-CE'}</strong></div>
               </div>
               <p className="agent-full-object"><strong>Objeto:</strong> {item.object}</p>
               <div className="discovery-tags">{item.categories.filter((c) => c !== 'OBRAS_GERAIS').slice(0, 5).map((c) => <span key={c}>{labels[c]}</span>)}</div>
@@ -319,7 +254,7 @@ export function OpportunitiesPage() {
           <div className="agent-monitor-header"><h3 id="agent-monitor-title"><MonitorPlay size={18}/>Acompanhar agente</h3><button type="button" className="secondary-button compact" onClick={() => setMonitorOpen(false)} aria-label="Fechar acompanhamento"><X size={17}/></button></div>
           <div className="agent-monitor-screen">
             <MonitorPlay size={36}/><strong>{status?.run?.progress ?? 'Nenhuma busca em andamento'}</strong>
-            <p>Acompanhe a pesquisa pública e os avisos de autenticação das plataformas. A transmissão visual das abas ainda não está disponível; veja os detalhes e os avisos para saber quais acessos foram confirmados.</p>
+            <p>O agente consulta exclusivamente o TCE-CE. Nos detalhes de cada obra procura o local da disputa e a forma de publicação para identificar a plataforma, sem acessar contas.</p>
           </div>
           <div className="agent-monitor-metrics">
             <div><small>Situação</small><strong>{status?.run?.status ?? 'Sem execução'}</strong></div>
