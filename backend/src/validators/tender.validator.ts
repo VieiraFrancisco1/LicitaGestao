@@ -56,6 +56,8 @@ export const tenderBody = z.object({
   isPreQualification: z.boolean().optional(), // LICITAGESTAO_PREQUAL_ALL_EMAILS_V1_VALIDATOR
   isInvertedPhase: z.boolean().optional(),
   municipality: z.string().trim().max(120).optional(),
+  agency: z.string().trim().max(180).optional(),
+  sessionTime: z.string().trim().regex(/^([01]\d|2[0-3]):[0-5]\d$/).nullable().optional(),
   sessionDate: date,
   object: z.string().trim().max(10000).optional(),
   proposalValidityDays: z.preprocess(

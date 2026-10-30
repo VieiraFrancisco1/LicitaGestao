@@ -8,6 +8,7 @@ import { reviewWithAi } from './discovery-ai.js';
 import { categoryNames, deduplicate, discoverySettings, fingerprint, matches, platformKey, platformGroup, type Platform, type Candidate, type DiscoverySettings, type Source } from './discovery-core.js';
 import { collectSources, validSourceLink, type Collection } from './discovery-sources.js';
 import { enrichTcePlatforms, fetchTceDocuments } from './discovery-tce-platform.js';
+import { fetchTcePublicDetails } from './discovery-tce-details.js';
 import { mergeOfficialEdict, readOfficialEdict } from './discovery-edital.js';
 
 const json = (value: unknown) => JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
@@ -98,14 +99,37 @@ export async function opportunityDraft(id: string, auth: AuthScope) {
   if (row.importedTender) throw new AppError('Esta oportunidade já foi adicionada ao controle', 409);
   const data = row.data as unknown as Candidate;
   if (!data || data.state !== 'CE' || !data.sources?.length || !data.sources.every((s) => validSourceLink(s.url))) throw new AppError('Dados da fonte inválidos', 422);
-  const base = { opportunityId: row.id, municipality: data.municipality, modality: data.modality, noticeNumber: data.reference, processNumber: data.processNumber, sessionDate: data.sessionDate, object: data.object, estimatedValue: data.estimatedValue?.toString() ?? '', platformLink: data.platformUrl ?? data.sources[0]!.url, platformName: data.platformName ?? '', sourceLabel: data.sources.map((s) => s.source === 'TCE' ? 'TCE-CE' : 'PNCP').join(' / ') };
+  let detailed = data;
+  let tceNote = '';
+  if (data.sources.some((source) => source.source === 'TCE')) {
+    try {
+      detailed = await fetchTcePublicDetails(data);
+      await prisma.discoveryOpportunity.update({
+        where: { id: row.id },
+        data: { data: json({ ...detailed, documents: detailed.documents?.length ? detailed.documents : data.documents }) }
+      });
+      tceNote = ' Campos públicos do detalhamento consultados.';
+    } catch {
+      tceNote = ' Detalhamento temporariamente indisponível: alguns campos podem precisar de preenchimento manual.';
+    }
+  }
+  const base = {
+    opportunityId: row.id,
+    municipality: detailed.municipality, modality: detailed.modality,
+    noticeNumber: detailed.reference, processNumber: detailed.processNumber,
+    agency: detailed.agency, sessionDate: detailed.sessionDate,
+    sessionTime: detailed.sessionTime || '', isInvertedPhase: detailed.isInvertedPhase ?? false,
+    object: detailed.object, estimatedValue: detailed.estimatedValue?.toString() ?? '',
+    platformLink: detailed.platformUrl ?? '', platformName: detailed.platformName ?? '',
+    sourceLabel: detailed.sources.map((s) => s.source === 'TCE' ? 'TCE-CE' : 'PNCP').join(' / ') + tceNote
+  };
   // Pré-seleciona a plataforma já cadastrada quando a correspondência for inequívoca.
   const registered = await prisma.platform.findMany({ where: { organizationId: row.organizationId, active: true }, select: { id: true, name: true } });
-  const identified = platformKey(data.platformName);
-  const matchedPlatforms = registered.filter((p) => identified !== 'NAO_INFORMADA' && identified !== 'OUTRAS' ? platformKey(p.name) === identified : Boolean(data.platformName && p.name.trim().toLowerCase() === data.platformName.trim().toLowerCase()));
+  const identified = platformKey(detailed.platformName);
+  const matchedPlatforms = registered.filter((p) => identified !== 'NAO_INFORMADA' && identified !== 'OUTRAS' ? platformKey(p.name) === identified : Boolean(detailed.platformName && p.name.trim().toLowerCase() === detailed.platformName.trim().toLowerCase()));
   if (matchedPlatforms.length === 1) Object.assign(base, { platformId: matchedPlatforms[0]!.id });
   // Não bloqueia a inclusão quando a IA ou o edital estiver indisponível.
-  const reading = await readOfficialEdict(data);
+  const reading = await readOfficialEdict(detailed);
   return { ...(reading.extracted ? mergeOfficialEdict(base, reading.extracted) : base), sourceLabel: `${base.sourceLabel}. ${reading.note}`, edictDocumentUrl: reading.documentUrl, edictEvidence: reading.extracted?.evidence ?? '' };
 }
 export async function checkOpportunityPhase(id: string, auth: AuthScope) {
@@ -190,7 +214,7 @@ async function executeScan(runId: string, auth: AuthScope, settings: DiscoverySe
     const old = await prisma.discoveryOpportunity.findMany({ where: { organizationId, active: true }, select: { id: true, data: true, sourceKeys: true } });
     const absent = old.filter((row) => {
       const data = row.data as unknown as Candidate;
-      return data.sources?.length && data.sources.every((s) => completeSources.has(s.source)) && !row.sourceKeys.some((key) => seen.has(key));
+      return !data.manualSearch && data.sources?.length && data.sources.every((s) => completeSources.has(s.source)) && !row.sourceKeys.some((key) => seen.has(key));
     }).map((row) => row.id);
     if (absent.length) await prisma.discoveryOpportunity.updateMany({ where: { id: { in: absent }, organizationId }, data: { active: false } });
     if (addedCount) await prisma.userNotification.create({ data: { userId: auth.userId, title: 'Novas licitações no Ceará', message: `${addedCount} nova(s) oportunidade(s) correspondem aos filtros da sua busca.`, link: '/oportunidades' } });

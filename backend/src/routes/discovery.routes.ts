@@ -5,6 +5,7 @@ import { authenticate, authorize } from '../middlewares/auth.js';
 import { validate } from '../middlewares/validate.js';
 import { asyncHandler } from '../utils/async-handler.js';
 import { discoverySettings } from '../services/discovery-core.js';
+import { searchAndSaveTce } from '../services/discovery-tce-search.js';
 import { listPlatformLoginStatus, savePlatformLogin, removePlatformLogin, permittedLoginPlatforms } from '../services/discovery-credentials.js';
 import { testPlatformLogin } from '../services/platform-browser.js';
 import { checkOpportunityPhase, getDiscoveryStatus, listOpportunities, opportunityDocuments, opportunityDraft, saveDiscoverySettings, startDiscoveryScan } from '../services/discovery.service.js';
@@ -21,6 +22,12 @@ const loginSchema = z.object({ body: z.object({ platform: z.enum(permittedLoginP
 discoveryRouter.post('/platform-logins', validate(loginSchema), asyncHandler(async (req, res) => { res.json({ success: true, data: await savePlatformLogin(req.auth!, req.body) }); }));
 discoveryRouter.post('/platform-logins/:platform/test', validate(z.object({ body: z.object({}).strict(), params: z.object({ platform: z.enum(permittedLoginPlatforms) }), query: z.object({}) })), asyncHandler(async (req, res) => { res.json({ success: true, data: await testPlatformLogin(req.auth!, req.params.platform as 'BLL' | 'M2A' | 'LICITAMAIS') }); }));
 discoveryRouter.delete('/platform-logins/:platform', validate(z.object({ body: z.object({}), params: z.object({ platform: z.enum(permittedLoginPlatforms) }), query: z.object({}) })), asyncHandler(async (req, res) => { res.json({ success: true, data: await removePlatformLogin(req.auth!, req.params.platform as 'BLL' | 'M2A' | 'LICITAMAIS') }); }));
+discoveryRouter.get('/search-tce',
+  validate(z.object({ body: z.object({}), params: z.object({}),
+    query: z.object({ q: z.string().trim().min(3).max(120) }) })),
+  asyncHandler(async (req, res) => {
+    res.json({ success: true, data: await searchAndSaveTce(req.query.q as string, req.auth!) });
+  }));
 discoveryRouter.get('/:id/documents', validate(z.object({ body: z.object({}), params: z.object({ id: z.string().uuid() }), query: z.object({}) })), asyncHandler(async (req, res) => { res.json({ success: true, data: await opportunityDocuments(req.params.id as string, req.auth!) }); }));
 discoveryRouter.get('/:id/draft', validate(z.object({ body: z.object({}), params: z.object({ id: z.string().uuid() }), query: z.object({}) })), asyncHandler(async (req, res) => { res.json({ success: true, data: await opportunityDraft(req.params.id as string, req.auth!) }); }));
 

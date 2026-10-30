@@ -498,8 +498,9 @@ export const listTenders = async (query: TenderQuery, auth: AuthScope) => {
         servicesValue: discount.servicesValue,
         materialsValue: discount.materialsValue,
         equipmentValue: discount.equipmentValue,
-        discountPercentage: discount.discountedValue !== null && item.estimatedValue && item.estimatedValue.greaterThan(0)
-          ? item.estimatedValue.minus(discount.discountedValue).dividedBy(item.estimatedValue).times(100).toDecimalPlaces(2)
+        discountPercentage: discount.discountedValue !== null && (discount.budgetValue ?? item.estimatedValue)?.greaterThan(0)
+          ? (discount.budgetValue ?? item.estimatedValue)!.minus(discount.discountedValue)
+              .dividedBy((discount.budgetValue ?? item.estimatedValue)!).times(100).toDecimalPlaces(2)
           : null
       }
     };
