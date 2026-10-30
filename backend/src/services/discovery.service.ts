@@ -7,7 +7,7 @@ import { organizationHasPaidAccess } from './billing.service.js';
 import { reviewWithAi } from './discovery-ai.js';
 import { categoryNames, deduplicate, discoverySettings, fingerprint, matches, platformKey, platformGroup, type Platform, type Candidate, type DiscoverySettings, type Source } from './discovery-core.js';
 import { collectSources, validSourceLink, type Collection } from './discovery-sources.js';
-import { enrichTcePlatforms } from './discovery-tce-platform.js';
+import { enrichTcePlatforms, fetchTceDocuments } from './discovery-tce-platform.js';
 import { mergeOfficialEdict, readOfficialEdict } from './discovery-edital.js';
 
 const json = (value: unknown) => JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
@@ -72,6 +72,26 @@ export async function listOpportunities(auth: AuthScope, page = 1, settings?: Di
   items.sort((a, b) => a.sessionDate.localeCompare(b.sessionDate) || a.municipality.localeCompare(b.municipality));
   return { items: items.slice((page - 1) * 20, page * 20), total: items.length, allTotal: matched.length, platformCounts, platformGroups, page, pages: Math.ceil(items.length / 20), limited: rows.length === 3000 };
 }
+/** Lista anexos do TCE sob demanda, sem baixar/salvar PDFs no servidor. */
+export async function opportunityDocuments(id: string, auth: AuthScope) {
+  const organizationId = discoveryScope(auth);
+  const row = await prisma.discoveryOpportunity.findFirst({ where: { id, organizationId, active: true } });
+  if (!row) throw new AppError('Licitação não encontrada nesta conta.', 404);
+  const item = row.data as unknown as Candidate;
+  const tce = item.sources?.find((source) => source.source === 'TCE');
+  if (!tce) throw new AppError('A licitação não possui uma página de detalhes do TCE-CE.', 422);
+  try {
+    const result = await fetchTceDocuments(item);
+    if (!result.available) throw new AppError('Endereço oficial de detalhes do TCE-CE indisponível.', 422);
+    const updated = { ...item, documents: result.documents };
+    await prisma.discoveryOpportunity.update({ where: { id: row.id }, data: { data: json(updated) } });
+    return { documents: result.documents, sourceUrl: tce.url };
+  } catch (error) {
+    if (error instanceof AppError) throw error;
+    throw new AppError('O TCE-CE não respondeu à consulta dos anexos. Abra a página oficial para conferi-los.', 503);
+  }
+}
+
 export async function opportunityDraft(id: string, auth: AuthScope) {
   const row = await prisma.discoveryOpportunity.findFirst({ where: { id, organizationId: discoveryScope(auth), active: true }, include: { importedTender: { select: { id: true } } } });
   if (!row) throw new AppError('Oportunidade não encontrada nesta conta', 404);
@@ -158,7 +178,7 @@ async function executeScan(runId: string, auth: AuthScope, settings: DiscoverySe
       const current = await prisma.discoveryOpportunity.findFirst({ where: { organizationId, OR: [{ sourceKeys: { hasSome: item.sourceKeys } }, { fingerprint: hash }] } });
       if (current) {
         const previous = current.data as unknown as Candidate;
-        const merged = { ...item, documents: item.documents?.length ? item.documents : previous.documents ?? [], phaseStatus: previous.phaseStatus && previous.phaseStatus !== 'NAO_IDENTIFICADA' ? previous.phaseStatus : item.phaseStatus ?? 'NAO_IDENTIFICADA', phaseEvidence: previous.phaseEvidence ?? item.phaseEvidence, phaseCheckedAt: previous.phaseCheckedAt ?? item.phaseCheckedAt, platformUrl: item.platformUrl ?? null, platformName: item.platformName ?? null, platformEvidence: item.platformEvidence ?? null, sourceKeys: item.sourceKeys, sources: item.sources };
+        const merged = { ...item, documents: item.documents ?? previous.documents ?? [], phaseStatus: previous.phaseStatus && previous.phaseStatus !== 'NAO_IDENTIFICADA' ? previous.phaseStatus : item.phaseStatus ?? 'NAO_IDENTIFICADA', phaseEvidence: previous.phaseEvidence ?? item.phaseEvidence, phaseCheckedAt: previous.phaseCheckedAt ?? item.phaseCheckedAt, platformUrl: item.platformUrl ?? null, platformName: item.platformName ?? null, platformEvidence: item.platformEvidence ?? null, sourceKeys: item.sourceKeys, sources: item.sources };
         await prisma.discoveryOpportunity.update({ where: { id: current.id }, data: { data: json(merged), sourceKeys: merged.sourceKeys, active: true, lastSeenAt: new Date() } });
       } else {
         await prisma.discoveryOpportunity.create({ data: { organizationId, fingerprint: hash, sourceKeys: item.sourceKeys, data: json(item) } }); addedCount++;
