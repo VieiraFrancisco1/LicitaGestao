@@ -47,13 +47,13 @@ export function identifyTcePlatform(html: string): TcePlatformMatch {
   // Publicações em PNCP, Diário Oficial ou na prefeitura NÃO são prova de
   // plataforma. O nome de um portal de disputa precisa estar explícito.
   const section = readable.match(/\bForma de Publica[cç][aã]o\b([\s\S]*?)(?=\bÓrgãos\b|\bOrgaos\b|\bObjeto\/Lotes\b|$)/i)?.[1] ?? '';
-  for (const provider of PROVIDERS) {
-    if (provider.match.test(section)) return {
-      platformName: provider.name,
-      platformUrl: null,
-      platformEvidence: `TCE-CE · Forma de Publicação: ${provider.name}`
-    };
-  }
+  const mentioned = PROVIDERS.filter((provider) => provider.match.test(section));
+  // Publicações em dois portais diferentes não comprovam qual conduziu a disputa.
+  if (mentioned.length === 1) return {
+    platformName: mentioned[0]!.name,
+    platformUrl: null,
+    platformEvidence: `TCE-CE · Forma de Publicação: ${mentioned[0]!.name}`
+  };
   return null;
 }
 
