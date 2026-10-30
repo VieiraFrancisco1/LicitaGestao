@@ -16,15 +16,14 @@ export const calculateDiscountPercentage = (
   new Prisma.Decimal(globalValue).minus(discountedValue).dividedBy(globalValue).times(100).toDecimalPlaces(2);
 
 const withPercentage = <
-  T extends { discountedValue: Prisma.Decimal | null; tender: { estimatedValue: Prisma.Decimal | null } }
+  T extends { discountedValue: Prisma.Decimal | null; budgetValue: Prisma.Decimal | null; tender: { estimatedValue: Prisma.Decimal | null } }
 >(
   item: T
 ) => ({
   ...item,
-  discountPercentage:
-    item.discountedValue && item.tender.estimatedValue
-      ? calculateDiscountPercentage(item.tender.estimatedValue, item.discountedValue)
-      : null
+  discountPercentage: item.discountedValue !== null && (item.budgetValue ?? item.tender.estimatedValue)?.greaterThan(0)
+    ? calculateDiscountPercentage((item.budgetValue ?? item.tender.estimatedValue)!, item.discountedValue)
+    : null
 });
 
 const validateValue = (globalValue: Prisma.Decimal | null, discountedValue: number | null) => {
@@ -112,7 +111,7 @@ export const updateDiscount = async (
     include: { tender: { select: { estimatedValue: true } } }
   });
   if (!current) throw new AppError('Cálculo de baixa não encontrado', 404);
-  validateValue(current.tender.estimatedValue, discountedValue);
+  validateValue(additional?.budgetValue === null ? current.tender.estimatedValue : additional?.budgetValue !== undefined ? new Prisma.Decimal(additional.budgetValue) : current.budgetValue ?? current.tender.estimatedValue, discountedValue);
   const item = await prisma.discountCalculation.update({
     where: { id },
     data: { discountedValue, ...(additional ?? {}), updatedById: auth.userId },
@@ -171,7 +170,7 @@ export async function getTenderDiscount(companyId: string, tenderId: string, aut
 
 export async function saveTenderDiscount(companyId: string, tenderId: string, values: TenderDiscountInput, auth: AuthScope) {
   const estimatedValue = await companyTenderValue(companyId, tenderId, auth);
-  validateValue(estimatedValue, values.discountedValue);
+  validateValue(values.budgetValue !== undefined && values.budgetValue !== null ? new Prisma.Decimal(values.budgetValue) : estimatedValue, values.discountedValue);
   const item = await prisma.discountCalculation.upsert({
     where: { companyId_tenderId: { companyId, tenderId } },
     create: {
