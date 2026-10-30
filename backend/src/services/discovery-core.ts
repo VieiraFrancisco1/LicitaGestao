@@ -23,6 +23,7 @@ export type Candidate = {
   sessionDate: string; sessionTime: string | null; publishedDate: string | null;
   categories: Category[]; reason: string; aiReviewed: boolean;
   platformName?: string | null; platformUrl?: string | null; platformEvidence?: string | null;
+  isInvertedPhase?: boolean; manualSearch?: boolean;
   documents?: Array<{ title: string; url: string; type: string }>;
   phaseStatus?: 'SIM' | 'NAO' | 'NAO_IDENTIFICADA'; phaseEvidence?: string; phaseCheckedAt?: string;
 };
