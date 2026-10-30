@@ -93,7 +93,8 @@ export function extractTceDocuments(html: string, detailUrl: string): NonNullabl
     try { target = new URL(text(href).replace(/&amp;/gi, '&'), detailUrl); }
     catch { continue; }
     if (!['http:', 'https:'].includes(target.protocol) || target.username || target.password || target.port) continue;
-    if (target.hostname.toLowerCase() !== 'municipios-licitacoes.tce.ce.gov.br') continue;
+    const host = target.hostname.toLowerCase();
+    if (host !== 'tce.ce.gov.br' && !host.endsWith('.tce.ce.gov.br')) continue;
     if (target.protocol === 'http:') target.protocol = 'https:';
     if (target.href === detailUrl || seen.has(target.href)) continue;
     // Ignora links internos de navegação e outros links que não são anexos.
