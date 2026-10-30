@@ -5,6 +5,7 @@ import { AppError } from '../utils/app-error.js';
 import { requireOrganizationId, type AuthScope } from './access.service.js';
 import { decryptSecret } from './gmail-utils.js';
 import { type LoginPlatform } from './discovery-credentials.js';
+import { browserFailureHint } from './platform-browser-diagnostics.js';
 
 // V61: diagnóstico sob demanda. Nunca armazena cookies, capturas ou senhas.
 // NÃO participa de lances nem apresenta login como busca ativa de editais.
@@ -76,17 +77,23 @@ export async function testPlatformLogin(auth: AuthScope, platform: LoginPlatform
 
   busy.add(key); lastAttempt.set(key, Date.now());
   let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
+  let stage = 'iniciar Chromium';
   try {
     try { browser = await chromium.launch({ headless: true, args: ['--disable-dev-shm-usage'], timeout: 16000 }); }
-    catch { return message(platform, 'BROWSER_UNAVAILABLE', 'Chromium não está disponível no servidor. Instale o navegador Playwright no build do backend.'); }
+    catch (error) { return message(platform, 'BROWSER_UNAVAILABLE', browserFailureHint('iniciar Chromium', error)); }
+    stage = 'abrir contexto do navegador';
     const context = await browser.newContext({ acceptDownloads: false, serviceWorkers: 'block', locale: 'pt-BR' });
     const page = await context.newPage();
+    stage = 'abrir página de login';
     try {
       await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 });
+      stage = 'conferir domínio de autenticação';
       if (!permittedHost(platform, page.url())) return message(platform, 'NEEDS_REVIEW', 'O portal redirecionou para um domínio não previsto. É necessário conferir o fluxo.');
       const userSelector = 'input[autocomplete="username"], input[name*="email" i], input[name*="login" i], input[name*="cnpj" i], input[name*="cpf" i], input[type="email"], input[type="text"], input:not([type])';
+      stage = 'encontrar campo de usuário';
       if (!await fillVisible(page, creds.username, userSelector)) return message(platform, 'NEEDS_REVIEW', 'Campo de usuário não identificado no portal. O conector precisa ser adaptado.');
       // Licita Mais tem etapa de e-mail e etapa de senha. Não clicar novamente se a senha já aparecer.
+      stage = 'encontrar campo de senha';
       let hasPassword = await fillVisible(page, creds.password, 'input[type="password"]');
       if (!hasPassword) {
         if (!await clickSubmit(page)) return message(platform, 'NEEDS_REVIEW', 'Etapa de autenticação não reconhecida.');
@@ -95,16 +102,20 @@ export async function testPlatformLogin(auth: AuthScope, platform: LoginPlatform
         hasPassword = await fillVisible(page, creds.password, 'input[type="password"]');
       }
       if (!hasPassword) return message(platform, 'NEEDS_REVIEW', 'Campo de senha não encontrado. Pode haver uma verificação adicional.');
+      stage = 'enviar login';
       if (!await clickSubmit(page)) return message(platform, 'NEEDS_REVIEW', 'Botão de login não encontrado.');
       await page.waitForTimeout(1900);
       if (!permittedHost(platform, page.url())) return message(platform, 'NEEDS_REVIEW', 'O portal mudou o domínio de autenticação.');
+      stage = 'verificar sessão';
       const body = (await page.locator('body').innerText({ timeout: 5000 }).catch(() => '')).slice(0, 6000);
       if (challenge(body)) return message(platform, 'NEEDS_REVIEW', 'O portal pediu uma verificação humana. Faça a verificação diretamente no site.');
       const logout = page.getByRole('link', { name: /sair|logout|encerrar sess[aã]o/i }).or(page.getByRole('button', { name: /sair|logout|encerrar sess[aã]o/i }));
       if (await logout.first().isVisible().catch(() => false)) return message(platform, 'VERIFIED', 'Login confirmado por controle de saída da conta. O navegador foi encerrado.');
       return message(platform, 'NEEDS_REVIEW', 'A página foi acessada, mas não foi possível confirmar a autenticação. Nenhuma busca privada foi executada.');
     } finally { await context.close().catch(() => undefined); }
-  } catch {
-    return message(platform, 'NEEDS_REVIEW', 'O portal não respondeu como esperado ou o tempo se esgotou. Não houve novas tentativas automáticas.');
+  } catch (error) {
+    const hint = browserFailureHint(stage, error);
+    console.warn(`[login-diagnostic] ${platform}: ${hint}`);
+    return message(platform, 'NEEDS_REVIEW', hint);
   } finally { await browser?.close().catch(() => undefined); busy.delete(key); }
 }
