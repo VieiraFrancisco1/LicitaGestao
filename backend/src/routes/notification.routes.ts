@@ -8,3 +8,4 @@ notificationRouter.use(authenticate);
 notificationRouter.get('/', asyncHandler(controller.index));
 notificationRouter.post('/read-all', asyncHandler(controller.readAll));
 notificationRouter.post('/:id/read', asyncHandler(controller.read));
+notificationRouter.delete('/:id', asyncHandler(controller.remove));
