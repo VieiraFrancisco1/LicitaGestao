@@ -549,7 +549,7 @@ export function TendersPage({
             <thead>
               <tr>
                 <th>Licitação</th>
-                <th>Data</th>
+                <th>Data e Plataforma</th>
                 <th>Objeto</th>
                 <th>Validade</th>
                 <th>Valor</th>
@@ -608,7 +608,7 @@ export function TendersPage({
                           )}
                         </div>
                       </td>
-                      <td className="tender-date-cell"><strong>{formatDate(tender.sessionDate)}</strong><small className="tender-date-platform">{tender.platform?.name || "Sem plataforma"}</small></td>
+                      <td className="tender-date-cell"><strong>{formatDate(tender.sessionDate)}</strong><span className="tender-date-platform">{tender.platform?.name || "Sem plataforma"}</span></td>
                       <td className="object-cell organized-object-cell"><strong>{tender.object}</strong></td>
                       <td className="tender-validity-cell">
                         <strong>{tender.proposalValidityDays ?? '—'} dias</strong>
@@ -616,19 +616,21 @@ export function TendersPage({
                         <small className="tender-inverted-phase"><strong>Inversa:</strong> {tender.isInvertedPhase ? 'Sim' : 'Não'}</small>
                       </td>
                       <td className="tender-value-platform-cell">
-                        <strong>{formatCurrency(tender.estimatedValue)}</strong>
-                        {companyMode && selectedCompanyId && selectedBid && (
-                          <>
-                            {tender.companyDiscount?.discountPercentage != null && (
-                              <span className="tender-company-discount-pill">
-                                Desconto: {Number(tender.companyDiscount.discountPercentage).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%
-                              </span>
-                            )}
-                            <button type="button" className="tender-company-discount-button" onClick={() => setDiscountTender(tender)}>
-                              <Calculator size={13} /> Desconto
-                            </button>
-                          </>
-                        )}
+                        <div className="tender-value-discount-stack">
+                          <strong className="tender-global-amount">{formatCurrency(tender.estimatedValue)}</strong>
+                          {companyMode && selectedCompanyId && selectedBid && (
+                            <>
+                              {tender.companyDiscount?.discountPercentage != null && (
+                                <span className="tender-company-discount-pill">
+                                  Desconto: {Number(tender.companyDiscount.discountPercentage).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%
+                                </span>
+                              )}
+                              <button type="button" className="tender-company-discount-button" onClick={() => setDiscountTender(tender)}>
+                                <Calculator size={13} /> {tender.companyDiscount?.discountPercentage != null ? 'Editar desconto' : 'Desconto'}
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </td>
                       <td className="companies-cell organized-companies-cell">
                         <div className="tender-participant-actions">
