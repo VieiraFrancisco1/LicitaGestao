@@ -45,7 +45,7 @@ export async function getDiscoveryStatus(auth: AuthScope) {
     await prisma.discoveryRun.updateMany({ where: { id: run.id, organizationId, status: 'RUNNING' }, data: { status: 'FAILED', progress: 'Busca interrompida. Execute uma nova consulta.', finishedAt: new Date() } });
     currentRun = { ...run, status: 'FAILED', progress: 'Busca interrompida. Execute uma nova consulta.', finishedAt: new Date() };
   }
-  return { settings: { ...discoverySettings.parse(profile?.organizationId === organizationId ? profile.settings : {}), sources: ['TCE'] as const }, run: currentRun, aiAvailable: Boolean(env.TENDER_AI_API_KEY) };
+  return { settings: { ...discoverySettings.parse(profile?.organizationId === organizationId ? profile.settings : {}), sources: ['TCE'] as ['TCE'] }, run: currentRun, aiAvailable: Boolean(env.TENDER_AI_API_KEY) };
 }
 export async function saveDiscoverySettings(input: DiscoverySettings, auth: AuthScope) {
   const organizationId = discoveryScope(auth); const settings = { ...discoverySettings.parse(input), sources: ['TCE'] as ['TCE'] };
