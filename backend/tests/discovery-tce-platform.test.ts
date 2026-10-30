@@ -95,6 +95,11 @@ describe('arquivos publicados no TCE-CE', () => {
     expect(docs[0]?.url).toBe('https://municipios-licitacoes.tce.ce.gov.br/index.php/licitacao/arquivo/001');
     expect(docs[3]?.url).toContain('?tipo=publicacao&v=1');
   });
+  it('aceita documentos em outros subdomínios oficiais do TCE-CE', () => {
+    const html = '<h4>Arquivos</h4><li><a href="https://arquivos.tce.ce.gov.br/licitacoes/edital.pdf">EDITAL COMPLETO</a></li>';
+    const docs = extractTceDocuments(html, detailsUrl);
+    expect(docs).toEqual([{ title: 'EDITAL COMPLETO', type: 'Edital', url: 'https://arquivos.tce.ce.gov.br/licitacoes/edital.pdf' }]);
+  });
   it('não aceita anexos de domínios externos, javascript ou páginas de navegação', () => {
     const unsafe = `<h4>Arquivos</h4>
       <a href="https://example.org/edital.pdf">Documento externo</a>
