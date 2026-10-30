@@ -109,6 +109,25 @@ function detailsUrl(item: Candidate): string | null {
   return source?.url ?? null;
 }
 
+/**
+ * Consulta pontual do TCE para o botão Arquivos. Resolve licitações que não
+ * estavam entre as primeiras 90 análises do agente.
+ */
+export async function fetchTceDocuments(item: Candidate, fetcher: typeof fetch = fetch) {
+  const url = detailsUrl(item);
+  if (!url) return { documents: [] as NonNullable<Candidate['documents']>, available: false };
+  const response = await fetcher(url, {
+    signal: AbortSignal.timeout(10000), redirect: 'error',
+    headers: { 'User-Agent': 'LicitaGestao/1.0 (anexos públicos TCE-CE)' }
+  });
+  if (!response.ok) throw new Error('TCE-CE não respondeu à consulta de arquivos');
+  const length = Number(response.headers.get('content-length') ?? 0);
+  if (length > 1_200_000) throw new Error('Lista de arquivos maior que o limite');
+  const html = await response.text();
+  if (html.length > 1_200_000) throw new Error('Lista de arquivos maior que o limite');
+  return { documents: extractTceDocuments(html, url), available: true };
+}
+
 export type TceEnrichmentReport = { checked: number; identified: number; eligible: number; skipped: number; failed: number };
 
 /** Nunca consulta domínios fornecidos nos editais; só páginas fixas do TCE. */
