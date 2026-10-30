@@ -57,6 +57,53 @@ export function identifyTcePlatform(html: string): TcePlatformMatch {
   return null;
 }
 
+/**
+ * Extrai os links publicados no bloco "Arquivos" do detalhamento municipal.
+ * Não baixa arquivos, apenas retorna links apontando para o portal TCE-CE.
+ * Documentos sinalizados como excluídos não são ofertados para download.
+ */
+export function extractTceDocuments(html: string, detailUrl: string): NonNullable<Candidate['documents']> {
+  if (!DETAILS.test(detailUrl)) return [];
+  // Usa o título visível no HTML para localizar o painel de anexos.
+  const headings = [...html.matchAll(/>\s*Arquivos\s*</gi)];
+  if (!headings.length) return [];
+  const start = headings[headings.length - 1]!.index! + headings[headings.length - 1]![0].length;
+  let section = html.slice(start, start + 22000);
+  const cut = section.search(/D[uú]vidas\??|Contate a Ouvidoria|<\/aside\s*>/i);
+  if (cut >= 0) section = section.slice(0, cut);
+  const result: NonNullable<Candidate['documents']> = [];
+  const seen = new Set<string>();
+  const anchors = [...section.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a\s*>/gi)];
+  for (let index = 0; index < anchors.length && result.length < 35; index++) {
+    const anchor = anchors[index]!;
+    const attributes = anchor[1]!;
+    const href = attributes.match(/\bhref\s*=\s*(?:"([^"]*)"|'([^']*)')/i)?.[1]
+      ?? attributes.match(/\bhref\s*=\s*(?:"([^"]*)"|'([^']*)')/i)?.[2];
+    if (!href) continue;
+    const title = text(anchor[2]!).slice(0, 180).trim();
+    if (!title || /^(excluir|editar|voltar|p[aá]gina inicial)$/i.test(title)) continue;
+    // Marcadores de exclusão aparecem na mesma linha ou logo depois do link.
+    const from = anchor.index! + anchor[0].length;
+    const untilNextAnchor = anchors[index + 1]?.index ?? section.length;
+    const trailing = section.slice(from, Math.min(untilNextAnchor, from + 240));
+    const rowEnd = trailing.search(/<\/li\s*>|<\/tr\s*>|<\/div\s*>/i);
+    const context = (rowEnd >= 0 ? trailing.slice(0, rowEnd) : trailing.slice(0, 120));
+    if (/\bexclu[ií]d[oa]s?\b/i.test(text(anchor[0] + context))) continue;
+    let target: URL;
+    try { target = new URL(text(href).replace(/&amp;/gi, '&'), detailUrl); }
+    catch { continue; }
+    if (!['http:', 'https:'].includes(target.protocol) || target.username || target.password || target.port) continue;
+    if (target.hostname.toLowerCase() !== 'municipios-licitacoes.tce.ce.gov.br') continue;
+    if (target.protocol === 'http:') target.protocol = 'https:';
+    if (target.href === detailUrl || seen.has(target.href)) continue;
+    // Ignora links internos de navegação e outros links que não são anexos.
+    if (/\/licitacao\/(?:detalhes|abertas|busca_avancada)\b/i.test(target.pathname)) continue;
+    seen.add(target.href);
+    result.push({ title, type: /edital/i.test(title) ? 'Edital' : /planilha/i.test(title) ? 'Planilha' : /projeto/i.test(title) ? 'Projeto' : 'Documento do TCE-CE', url: target.href });
+  }
+  return result;
+}
+
 function detailsUrl(item: Candidate): string | null {
   const source = item.sources.find((s) => s.source === 'TCE' && DETAILS.test(s.url));
   return source?.url ?? null;
@@ -94,6 +141,8 @@ export async function enrichTcePlatforms(
         if (!response.ok) throw new Error('HTTP indisponível');
         const body = await response.text();
         if (body.length > 1_200_000) throw new Error('Documento acima do limite');
+        // Mesmo quando a plataforma é desconhecida, o TCE pode oferecer editais.
+        item.documents = extractTceDocuments(body, url);
         const matched = identifyTcePlatform(body);
         if (matched) {
           item.platformName = matched.platformName;
