@@ -6,11 +6,12 @@ import { requireOrganizationId, type AuthScope } from './access.service.js';
 import { decryptSecret } from './gmail-utils.js';
 import { type LoginPlatform } from './discovery-credentials.js';
 import { browserFailureHint } from './platform-browser-diagnostics.js';
+import { openM2aSupplierLogin, secureM2aAddress, M2aNavigationError } from './m2a-supplier-login.js';
 
 // V61: diagnóstico sob demanda. Nunca armazena cookies, capturas ou senhas.
 // NÃO participa de lances nem apresenta login como busca ativa de editais.
 const LOGIN: Partial<Record<LoginPlatform, string>> = {
-  M2A: 'https://precodereferencia.m2atecnologia.com.br/usuario/login/',
+  M2A: 'https://compras.m2atecnologia.com.br/',
   LICITAMAIS: 'https://licitamaisbrasil.com.br/login'
 };
 const busy = new Set<string>();
@@ -86,14 +87,18 @@ export async function testPlatformLogin(auth: AuthScope, platform: LoginPlatform
     const page = await context.newPage();
     stage = 'abrir página de login';
     try {
-      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 });
+      if (platform === 'M2A') await openM2aSupplierLogin(page, (step) => { stage = step; });
+      else await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 });
       stage = 'conferir domínio de autenticação';
       if (!permittedHost(platform, page.url())) return message(platform, 'NEEDS_REVIEW', 'O portal redirecionou para um domínio não previsto. É necessário conferir o fluxo.');
       const userSelector = 'input[autocomplete="username"], input[name*="email" i], input[name*="login" i], input[name*="cnpj" i], input[name*="cpf" i], input[type="email"], input[type="text"], input:not([type])';
       stage = 'encontrar campo de usuário';
+      if (platform === 'M2A' && !secureM2aAddress(page.url())) return message(platform, 'NEEDS_REVIEW', 'O formulário de fornecedor não está em HTTPS. Nenhuma credencial foi enviada.');
+      await page.locator(userSelector).first().waitFor({ state: 'visible', timeout: 8000 });
       if (!await fillVisible(page, creds.username, userSelector)) return message(platform, 'NEEDS_REVIEW', 'Campo de usuário não identificado no portal. O conector precisa ser adaptado.');
       // Licita Mais tem etapa de e-mail e etapa de senha. Não clicar novamente se a senha já aparecer.
       stage = 'encontrar campo de senha';
+      if (platform === 'M2A' && !secureM2aAddress(page.url())) return message(platform, 'NEEDS_REVIEW', 'A M2A mudou para HTTP antes da senha; o envio foi bloqueado.');
       let hasPassword = await fillVisible(page, creds.password, 'input[type="password"]');
       if (!hasPassword) {
         if (!await clickSubmit(page)) return message(platform, 'NEEDS_REVIEW', 'Etapa de autenticação não reconhecida.');
@@ -103,6 +108,7 @@ export async function testPlatformLogin(auth: AuthScope, platform: LoginPlatform
       }
       if (!hasPassword) return message(platform, 'NEEDS_REVIEW', 'Campo de senha não encontrado. Pode haver uma verificação adicional.');
       stage = 'enviar login';
+      if (platform === 'M2A' && !secureM2aAddress(page.url())) return message(platform, 'NEEDS_REVIEW', 'A M2A mudou para HTTP; o envio da senha foi bloqueado.');
       if (!await clickSubmit(page)) return message(platform, 'NEEDS_REVIEW', 'Botão de login não encontrado.');
       await page.waitForTimeout(1900);
       if (!permittedHost(platform, page.url())) return message(platform, 'NEEDS_REVIEW', 'O portal mudou o domínio de autenticação.');
@@ -114,7 +120,7 @@ export async function testPlatformLogin(auth: AuthScope, platform: LoginPlatform
       return message(platform, 'NEEDS_REVIEW', 'A página foi acessada, mas não foi possível confirmar a autenticação. Nenhuma busca privada foi executada.');
     } finally { await context.close().catch(() => undefined); }
   } catch (error) {
-    const hint = browserFailureHint(stage, error);
+    const hint = error instanceof M2aNavigationError ? error.safeMessage : browserFailureHint(stage, error);
     console.warn(`[login-diagnostic] ${platform}: ${hint}`);
     return message(platform, 'NEEDS_REVIEW', hint);
   } finally { await browser?.close().catch(() => undefined); busy.delete(key); }
