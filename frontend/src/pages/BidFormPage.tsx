@@ -261,7 +261,11 @@ export function BidFormPage() {
             Modalidade
             <select value={form.modality} onChange={(event) => field('modality', event.target.value)}>
               <option value="">Selecione (opcional)</option>
+              <option value="Concorrência">Concorrência</option>
               <option value="Concorrência Eletrônica">Concorrência Eletrônica</option>
+              <option value="Pregão">Pregão</option>
+              <option value="Dispensa">Dispensa</option>
+              <option value="Leilão">Leilão</option>
               <option value="Pregão Eletrônico">Pregão Eletrônico</option>
               <option value="Dispensa Eletrônica">Dispensa Eletrônica</option>
               <option value="Credenciamento">Credenciamento</option>
