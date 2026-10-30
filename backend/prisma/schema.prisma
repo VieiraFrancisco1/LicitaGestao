@@ -410,6 +410,10 @@ model DiscountCalculation {
   tenderId        String   @map("tender_id") @db.Uuid
   tender          Tender   @relation(fields: [tenderId], references: [id], onDelete: Cascade)
   discountedValue Decimal? @map("discounted_value") @db.Decimal(15, 2)
+  budgetValue     Decimal? @map("budget_value") @db.Decimal(15, 2)
+  servicesValue   Decimal? @map("services_value") @db.Decimal(15, 2)
+  materialsValue  Decimal? @map("materials_value") @db.Decimal(15, 2)
+  equipmentValue  Decimal? @map("equipment_value") @db.Decimal(15, 2)
   createdById     String   @map("created_by_id") @db.Uuid
   createdBy       User     @relation("DiscountCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   updatedById     String   @map("updated_by_id") @db.Uuid
@@ -564,12 +568,16 @@ model CompanyChatMessage {
   author         User         @relation("CompanyChatAuthor", fields: [authorId], references: [id], onDelete: Cascade)
   content        String       @db.VarChar(3000)
   mentionUserIds String[]     @default([]) @map("mention_user_ids")
+  replyToId      String?      @map("reply_to_id") @db.Uuid
+  replyTo        CompanyChatMessage? @relation("ChatReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies        CompanyChatMessage[] @relation("ChatReplies")
   createdAt      DateTime     @default(now()) @map("created_at")
   updatedAt      DateTime     @updatedAt @map("updated_at")
 
   @@index([organizationId, createdAt])
   @@index([organizationId, companyId, createdAt])
   @@index([authorId])
+  @@index([replyToId])
   @@map("company_chat_messages")
 }
 
