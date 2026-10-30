@@ -1,4 +1,4 @@
-import { normalize, type Candidate, type DiscoverySettings } from './discovery-core.js';
+import { matches, type Candidate, type DiscoverySettings } from './discovery-core.js';
 import { TCE_ORIGIN, text } from './discovery-sources.js';
 
 /**
@@ -74,17 +74,10 @@ export async function enrichTcePlatforms(
 ): Promise<TceEnrichmentReport> {
   // Primeiro filtra obras, valor, data e município. A plataforma ainda é
   // desconhecida, por isso o filtro de plataforma só é aplicado DEPOIS.
-  const eligible = items.filter((item) => {
-    if (!item.sources.some((s) => s.source === 'TCE') || item.state !== 'CE') return false;
-    if (item.municipality && /^(FORTALEZA|EUSEBIO|EUSÉBIO)$/i.test(item.municipality.trim())) return false;
-    if (settings.sessionFrom && item.sessionDate < settings.sessionFrom) return false;
-    if (settings.sessionTo && item.sessionDate > settings.sessionTo) return false;
-    if (item.estimatedValue === null ? !settings.includeUnknownValue : item.estimatedValue <= settings.minValue) return false;
-    if (!item.categories.some((c) => settings.categories.includes(c)) && !settings.categories.includes('OBRAS_GERAIS')) return false;
-    if (settings.municipality && !normalize(item.municipality).includes(normalize(settings.municipality))) return false;
-    if (settings.keywords && !normalize(settings.keywords).split(' ').every((w) => normalize(item.object).includes(w))) return false;
-    return true;
-  }).sort((a, b) => a.sessionDate.localeCompare(b.sessionDate));
+  const eligible = items.filter((item) =>
+    item.sources.some((s) => s.source === 'TCE')
+    && matches(item, { ...settings, sources: ['TCE'], platforms: [] })
+  ).sort((a, b) => a.sessionDate.localeCompare(b.sessionDate));
   const selected = eligible.filter(detailsUrl).slice(0, Math.max(0, Math.min(150, maxDetails)));
   let checked = 0; let identified = 0; let failed = 0; let cursor = 0;
   const workers = Array.from({ length: Math.min(5, selected.length) }, async () => {
