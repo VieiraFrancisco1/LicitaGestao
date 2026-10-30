@@ -31,7 +31,11 @@ export const createDiscountSchema = z.object({
 
 export const updateDiscountSchema = z.object({
   body: z.object({
-    discountedValue: flexibleMoney
+    discountedValue: flexibleMoney,
+    budgetValue: flexibleMoney.optional(),
+    servicesValue: flexibleMoney.optional(),
+    materialsValue: flexibleMoney.optional(),
+    equipmentValue: flexibleMoney.optional()
   }),
   params: z.object({ id: z.string().uuid(), discountId: z.string().uuid() }),
   query: z.object({})
