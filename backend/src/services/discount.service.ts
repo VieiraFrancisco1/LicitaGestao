@@ -103,7 +103,8 @@ export const updateDiscount = async (
   companyId: string,
   id: string,
   discountedValue: number | null,
-  auth: AuthScope
+  auth: AuthScope,
+  additional?: { budgetValue?: number | null; servicesValue?: number | null; materialsValue?: number | null; equipmentValue?: number | null }
 ) => {
   await assertCompanyWriteAccess(companyId, auth);
   const current = await prisma.discountCalculation.findFirst({
@@ -114,7 +115,7 @@ export const updateDiscount = async (
   validateValue(current.tender.estimatedValue, discountedValue);
   const item = await prisma.discountCalculation.update({
     where: { id },
-    data: { discountedValue, updatedById: auth.userId },
+    data: { discountedValue, ...(additional ?? {}), updatedById: auth.userId },
     include: includeDiscount
   });
   return withPercentage(item);
