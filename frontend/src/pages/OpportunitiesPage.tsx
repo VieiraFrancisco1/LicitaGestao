@@ -2,6 +2,7 @@ import { ArrowRight, BellRing, Bot, CalendarRange, ChevronDown, ChevronUp, Downl
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api, errorMessage } from '../services/api';
+import { TceQuickSearch } from './TceQuickSearch';
 import type { ApiResponse } from '../types';
 import { formatCurrency, formatDate } from '../utils/bid';
 import './opportunities.css';
@@ -210,6 +211,7 @@ export function OpportunitiesPage() {
         </div>
         </div>
       </section>
+      <TceQuickSearch />
       {!resultsCleared && status?.run && <section className={`discovery-run agent-run-compact ${running ? 'running' : ''}`} role="status">
         <div className="agent-run-top"><span className="agent-run-status"><RefreshCw size={17} className={running ? 'discovery-spin' : ''} /><strong>{status.run.progress}</strong>{status.run.warnings.length > 0 && <span className="agent-run-warnings">{status.run.warnings.length} aviso(s)</span>}</span><div className="agent-run-actions"><button type="button" className="secondary-button compact" onClick={() => setMonitorOpen(true)}><MonitorPlay size={15}/>Acompanhar agente</button><button type="button" className="secondary-button compact" onClick={() => setShowRunDetails((v) => !v)} aria-expanded={showRunDetails} aria-controls="agent-run-report">{showRunDetails ? 'Ocultar detalhes' : 'Ver detalhes'}{showRunDetails ? <ChevronUp size={14} /> : <ChevronDown size={14} />}</button></div></div>
         {showRunDetails && <div id="agent-run-report" className="agent-run-report"><small>Última busca: {new Date(status.run.startedAt).toLocaleString('pt-BR')}</small>{status.run.reports && <div className="discovery-source-report">{status.run.reports.map((r, index) => <span key={`${r.source}-${index}`}>{r.source === 'PORTAL' ? `${r.message} · ${r.records} registro(s)` : `${sourceLabel(r.source)} · ${r.pages} página(s) · ${r.complete ? 'concluída' : 'parcial'}`}</span>)}</div>}{status.run.warnings.map((w, i) => <p key={i}>{w}</p>)}</div>}
