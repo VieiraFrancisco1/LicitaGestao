@@ -26,12 +26,13 @@ export function parseTcePublicDetails(html: string, item: Candidate): Candidate 
   const link = platform?.platformUrl ?? null;
   const directUrl = item.sources.find((s) => s.source === 'TCE')?.url ?? '';
   const explicitInversion = /\b(?:invers[aã]o de fases|fase invertida)\b/i.test(readable);
+  const electronic = /eletr[oô]nic/i.test(modality + ' ' + local);
   const mappedModality = /concorr[eê]ncia/i.test(modality)
-    ? (/eletr[oô]nic/i.test(modality + ' ' + local) ? 'Concorrência Eletrônica' : '')
-    : /preg[aã]o/i.test(modality) && /eletr[oô]nic/i.test(modality + ' ' + local) ? 'Pregão Eletrônico'
-    : /dispensa/i.test(modality) && /eletr[oô]nic/i.test(modality + ' ' + local) ? 'Dispensa Eletrônica'
+    ? (electronic ? 'Concorrência Eletrônica' : 'Concorrência')
+    : /preg[aã]o/i.test(modality) ? (electronic ? 'Pregão Eletrônico' : 'Pregão')
+    : /dispensa/i.test(modality) ? (electronic ? 'Dispensa Eletrônica' : 'Dispensa')
     : /credenciamento/i.test(modality) ? 'Credenciamento'
-    : /leil[aã]o/i.test(modality) && /eletr[oô]nic/i.test(modality + ' ' + local) ? 'Leilão Eletrônico'
+    : /leil[aã]o/i.test(modality) ? (electronic ? 'Leilão Eletrônico' : 'Leilão')
     : '';
   const parsedDate = brDate(openDate) ?? (validDate(openDate) ? openDate : null);
   return {
