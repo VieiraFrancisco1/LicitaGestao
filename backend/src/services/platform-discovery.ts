@@ -4,6 +4,8 @@ import { prisma } from '../config/database.js';
 import { env } from '../config/env.js';
 import { requireOrganizationId, type AuthScope } from './access.service.js';
 import { decryptSecret } from './gmail-utils.js';
+import { openM2aSupplierLogin, M2aNavigationError, secureM2aAddress } from './m2a-supplier-login.js';
+import { browserFailureHint } from './platform-browser-diagnostics.js';
 import { brDate, classify, normalize, validDate, type Candidate, type DiscoverySettings } from './discovery-core.js';
 
 // Login somente sob demanda, nunca nos ciclos automáticos. Sem cookies, traces ou senhas persistidos.
@@ -12,7 +14,7 @@ export type PlatformSearchResult = { items: Candidate[]; warnings: string[]; att
 type Platform = 'M2A' | 'LICITAMAIS' | 'BLL';
 type Credentials = { username: string; password: string };
 const PORTALS = {
-  M2A: { name: 'M2A Compras', login: 'https://precodereferencia.m2atecnologia.com.br/usuario/login/' },
+  M2A: { name: 'M2A Compras', login: 'https://compras.m2atecnologia.com.br/' },
   LICITAMAIS: { name: 'Licita Mais', login: 'https://licitamaisbrasil.com.br/login' },
   BLL: { name: 'BLL Compras', login: 'https://bllcompras.com/Home/Login' }
 } as const;
@@ -105,11 +107,19 @@ async function submit(page: Page) {
   return false;
 }
 async function login(page: Page, platform: Platform, credentials: Credentials) {
-  await page.goto(PORTALS[platform].login, { waitUntil: 'domcontentloaded', timeout: 14000 });
+  if (platform === 'M2A') {
+    try { await openM2aSupplierLogin(page); }
+    catch (error) { return error instanceof M2aNavigationError ? error.safeMessage : browserFailureHint('abrir perfil Fornecedor da M2A', error); }
+  } else {
+    await page.goto(PORTALS[platform].login, { waitUntil: 'domcontentloaded', timeout: 14000 });
+  }
   if (!permittedPlatformUrl(platform, page.url())) return 'Redirecionamento para domínio não autorizado';
   if (platform === 'BLL') return 'Autenticação BLL com teclado virtual ainda não validada';
   const selector = 'input[autocomplete="username"],input[name*="email" i],input[name*="login" i],input[name*="cnpj" i],input[type="email"],input[type="text"]';
+  if (platform === 'M2A' && !secureM2aAddress(page.url())) return 'Formulário da M2A sem HTTPS. Nenhuma credencial foi enviada.';
+  await page.locator(selector).first().waitFor({ state: 'visible', timeout: 8000 }).catch(() => undefined);
   if (!await fill(page, credentials.username, selector)) return 'Campo de usuário não reconhecido';
+  if (platform === 'M2A' && !secureM2aAddress(page.url())) return 'A M2A mudou para HTTP antes da senha; o envio foi bloqueado.';
   let pass = await fill(page, credentials.password, 'input[type="password"]');
   if (!pass) {
     if (!await submit(page)) return 'Próxima etapa do login não encontrada';
@@ -118,6 +128,7 @@ async function login(page: Page, platform: Platform, credentials: Credentials) {
     pass = await fill(page, credentials.password, 'input[type="password"]');
   }
   if (!pass) return 'Campo de senha não reconhecido ou verificação adicional exigida';
+  if (platform === 'M2A' && !secureM2aAddress(page.url())) return 'A M2A mudou para HTTP; o envio da senha foi bloqueado.';
   if (!await submit(page)) return 'Botão de autenticação não encontrado';
   await page.waitForTimeout(2000);
   if (!permittedPlatformUrl(platform, page.url())) return 'Domínio não autorizado após login';
