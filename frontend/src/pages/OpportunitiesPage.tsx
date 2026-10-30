@@ -32,7 +32,6 @@ const platforms: Array<[Platform, string]> = [
 const labels: Record<Category, string> = { ...Object.fromEntries(categories), CALCAMENTO: 'Calçamento', OBRAS_GERAIS: 'Obras em geral' } as Record<Category, string>;
 const defaults: Settings = { minValue: 1000000, categories: categories.map(([c]) => c), sources: ['TCE'], platforms: [], sessionFrom: null, sessionTo: null, municipality: '', keywords: '', includeUnknownValue: false, useAi: true, enabled: false, intervalHours: 6 };
 const sourceLabel = (source: Source) => source === 'TCE' ? 'TCE-CE' : source === 'PORTAL' ? 'Plataforma' : 'PNCP';
-const platformLabel = (key: Platform) => platforms.find(([p]) => p === key)?.[1] ?? key;
 
 export function OpportunitiesPage() {
   const navigate = useNavigate();
