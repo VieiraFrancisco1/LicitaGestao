@@ -22,14 +22,14 @@ export type Candidate = {
   agency: string; modality: string; object: string; estimatedValue: number | null;
   sessionDate: string; sessionTime: string | null; publishedDate: string | null;
   categories: Category[]; reason: string; aiReviewed: boolean;
-  platformName?: string | null; platformUrl?: string | null;
+  platformName?: string | null; platformUrl?: string | null; platformEvidence?: string | null;
   documents?: Array<{ title: string; url: string; type: string }>;
   phaseStatus?: 'SIM' | 'NAO' | 'NAO_IDENTIFICADA'; phaseEvidence?: string; phaseCheckedAt?: string;
 };
 export const discoverySettings = z.object({
   minValue: z.coerce.number().min(0).max(999999999999).default(1000000),
   categories: z.array(z.enum(Object.keys(categoryNames) as [Category, ...Category[]])).min(1).max(23).default(['OBRAS_GERAIS']),
-  sources: z.array(z.enum(['PNCP', 'TCE'])).min(1).max(2).default(['PNCP', 'TCE']),
+  sources: z.array(z.enum(['PNCP', 'TCE'])).min(1).max(2).default(['TCE']),
   municipality: z.string().trim().max(120).default(''),
   platforms: z.array(z.enum(['BLL', 'M2A', 'LICITAMAIS', 'COMPRASGOV', 'PORTALCOMPRAS', 'LICITANET', 'BBMNET', 'OUTRAS', 'NAO_INFORMADA'])).max(9).default([]),
   sessionFrom: z.string().refine((v) => !!validDate(v), 'Data inicial inválida').nullable().default(null),
@@ -139,7 +139,7 @@ export function matches(item: Candidate, settings: DiscoverySettings, now = new 
     && (!settings.sessionFrom || item.sessionDate >= settings.sessionFrom)
     && (settings.sessionTo ? item.sessionDate <= settings.sessionTo : item.sessionDate <= todayCE(new Date(now.getTime() + 90 * 86400000)))
     && (!settings.platforms.length || settings.platforms.includes(platformKey(item.platformName))) && item.categories.length > 0 && (settings.categories.includes('OBRAS_GERAIS') || item.categories.some((c) => settings.categories.includes(c))) &&
-    item.sources.some((s) => s.source === 'PORTAL' || settings.sources.includes(s.source as 'PNCP' | 'TCE')) &&
+    item.sources.some((s) => settings.sources.includes(s.source as 'PNCP' | 'TCE')) &&
     (item.estimatedValue === null ? settings.includeUnknownValue : item.estimatedValue > settings.minValue) &&
     (!settings.municipality || normalize(item.municipality).includes(normalize(settings.municipality))) &&
     (!settings.keywords || normalize(settings.keywords).split(' ').every((word) => normalize(item.object).includes(word)));
