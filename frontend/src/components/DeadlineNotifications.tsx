@@ -335,6 +335,17 @@ export function DeadlineNotifications() { // LICITAGESTAO_PRIORITY_FIRST_PLACE_V
     );
   };
 
+  const dismissSystemNotification = async (item: UserNotification) => {
+    if (!window.confirm(`Apagar esta notificação?\n\n${item.title}`)) return;
+    try {
+      await api.delete(`/notifications/${item.id}`);
+      setSystemNotifications((current) => current ? ({
+        items: current.items.filter((notification) => notification.id !== item.id),
+        unread: Math.max(0, current.unread - (item.readAt ? 0 : 1))
+      }) : current);
+    } catch { await loadAlerts(); }
+  };
+
   const openSystemNotification = async (item: UserNotification) => {
     setSystemNotifications((current) =>
       current
@@ -633,6 +644,9 @@ export function DeadlineNotifications() { // LICITAGESTAO_PRIORITY_FIRST_PLACE_V
                     <em>{item.message}</em>
                   </span>
                 </button>
+                {!selectionMode && <button type="button" className="notification-dismiss"
+                  title="Apagar notificação" aria-label={`Apagar notificação ${item.title}`}
+                  onClick={() => void dismissSystemNotification(item)}><Trash2 size={15} /></button>}
               </div>
             ))}
             {gmailItems.length > 0 && (
