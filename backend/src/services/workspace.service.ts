@@ -325,7 +325,7 @@ export async function listOrganizationChat(auth: AuthScope) {
   }
   const messages = await prisma.companyChatMessage.findMany({
     where: { organizationId },
-    include: { author: { select: { id: true, name: true, role: true } } },
+    include: { author: { select: { id: true, name: true, role: true } }, replyTo: { select: { id: true, content: true, author: { select: { id: true, name: true } } } } },
     orderBy: { createdAt: 'desc' },
     take: 100
   });
@@ -338,7 +338,7 @@ export async function listOrganizationChat(auth: AuthScope) {
 }
 
 export async function sendOrganizationChatMessage(
-  input: { content: string; mentionUserIds?: string[] },
+  input: { content: string; mentionUserIds?: string[]; replyToId?: string | null },
   auth: AuthScope
 ) {
   const organizationId = requireOrganizationId(auth);
@@ -358,15 +358,24 @@ export async function sendOrganizationChatMessage(
     new Set((input.mentionUserIds ?? []).filter((id) => id !== auth.userId && allowedIds.has(id)))
   );
 
+  if (input.replyToId) {
+    const original = await prisma.companyChatMessage.findFirst({
+      where: { id: input.replyToId, organizationId },
+      select: { id: true }
+    });
+    if (!original) throw new AppError('Mensagem citada não encontrada neste chat', 422);
+  }
+
   const message = await prisma.companyChatMessage.create({
     data: {
       organizationId,
       companyId: null,
       authorId: auth.userId,
       content: input.content.trim(),
-      mentionUserIds
+      mentionUserIds,
+      replyToId: input.replyToId || null
     },
-    include: { author: { select: { id: true, name: true, role: true } } }
+    include: { author: { select: { id: true, name: true, role: true } }, replyTo: { select: { id: true, content: true, author: { select: { id: true, name: true } } } } }
   });
 
   if (mentionUserIds.length > 0) {
@@ -406,7 +415,7 @@ export async function listCompanyChat(companyId: string, auth: AuthScope) {
 
 export async function sendCompanyChatMessage(
   companyId: string,
-  input: { content: string; mentionUserIds?: string[] },
+  input: { content: string; mentionUserIds?: string[]; replyToId?: string | null },
   auth: AuthScope
 ) {
   await assertCompanyWriteAccess(companyId, auth);

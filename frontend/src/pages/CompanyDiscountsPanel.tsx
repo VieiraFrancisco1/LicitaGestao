@@ -27,6 +27,7 @@ export function CompanyDiscountsPanel({ companyId }: { companyId: string }) {
   const [tenders, setTenders] = useState<Tender[]>([]);
   const [selectedTenderId, setSelectedTenderId] = useState('');
   const [values, setValues] = useState<Record<string, string>>({});
+  const [budgets, setBudgets] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState('');
   const [error, setError] = useState('');
@@ -41,9 +42,8 @@ export function CompanyDiscountsPanel({ companyId }: { companyId: string }) {
       ]);
       setItems(discountResponse.data.data);
       setTenders(tenderResponse.data.data);
-      setValues(
-        Object.fromEntries(discountResponse.data.data.map((item) => [item.id, item.discountedValue ?? '']))
-      );
+      setValues(Object.fromEntries(discountResponse.data.data.map((item) => [item.id, item.discountedValue ?? ''])));
+      setBudgets(Object.fromEntries(discountResponse.data.data.map((item) => [item.id, item.budgetValue ?? ''])));
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -74,6 +74,9 @@ export function CompanyDiscountsPanel({ companyId }: { companyId: string }) {
   const calculate = async (item: DiscountCalculation) => {
     const value = values[item.id] ?? '';
     const normalizedValue = parseFlexibleMoney(value);
+    const budgetText = budgets[item.id] ?? '';
+    const normalizedBudget = parseFlexibleMoney(budgetText);
+    if (budgetText.trim() && normalizedBudget === null) { setError('Informe um orçamento válido.'); return; }
     if (normalizedValue === null) {
       setError('Informe um valor válido já com desconto');
       return;
@@ -83,7 +86,7 @@ export function CompanyDiscountsPanel({ companyId }: { companyId: string }) {
     try {
       const response = await api.put<ApiResponse<DiscountCalculation>>(
         `/companies/${companyId}/discounts/${item.id}`,
-        { discountedValue: normalizedValue }
+        { discountedValue: normalizedValue, budgetValue: normalizedBudget }
       );
       setItems((current) => current.map((row) => (row.id === item.id ? response.data.data : row)));
     } catch (err) {
@@ -113,7 +116,7 @@ export function CompanyDiscountsPanel({ companyId }: { companyId: string }) {
         <div>
           <span className="eyebrow">Cálculo simples</span>
           <h3>Baixas das licitações</h3>
-          <p>Informe o valor final e o sistema calcula a porcentagem de desconto sobre o valor global.</p>
+          <p>Desconto por orçamento: registre o orçamento de referência e a proposta final. O percentual oficial usa o valor global da licitação.</p>
         </div>
         <TrendingDown size={28} />
       </div>
@@ -143,6 +146,7 @@ export function CompanyDiscountsPanel({ companyId }: { companyId: string }) {
             <tr>
               <th>Licitação</th>
               <th>Valor global</th>
+              <th>Orçamento (referência)</th>
               <th>Valor com desconto</th>
               <th>Baixa</th>
               <th>Ações</th>
@@ -151,14 +155,14 @@ export function CompanyDiscountsPanel({ companyId }: { companyId: string }) {
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={5} className="table-message">
+                <td colSpan={6} className="table-message">
                   Carregando baixas...
                 </td>
               </tr>
             )}
             {!loading && items.length === 0 && (
               <tr>
-                <td colSpan={5} className="table-message">
+                <td colSpan={6} className="table-message">
                   <Calculator size={26} />
                   Nenhuma licitação adicionada às baixas.
                 </td>
@@ -176,6 +180,10 @@ export function CompanyDiscountsPanel({ companyId }: { companyId: string }) {
                   <td>
                     <strong>{formatCurrency(item.tender.estimatedValue)}</strong>
                   </td>
+                  <td><input aria-label="Valor do orçamento" type="text" inputMode="decimal"
+                    value={budgets[item.id] ?? ''}
+                    onChange={(event) => setBudgets((current) => ({ ...current, [item.id]: event.target.value.replace(/[^\d.,]/g, '') }))}
+                    placeholder="0,00" /></td>
                   <td>
                     <input
                       aria-label="Valor com desconto"

@@ -1,0 +1,19 @@
+.tender-discount-modal { display: grid; gap: 16px; padding: 18px 20px 20px; max-height: 72vh; overflow: auto; }
+.tender-discount-summary { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 9px; }
+.tender-discount-summary>div { background: #f3f7ff; border: 1px solid #d9e6fa; border-radius: 9px; padding: 11px; min-width: 0; }
+.tender-discount-summary small { display:block; font-size: 11px; color:#627999; margin-bottom:5px; }
+.tender-discount-summary strong { font-size: 14px; color:#183a69; overflow-wrap:anywhere; }
+.tender-discount-summary strong.discount-rate { color: #168056; }
+.tender-discount-primary, .tender-discount-grid { display:grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
+.tender-discount-info { display:grid; gap: 7px; border-top:1px solid #e1eaf6; padding-top:13px; }
+.tender-discount-info>div:first-child { display:flex; gap:7px; align-items:center; color:#1f477f; }
+.tender-discount-info>p { color:#61718b; font-size:12px; margin:0; }
+.tender-discount-grid { grid-template-columns: repeat(3,minmax(0,1fr)); }
+.tender-discount-modal label { display:grid; gap:7px; font-size:12px; font-weight:750; color:#25436c; }
+.tender-discount-modal input { width:100%; min-width:0; background:#fff; border:1px solid #cfdcef; border-radius:8px; padding:10px 11px; font:inherit; }
+.tender-discount-formula { display:flex; align-items:center; gap:6px; color:#65778e; }
+.tender-discount-actions { display:flex; justify-content:flex-end; gap:9px; }
+.tender-company-discount-pill { display: inline-flex; align-items:center; gap:5px; margin-top:5px; padding:4px 7px; border-radius:6px; background:#e7f6ee; color:#147145; font-size:12px; font-weight:850; width:max-content; }
+.tender-company-discount-button { display:inline-flex; align-items:center; gap:5px; padding:5px 9px; margin-top:6px; color:#1b55a3; background:#eef4ff; border:1px solid #cadaf8; border-radius:7px; font-size:11px; font-weight:800; cursor:pointer; }
+.tender-date-platform { display:block; max-width:160px; margin-top:4px; color:#536d94; font-weight:750; font-size:11px; overflow-wrap:anywhere; line-height:1.3; }
+@media(max-width:640px) { .tender-discount-summary, .tender-discount-primary, .tender-discount-grid { grid-template-columns:1fr; } .tender-discount-modal { padding:12px; } }

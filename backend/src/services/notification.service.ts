@@ -3,7 +3,18 @@ import type { AuthScope } from './access.service.js';
 
 export async function listUserNotifications(auth: AuthScope) {
   const items = await prisma.userNotification.findMany({
-    where: { userId: auth.userId },
+    where: {
+      userId: auth.userId,
+      OR: [
+        { link: { startsWith: '/licitacoes' } },
+        { link: { startsWith: '/oportunidades' } },
+        { title: { contains: 'licita', mode: 'insensitive' } },
+        { title: { contains: 'edital', mode: 'insensitive' } },
+        { title: { contains: 'convoca', mode: 'insensitive' } },
+        { title: { contains: 'e-mail aprovado', mode: 'insensitive' } },
+        { title: { contains: 'email aprovado', mode: 'insensitive' } }
+      ]
+    },
     orderBy: { createdAt: 'desc' },
     take: 50
   });
@@ -22,4 +33,9 @@ export async function markAllUserNotificationsRead(auth: AuthScope) {
     data: { readAt: new Date() }
   });
   return { count: result.count };
+}
+
+export async function deleteUserNotification(id: string, auth: AuthScope) {
+  const result = await prisma.userNotification.deleteMany({ where: { id, userId: auth.userId } });
+  return { deleted: result.count > 0 };
 }

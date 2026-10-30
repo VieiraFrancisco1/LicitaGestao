@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import {
   listUserNotifications,
+  deleteUserNotification,
   markAllUserNotificationsRead,
   markUserNotificationRead
 } from '../services/notification.service.js';
@@ -16,4 +17,9 @@ export const read = async (req: Request, res: Response) => {
 
 export const readAll = async (req: Request, res: Response) => {
   res.json({ success: true, data: await markAllUserNotificationsRead(req.auth!) });
+};
+
+export const remove = async (req: Request, res: Response) => {
+  const result = await deleteUserNotification(req.params.id as string, req.auth!);
+  res.json({ success: true, data: result });
 };

@@ -9,6 +9,7 @@ import {
   MessageCircle,
   Plus,
   RefreshCw,
+  Reply,
   Send,
   Star,
   Trash2,
@@ -83,6 +84,8 @@ export function DashboardPage() {
   const [editingAgenda, setEditingAgenda] = useState<AgendaItem | null>(null);
   const [chatText, setChatText] = useState('');
   const [chatMentions, setChatMentions] = useState<string[]>([]);
+  const [replyToId, setReplyToId] = useState<string | null>(null);
+  const chatStayAtBottom = useRef(true);
   const [deletingChatId, setDeletingChatId] = useState('');
   const chatMessagesRef = useRef<HTMLDivElement | null>(null);
   const [sendingChat, setSendingChat] = useState(false);
@@ -137,7 +140,9 @@ export function DashboardPage() {
     }
     try {
       const response = await api.get<ApiResponse<CompanyChatData>>('/workspace/chat');
-      setChat(response.data.data);
+      setChat((current) => current && current.messages.length === response.data.data.messages.length &&
+        current.messages.every((msg, i) => msg.id === response.data.data.messages[i]?.id)
+        ? current : response.data.data);
     } catch (err) {
       setError(errorMessage(err));
     }
@@ -161,13 +166,13 @@ export function DashboardPage() {
   useEffect(() => {
     const timer = window.setInterval(() => {
       void loadChat();
-    }, 30_000);
+    }, 3_000);
     return () => window.clearInterval(timer);
   }, [loadChat]);
 
   useEffect(() => {
     const container = chatMessagesRef.current;
-    if (!container) return;
+    if (!container || !chatStayAtBottom.current) return;
     container.scrollTop = container.scrollHeight;
   }, [chat?.messages.length]);
 
@@ -256,13 +261,16 @@ export function DashboardPage() {
     try {
       const response = await api.post<ApiResponse<CompanyChatData['messages'][number]>>('/workspace/chat', {
         content,
-        mentionUserIds
+        mentionUserIds,
+        replyToId
       });
       setChat((current) =>
         current ? { ...current, messages: [...current.messages, response.data.data] } : current
       );
       setChatText('');
       setChatMentions([]);
+      setReplyToId(null);
+      chatStayAtBottom.current = true;
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -540,7 +548,7 @@ export function DashboardPage() {
                 </div>
                 <MessageCircle size={20} />
               </div>
-              <div className="team-chat-messages" ref={chatMessagesRef}>
+              <div className="team-chat-messages" ref={chatMessagesRef} onScroll={(event) => { const el = event.currentTarget; chatStayAtBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 90; }}>
                 {!chat.enabled && (
                   <div className="dashboard-empty">
                     O chat será liberado assim que houver pelo menos dois usuários ativos na equipe da organização.
@@ -548,11 +556,12 @@ export function DashboardPage() {
                 )}
                 {chat.enabled && !chat.messages.length && <div className="dashboard-empty">Nenhuma mensagem ainda.</div>}
                 {chat.enabled && chat.messages.map((message) => (
-                  <article key={message.id} className={message.authorId === user?.id ? 'mine' : ''}>
+                  <article id={`chat-msg-${message.id}`} key={message.id} className={message.authorId === user?.id ? 'mine' : ''}>
                     <div className="chat-message-heading">
                       <strong>{message.author.name}</strong>
                       <span className="chat-message-meta">
                         <small>{new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(message.createdAt))}</small>
+                        <button type="button" className="chat-reply-message" title="Responder mensagem" aria-label={`Responder mensagem de ${message.author.name}`} onClick={() => setReplyToId(message.id)}><Reply size={14} /></button>
                         {message.authorId === user?.id && (
                           <button
                             type="button"
@@ -567,12 +576,14 @@ export function DashboardPage() {
                         )}
                       </span>
                     </div>
+                    {message.replyTo && <button className="chat-referenced-message" type="button" onClick={() => document.getElementById(`chat-msg-${message.replyTo!.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })}><strong>{message.replyTo.author.name}</strong><span>{message.replyTo.content.slice(0, 160)}</span></button>}
                     <p>{message.content}</p>
                   </article>
                 ))}
               </div>
               {chat.enabled && (
                 <form className="team-chat-form" onSubmit={(event) => void sendChat(event)}>
+                  {replyToId && <div className="chat-reply-preview"><Reply size={15} /><div><strong>Respondendo a {chat.messages.find((msg) => msg.id === replyToId)?.author.name ?? 'mensagem'}</strong><small>{chat.messages.find((msg) => msg.id === replyToId)?.content.slice(0, 170) ?? 'Mensagem não encontrada'}</small></div><button type="button" aria-label="Cancelar resposta" onClick={() => setReplyToId(null)}><X size={16}/></button></div>}
                   <div className="chat-input-wrap">
                     <textarea
                       rows={2}

@@ -58,7 +58,8 @@ export const priorityDeleteSchema = z.object({
 export const chatCreateSchema = z.object({
   body: z.object({
     content: z.string().trim().min(1).max(3000),
-    mentionUserIds: z.array(z.string().uuid()).max(30).optional()
+    mentionUserIds: z.array(z.string().uuid()).max(30).optional(),
+    replyToId: z.string().uuid().nullable().optional()
   }),
   params: companyParams,
   query: z.object({})
@@ -74,7 +75,8 @@ export const organizationChatSchema = z.object({
 export const organizationChatCreateSchema = z.object({
   body: z.object({
     content: z.string().trim().min(1).max(3000),
-    mentionUserIds: z.array(z.string().uuid()).max(100).optional()
+    mentionUserIds: z.array(z.string().uuid()).max(100).optional(),
+    replyToId: z.string().uuid().nullable().optional()
   }),
   params: z.object({}),
   query: z.object({})

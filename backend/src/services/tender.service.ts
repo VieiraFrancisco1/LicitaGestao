@@ -479,9 +479,34 @@ export const listTenders = async (query: TenderQuery, auth: AuthScope) => {
   const total = filtered.length;
   const start = (query.page - 1) * query.pageSize;
   const items = filtered.slice(start, start + query.pageSize);
+  // Nunca inclui descontos de outras empresas no Controle Geral.
+  const companyDiscounts = query.companyId && items.length
+    ? await prisma.discountCalculation.findMany({
+      where: { companyId: query.companyId, tenderId: { in: items.map((item) => item.id) } },
+      select: { tenderId: true, discountedValue: true, budgetValue: true, servicesValue: true, materialsValue: true, equipmentValue: true }
+    })
+    : [];
+  const discountByTender = new Map(companyDiscounts.map((item) => [item.tenderId, item]));
+  const scopedItems = items.map((item) => {
+    const discount = discountByTender.get(item.id);
+    if (!discount || !query.companyId) return item;
+    return {
+      ...item,
+      companyDiscount: {
+        discountedValue: discount.discountedValue,
+        budgetValue: discount.budgetValue,
+        servicesValue: discount.servicesValue,
+        materialsValue: discount.materialsValue,
+        equipmentValue: discount.equipmentValue,
+        discountPercentage: discount.discountedValue !== null && item.estimatedValue && item.estimatedValue.greaterThan(0)
+          ? item.estimatedValue.minus(discount.discountedValue).dividedBy(item.estimatedValue).times(100).toDecimalPlaces(2)
+          : null
+      }
+    };
+  });
 
   return {
-    items,
+    items: scopedItems,
     total,
     page: query.page,
     pageSize: query.pageSize,

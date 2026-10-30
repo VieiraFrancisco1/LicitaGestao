@@ -4,6 +4,8 @@ import {
   deleteDiscount,
   listEligibleDiscountTenders,
   listDiscounts,
+  getTenderDiscount,
+  saveTenderDiscount,
   updateDiscount
 } from '../services/discount.service.js';
 import { AuditActions, recordAudit } from '../services/audit.service.js';
@@ -36,7 +38,8 @@ export const update = async (req: Request, res: Response) => {
     req.params.id as string,
     req.params.discountId as string,
     req.body.discountedValue,
-    req.auth!
+    req.auth!,
+    { budgetValue: req.body.budgetValue, servicesValue: req.body.servicesValue, materialsValue: req.body.materialsValue, equipmentValue: req.body.equipmentValue }
   );
   await recordAudit(req.auth!, {
     action: AuditActions.UPDATE,
@@ -63,4 +66,22 @@ export const remove = async (req: Request, res: Response) => {
     metadata: { companyId: req.params.id as string }
   });
   res.json({ success: true, message: 'Licitação removida das baixas' });
+};
+
+export const tenderDiscountShow = async (req: Request, res: Response) => {
+  const item = await getTenderDiscount(req.params.id as string, req.params.tenderId as string, req.auth!);
+  res.json({ success: true, data: item });
+};
+
+export const tenderDiscountSave = async (req: Request, res: Response) => {
+  const item = await saveTenderDiscount(req.params.id as string, req.params.tenderId as string, req.body, req.auth!);
+  await recordAudit(req.auth!, {
+    action: AuditActions.UPDATE,
+    entityType: 'DISCOUNT',
+    entityId: item.id,
+    entityLabel: item.tender.noticeNumber || item.tender.municipality,
+    description: 'Desconto principal e valores informativos atualizados',
+    metadata: { companyId: item.companyId, tenderId: item.tenderId }
+  });
+  res.json({ success: true, data: item });
 };

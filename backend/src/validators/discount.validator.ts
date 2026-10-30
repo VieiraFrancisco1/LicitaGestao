@@ -31,7 +31,11 @@ export const createDiscountSchema = z.object({
 
 export const updateDiscountSchema = z.object({
   body: z.object({
-    discountedValue: flexibleMoney
+    discountedValue: flexibleMoney,
+    budgetValue: flexibleMoney.optional(),
+    servicesValue: flexibleMoney.optional(),
+    materialsValue: flexibleMoney.optional(),
+    equipmentValue: flexibleMoney.optional()
   }),
   params: z.object({ id: z.string().uuid(), discountId: z.string().uuid() }),
   query: z.object({})
@@ -40,5 +44,23 @@ export const updateDiscountSchema = z.object({
 export const deleteDiscountSchema = z.object({
   body: z.object({}),
   params: z.object({ id: z.string().uuid(), discountId: z.string().uuid() }),
+  query: z.object({})
+});
+
+export const tenderDiscountSchema = z.object({
+  body: z.object({
+    discountedValue: flexibleMoney,
+    budgetValue: flexibleMoney.optional(),
+    servicesValue: flexibleMoney.optional(),
+    materialsValue: flexibleMoney.optional(),
+    equipmentValue: flexibleMoney.optional()
+  }),
+  params: z.object({ id: z.string().uuid(), tenderId: z.string().uuid() }),
+  query: z.object({})
+});
+
+export const tenderDiscountGetSchema = z.object({
+  body: z.object({}),
+  params: z.object({ id: z.string().uuid(), tenderId: z.string().uuid() }),
   query: z.object({})
 });

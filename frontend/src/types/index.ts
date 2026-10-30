@@ -139,6 +139,16 @@ export type Tender = {
   updatedBy?: { id: string; name: string };
   bids: TenderParticipation[];
   _count?: { bids: number };
+  companyDiscount?: TenderCompanyDiscount;
+};
+
+export type TenderCompanyDiscount = {
+  discountedValue: string | null;
+  budgetValue: string | null;
+  servicesValue: string | null;
+  materialsValue: string | null;
+  equipmentValue: string | null;
+  discountPercentage: string | null;
 };
 
 export type DiscountCalculation = {
@@ -146,6 +156,10 @@ export type DiscountCalculation = {
   companyId: string;
   tenderId: string;
   discountedValue: string | null;
+  budgetValue: string | null;
+  servicesValue: string | null;
+  materialsValue: string | null;
+  equipmentValue: string | null;
   discountPercentage: string | null;
   tender: Tender;
   createdAt: string;
@@ -491,6 +505,8 @@ export type CompanyChatMessage = {
   authorId: string;
   content: string;
   mentionUserIds: string[];
+  replyToId: string | null;
+  replyTo?: { id: string; content: string; author: { id: string; name: string } } | null;
   createdAt: string;
   updatedAt: string;
   author: { id: string; name: string; role: UserRole };

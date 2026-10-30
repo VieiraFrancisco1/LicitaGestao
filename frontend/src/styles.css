@@ -10572,3 +10572,14 @@ button.attachment-status.attachment-toggle:disabled {
   cursor: wait;
   opacity: 0.7;
 }
+/* V64 — respostas no chat, sem alterar a organização dos cartões existentes */
+.chat-reply-message { display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px; border:0; border-radius:7px; background:#e9f1ff; color:#285da2; cursor:pointer; }
+.chat-reply-message:hover { background:#dbe9ff; }
+.chat-reply-preview { display:flex; align-items:center; gap:8px; padding:9px 11px; margin:0 0 8px; border-left:3px solid #3976d1; border-radius:8px; background:#f1f6ff; color:#244775; min-width:0; }
+.chat-reply-preview>div { display:grid; gap:2px; flex:1; min-width:0; }
+.chat-reply-preview strong { font-size:12px; font-weight:800; }
+.chat-reply-preview small { font-size:11px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+.chat-reply-preview>button { border:0; background:transparent; cursor:pointer; color:#627b9d; }
+.team-chat-messages .chat-referenced-message { display:grid; gap:3px; width:100%; text-align:left; padding:8px 10px; margin:8px 0 5px; background:#eef5ff; border:0; border-left:3px solid #3874c6; border-radius:5px; cursor:pointer; color:#314e75; }
+.team-chat-messages .chat-referenced-message strong { font-size:11px; }
+.team-chat-messages .chat-referenced-message span { overflow:hidden; white-space:nowrap; text-overflow:ellipsis; max-width:100%; font-size:11px; }
