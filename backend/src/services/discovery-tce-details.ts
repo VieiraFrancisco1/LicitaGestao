@@ -16,7 +16,7 @@ export function parseTcePublicDetails(html: string, item: Candidate): Candidate 
   };
   const field = (label: RegExp, stops: RegExp, max = 200) => section(label, stops, max).slice(0, max).trim();
   const object = field(/\bObjeto\s*:\s*/i, /\bS[ií]ntese do Objeto\b|\bModalidade\s*:|\bCrit[eé]rio de julgamento\b/i, 2500);
-  const agency = section(/\b[oó]rg[aã]os\s*/i, /\bObjeto\s*\/\s*Lotes\s*\/\s*Itens\b|\bN[ºo°]\s*do Processo Administrativo\b/i, 650).slice(0, 180);
+  const agency = section(/(?:^|\s)[oó]rg[aã]os\s*/i, /\bObjeto\s*\/\s*Lotes\s*\/\s*Itens\b|\bN[ºo°]\s*do Processo Administrativo\b/i, 650).slice(0, 180);
   const process = field(/\bN[ºo°]\s*do Processo Administrativo\s*:\s*/i, /\bFundamenta[cç][aã]o Legal\b|\bOrdenador\b|\bRegime\b/i, 170);
   const modality = field(/\bModalidade\s*:\s*/i, /\bCrit[eé]rio de julgamento\b|\bSitua[cç][aã]o\s*:/i, 140);
   const openDate = field(/\bData de Abertura\s*:\s*/i, /\bHora da Abertura\b|\bLocal\s*:/i, 90);
