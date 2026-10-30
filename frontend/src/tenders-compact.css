@@ -818,3 +818,13 @@
   }
 }
 
+
+/* V65 — Colunas compactas e legíveis na lista de licitações. */
+.organized-tenders-table .tender-date-cell { min-width: 150px; vertical-align:middle; }
+.organized-tenders-table .tender-date-cell > strong { font-size:13px; font-weight:850; }
+.organized-tenders-table .tender-date-platform { display:block; margin-top:7px; font-size:13px; font-weight:900; line-height:1.3; color:#17447f; white-space:normal; overflow-wrap:anywhere; max-width:180px; }
+.organized-tenders-table .tender-value-platform-cell { vertical-align:middle; }
+.tender-value-discount-stack { display:flex; flex-direction:column; align-items:flex-start; justify-content:center; gap:7px; min-width:140px; }
+.tender-value-discount-stack .tender-global-amount { font-size:14px; line-height:1.3; color:#142f5b; font-weight:900; }
+.tender-value-discount-stack .tender-company-discount-pill { margin:0; padding:5px 8px; font-size:11px; font-weight:850; line-height:1.25; }
+.tender-value-discount-stack .tender-company-discount-button { margin:0; font-size:11px; padding:6px 10px; width:auto; }
