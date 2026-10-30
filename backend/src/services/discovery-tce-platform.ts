@@ -1,5 +1,5 @@
 import { matches, type Candidate, type DiscoverySettings } from './discovery-core.js';
-import { TCE_ORIGIN, text } from './discovery-sources.js';
+import { text } from './discovery-sources.js';
 
 /**
  * Identifica a plataforma exclusivamente nos campos do DETALHAMENTO do TCE.
