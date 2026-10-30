@@ -38,7 +38,8 @@ export const update = async (req: Request, res: Response) => {
     req.params.id as string,
     req.params.discountId as string,
     req.body.discountedValue,
-    req.auth!
+    req.auth!,
+    { budgetValue: req.body.budgetValue, servicesValue: req.body.servicesValue, materialsValue: req.body.materialsValue, equipmentValue: req.body.equipmentValue }
   );
   await recordAudit(req.auth!, {
     action: AuditActions.UPDATE,
