@@ -13,7 +13,9 @@ type TenderForm = { // LICITAGESTAO_PREQUAL_ALL_EMAILS_V1_FORM
   isPreQualification: boolean;
   isInvertedPhase: boolean;
   municipality: string;
+  agency: string;
   sessionDate: string;
+  sessionTime: string;
   object: string;
   proposalValidityDays: string;
   estimatedValue: string;
@@ -30,7 +32,9 @@ const emptyForm: TenderForm = {
   isPreQualification: false,
   isInvertedPhase: false,
   municipality: '',
+  agency: '',
   sessionDate: '',
+  sessionTime: '',
   object: '',
   proposalValidityDays: '',
   estimatedValue: '',
@@ -76,7 +80,9 @@ export function BidFormPage() {
           isPreQualification: tender.isPreQualification,
           isInvertedPhase: tender.isInvertedPhase ?? false,
           municipality: tender.municipality,
+          agency: tender.agency ?? '',
           sessionDate: tender.sessionDate.slice(0, 10),
+          sessionTime: tender.sessionTime ?? '',
           object: tender.object,
           proposalValidityDays: tender.proposalValidityDays?.toString() ?? '',
           estimatedValue: tender.estimatedValue ?? '',
@@ -191,7 +197,9 @@ export function BidFormPage() {
       isPreQualification: form.isPreQualification,
       isInvertedPhase: form.isInvertedPhase,
       municipality,
+      agency: form.agency.trim(),
       sessionDate: form.sessionDate,
+      sessionTime: form.sessionTime || null,
       object,
       proposalValidityDays,
       estimatedValue,
@@ -312,6 +320,14 @@ export function BidFormPage() {
               value={form.sessionDate}
               onChange={(event) => field('sessionDate', event.target.value)}
             />
+          </label>
+          <label>
+            Horário da sessão
+            <input type="time" value={form.sessionTime} onChange={(event) => field('sessionTime', event.target.value)} />
+          </label>
+          <label>
+            Órgão responsável
+            <input value={form.agency} onChange={(event) => field('agency', event.target.value)} placeholder="Preenchido quando constar no TCE-CE" />
           </label>
           <label>
             Cidade
