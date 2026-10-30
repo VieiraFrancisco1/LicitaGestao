@@ -129,3 +129,69 @@ export const deleteDiscount = async (companyId: string, id: string, auth: AuthSc
   if (!current) throw new AppError('Cálculo de baixa não encontrado', 404);
   await prisma.discountCalculation.delete({ where: { id } });
 };
+
+export type TenderDiscountInput = {
+  discountedValue: number | null;
+  budgetValue?: number | null;
+  servicesValue?: number | null;
+  materialsValue?: number | null;
+  equipmentValue?: number | null;
+};
+
+async function companyTenderValue(companyId: string, tenderId: string, auth: AuthScope) {
+  await assertCompanyWriteAccess(companyId, auth);
+  const bid = await prisma.bid.findFirst({
+    where: { companyId, tenderId, tender: { organizationId: requireOrganizationId(auth) } },
+    select: { tender: { select: { estimatedValue: true } } }
+  });
+  if (!bid) throw new AppError('A licitação não pertence a esta empresa', 404);
+  return bid.tender.estimatedValue;
+}
+
+export async function getTenderDiscount(companyId: string, tenderId: string, auth: AuthScope) {
+  const estimatedValue = await companyTenderValue(companyId, tenderId, auth);
+  const saved = await prisma.discountCalculation.findUnique({
+    where: { companyId_tenderId: { companyId, tenderId } },
+    include: includeDiscount
+  });
+  return saved ? withPercentage(saved) : {
+    id: null,
+    companyId,
+    tenderId,
+    discountedValue: null,
+    budgetValue: null,
+    servicesValue: null,
+    materialsValue: null,
+    equipmentValue: null,
+    discountPercentage: null,
+    globalValue: estimatedValue
+  };
+}
+
+export async function saveTenderDiscount(companyId: string, tenderId: string, values: TenderDiscountInput, auth: AuthScope) {
+  const estimatedValue = await companyTenderValue(companyId, tenderId, auth);
+  validateValue(estimatedValue, values.discountedValue);
+  const item = await prisma.discountCalculation.upsert({
+    where: { companyId_tenderId: { companyId, tenderId } },
+    create: {
+      companyId, tenderId,
+      discountedValue: values.discountedValue,
+      budgetValue: values.budgetValue ?? null,
+      servicesValue: values.servicesValue ?? null,
+      materialsValue: values.materialsValue ?? null,
+      equipmentValue: values.equipmentValue ?? null,
+      createdById: auth.userId,
+      updatedById: auth.userId
+    },
+    update: {
+      discountedValue: values.discountedValue,
+      budgetValue: values.budgetValue ?? null,
+      servicesValue: values.servicesValue ?? null,
+      materialsValue: values.materialsValue ?? null,
+      equipmentValue: values.equipmentValue ?? null,
+      updatedById: auth.userId
+    },
+    include: includeDiscount
+  });
+  return withPercentage(item);
+}
