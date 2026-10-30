@@ -15,7 +15,9 @@ import {
   createDiscountSchema,
   deleteDiscountSchema,
   listDiscountsSchema,
-  updateDiscountSchema
+  updateDiscountSchema,
+  tenderDiscountSchema,
+  tenderDiscountGetSchema
 } from '../validators/discount.validator.js';
 
 export const companyRouter = Router();
@@ -49,6 +51,18 @@ companyRouter.get(
   authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.FUNCIONARIO, UserRole.EMPRESA),
   validate(companyIdSchema),
   asyncHandler(controller.platforms)
+);
+companyRouter.get(
+  '/:id/discounts/tender/:tenderId',
+  authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.FUNCIONARIO, UserRole.EMPRESA),
+  validate(tenderDiscountGetSchema),
+  asyncHandler(discountController.tenderDiscountShow)
+);
+companyRouter.put(
+  '/:id/discounts/tender/:tenderId',
+  authorize(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.FUNCIONARIO, UserRole.EMPRESA),
+  validate(tenderDiscountSchema),
+  asyncHandler(discountController.tenderDiscountSave)
 );
 companyRouter.get(
   '/:id/discounts',
