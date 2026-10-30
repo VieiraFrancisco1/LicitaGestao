@@ -34,6 +34,7 @@ describe('Detalhamento público TCE-CE no cadastro', () => {
   expect(item.object).toContain('20 UNIDADES');
   expect(item.agency).toContain('SECRETARIA MUNICIPAL');
   expect(item.processNumber).toBe('010/2026');
+  expect(item.modality).toBe('Concorrência');
   expect(item.sessionTime).toBe('09:00');
   expect(item.isInvertedPhase).toBe(true);
   expect(item.estimatedValue).toBe(2771207.12);
