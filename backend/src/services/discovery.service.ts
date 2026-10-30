@@ -17,14 +17,22 @@ export function discoveryScope(auth: AuthScope) {
 }
 // Cache contém somente publicações públicas, sem perfis ou dados de clientes.
 const publicCache = new Map<string, { at: number; value: Promise<Collection> }>();
-async function publicCollection(sources: Source[], lastDate: string | null) {
+async function publicCollection(sources: Source[], lastDate: string | null, onProgress?: (message: string) => Promise<void>) {
   const key = [...sources].sort().join(',') + '|' + (lastDate ?? 'padrao'); const entry = publicCache.get(key);
-  if (entry && Date.now() - entry.at < 600000) return entry.value;
-  const value = collectSources(sources, fetch, new Date(), AbortSignal.timeout(240000), lastDate);
+  if (entry && Date.now() - entry.at < 600000) {
+    await onProgress?.('Usando resultados públicos consultados recentemente');
+    return entry.value;
+  }
+  const value = collectSources(sources, fetch, new Date(), AbortSignal.timeout(95_000), lastDate, onProgress);
   publicCache.set(key, { at: Date.now(), value });
-  const result = await value;
-  if (result.reports.some((r) => !r.complete)) publicCache.delete(key);
-  return result;
+  try {
+    const result = await value;
+    if (result.reports.some((r) => !r.complete)) publicCache.delete(key);
+    return result;
+  } catch (error) {
+    publicCache.delete(key);
+    throw error;
+  }
 }
 export async function getDiscoveryStatus(auth: AuthScope) {
   const organizationId = discoveryScope(auth);
@@ -111,15 +119,26 @@ export async function startDiscoveryScan(auth: AuthScope, input?: DiscoverySetti
 async function executeScan(runId: string, auth: AuthScope, settings: DiscoverySettings) {
   const organizationId = requireOrganizationId(auth);
   try {
-    const collection = await publicCollection(settings.sources, settings.sessionTo);
+    let lastProgressAt = 0;
+    const collection = await publicCollection(settings.sources, settings.sessionTo, async (progress) => {
+      const now = Date.now();
+      if (now - lastProgressAt < 2200 && !/concluído|parcial/i.test(progress)) return;
+      lastProgressAt = now;
+      await prisma.discoveryRun.updateMany({
+        where: { id: runId, organizationId, status: 'RUNNING' },
+        data: { progress: progress.slice(0, 190) }
+      });
+    });
     const warnings = collection.reports.filter((r) => !r.complete).map((r) => `${r.source === 'TCE' ? 'TCE-CE' : r.source}: ${r.message}`);
     if (collection.reports.every((r) => r.pages === 0 && !r.complete)) throw new AppError('As fontes não responderam. Os resultados anteriores foram preservados.', 503);
     await prisma.discoveryRun.update({ where: { id: runId }, data: { progress: 'Classificando e organizando os resultados', reports: json(collection.reports) } });
     const candidates = deduplicate(collection.items).filter((item) => matches(item, settings));
+    await prisma.discoveryRun.updateMany({ where: { id: runId, organizationId, status: 'RUNNING' }, data: { progress: `Classificando ${candidates.length} oportunidades` } });
     const reviewed = await reviewWithAi(candidates, settings);
     // Metadados de editais PNCP são coletados automaticamente, limitados para não
     // consumir toda a janela de busca. Os arquivos são baixados sob demanda.
-    const documentWarnings = await enrichPncpDocuments(reviewed.items, 40);
+    await prisma.discoveryRun.updateMany({ where: { id: runId, organizationId, status: 'RUNNING' }, data: { progress: 'Localizando arquivos oficiais dos editais' } });
+    const documentWarnings = await enrichPncpDocuments(reviewed.items, 24);
     warnings.push(...documentWarnings);
     if (reviewed.warning) warnings.push(reviewed.warning);
     let addedCount = 0;

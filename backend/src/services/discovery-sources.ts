@@ -1,4 +1,3 @@
-import { setTimeout as wait } from 'node:timers/promises';
 import { brDate, classify, safeUrl, validDate, type Candidate, type Source } from './discovery-core.js';
 
 export const TCE_ORIGIN = 'https://municipios-licitacoes.tce.ce.gov.br';
@@ -76,44 +75,125 @@ async function read(response: Response) {
   finally { await reader.cancel().catch(() => undefined); reader.releaseLock(); }
   return Buffer.concat(chunks).toString('utf8');
 }
-// Somente endpoints públicos fixos. Nunca busca URLs fornecidas por usuários ou pela IA.
-export async function collectSources(sources: Source[], fetcher: typeof fetch = fetch, now = new Date(), signal = AbortSignal.timeout(240000), lastDate?: string | null): Promise<Collection> {
-  const items: Candidate[] = []; const reports: SourceReport[] = [];
-  // Prioriza PNCP para não deixar sua busca sem resultados se o portal do TCE atrasar.
-  for (const source of [...new Set(sources)].sort((a, b) => a === 'PNCP' ? -1 : b === 'PNCP' ? 1 : 0)) {
-    const report: SourceReport = { source, pages: 0, records: 0, complete: true, message: '' };
-    reports.push(report);
+// Endpoints oficiais fixos. Nenhuma URL enviada por usuários ou pela IA é consultada.
+// Cada fonte possui seu próprio limite; a lentidão de uma não bloqueia a outra.
+export type DiscoveryProgress = (message: string) => Promise<void> | void;
+const MAX_SOURCE_TIME_MS = 70_000;
+const PAGE_TIMEOUT_MS = 9_000;
+const MAX_PNCP_PAGES_PER_MODALITY = 8;
+const MAX_TCE_PAGES_PER_TERM = 3;
+const TCE_TERMS = [
+  'OBRA', 'CONSTRU', 'REFORMA', 'PAVIMENTA', 'CALÇAMENTO', 'ENGENHARIA',
+  'DRENAGEM', 'SANEAMENTO', 'ESTRADA', 'ESCOLA', 'CRECHE', 'ILUMINA', 'PONTE', 'ABASTECIMENTO'
+];
+
+function sourceError(error: unknown) {
+  if (error instanceof Error && /abort|timeout/i.test(`${error.name} ${error.message}`)) {
+    return 'Tempo de consulta esgotado. Os resultados já obtidos foram preservados.';
+  }
+  return error instanceof Error ? error.message.slice(0, 160) : 'Fonte temporariamente indisponível.';
+}
+
+export async function collectSources(
+  sources: Source[], fetcher: typeof fetch = fetch, now = new Date(),
+  signal = AbortSignal.timeout(95_000), lastDate?: string | null,
+  onProgress?: DiscoveryProgress
+): Promise<Collection> {
+  const selected = [...new Set(sources)].sort((a, b) => a === 'PNCP' ? -1 : b === 'PNCP' ? 1 : 0);
+  const reports: SourceReport[] = selected.map((source) => ({ source, pages: 0, records: 0, complete: true, message: '' }));
+  const collected = await Promise.all(selected.map(async (source, index) => {
+    const items: Candidate[] = [];
+    const report = reports[index]!;
+    const sourceSignal = AbortSignal.any([signal, AbortSignal.timeout(MAX_SOURCE_TIME_MS)]);
+    const notify = async (message: string) => {
+      // O progresso é informativo: uma falha de escrita no status não cancela a consulta.
+      try { await onProgress?.(message); } catch { /* não impede a pesquisa */ }
+    };
     try {
       if (source === 'PNCP') {
-        const end = (lastDate && validDate(lastDate) ? lastDate : new Date(now.getTime() + 90 * 86400000).toISOString().slice(0, 10)).replace(/-/g, '');
-        for (let page = 1; page <= 25; page++) {
-          const url = new URL('https://pncp.gov.br/api/consulta/v1/contratacoes/proposta');
-          url.search = new URLSearchParams({ dataFinal: end, uf: 'CE', pagina: String(page), tamanhoPagina: '50' }).toString();
-          const response = await fetcher(url, { signal: AbortSignal.any([signal, AbortSignal.timeout(15000)]), headers: { 'User-Agent': 'LicitaGestao/1.0 (consulta publica de editais)' }, redirect: 'error' });
-          if (response.status === 204) break;
-          const parsed = parsePncp(JSON.parse(await read(response)));
-          items.push(...parsed.items); report.pages++; report.records += parsed.items.length;
-          if (page >= parsed.pages) break;
-          if (page === 25) { report.complete = false; report.message = 'Consulta parcial: limite de 25 páginas do PNCP atingido.'; }
-        }
-      } else {
-        // A busca textual do próprio TCE reduz a carga e evita varrer páginas antigas.
-        for (const term of ['PAVIMENTA', 'CALÇAMENTO', 'CONSTRU', 'REFORMA', 'AMPLIA', 'ENGENHARIA', 'DRENAGEM', 'SANEAMENTO', 'ESTRADA', 'RECUPERA', 'ESCOLA', 'CRECHE', 'OBRA', 'PONTE']) {
-          for (let page = 1; page <= 5; page++) {
-            if (signal.aborted) throw new Error('Tempo máximo da consulta atingido.');
-            const url = `${TCE_ORIGIN}/index.php/licitacao/abertas${page > 1 ? `/page/${page}` : ''}`;
-            const response = await fetcher(url, { method: 'POST', body: new URLSearchParams({ proc: '', obj: term, mun: '0', periodo: '' }), signal: AbortSignal.any([signal, AbortSignal.timeout(15000)]), headers: { 'User-Agent': 'LicitaGestao/1.0 (consulta publica de editais)' }, redirect: 'error' });
-            const parsed = parseTce(await read(response));
-            items.push(...parsed.items); report.pages++; report.records += parsed.items.length;
+        const end = (lastDate && validDate(lastDate)
+          ? lastDate : new Date(now.getTime() + 90 * 86400000).toISOString().slice(0, 10)).replace(/-/g, '');
+        // O código da modalidade evita respostas 400/422 e permite consultar obras
+        // publicadas como concorrência e pregão em vez de depender de uma única listagem.
+        for (const [modality, label] of [['4', 'Concorrência'], ['6', 'Pregão'], ['8', 'Dispensa']] as const) {
+          await notify(`PNCP: consultando ${label.toLowerCase()} (${report.pages} página(s) obtidas)`);
+          try {
+            for (let page = 1; page <= MAX_PNCP_PAGES_PER_MODALITY; page++) {
+            if (sourceSignal.aborted) throw new Error('Tempo máximo da fonte atingido.');
+            const url = new URL('https://pncp.gov.br/api/consulta/v1/contratacoes/proposta');
+            url.search = new URLSearchParams({
+              dataFinal: end, codigoModalidadeContratacao: modality,
+              uf: 'CE', pagina: String(page), tamanhoPagina: '50'
+            }).toString();
+            const response = await fetcher(url, {
+              signal: AbortSignal.any([sourceSignal, AbortSignal.timeout(PAGE_TIMEOUT_MS)]),
+              headers: { 'User-Agent': 'LicitaGestao/1.0 (consulta publica de editais)' }, redirect: 'error'
+            });
+            if (response.status === 204) break;
+            const parsed = parsePncp(JSON.parse(await read(response)));
+            items.push(...parsed.items);
+            report.pages++; report.records += parsed.items.length;
+            if (page === 1 || page % 3 === 0) await notify(`PNCP: ${report.pages} página(s), ${report.records} registro(s)`);
             if (page >= parsed.pages) break;
-            if (page === 5) { report.complete = false; report.message = 'Consulta parcial: limite de 5 páginas do TCE-CE por palavra-chave atingido.'; }
-            await wait(200, undefined, { signal });
+            if (page === MAX_PNCP_PAGES_PER_MODALITY) {
+              report.complete = false;
+              report.message = 'Limite de páginas do PNCP atingido; refine o período para uma busca mais abrangente.';
+            }
+            }
+          } catch (error) {
+            report.complete = false;
+            report.message = `${label}: ${sourceError(error)}`;
+            if (sourceSignal.aborted) break;
           }
         }
+        if (sourceSignal.aborted) throw new Error('Tempo máximo da fonte atingido.');
+      } else {
+        // Pesquisa textual ampla com concorrência limitada e uma janela de tempo própria.
+        // Os termos são deduplicados posteriormente pelo identificador da publicação.
+        let cursor = 0;
+        const workers = Array.from({ length: 3 }, async () => {
+          while (cursor < TCE_TERMS.length && !sourceSignal.aborted) {
+            const term = TCE_TERMS[cursor++];
+            if (!term) break;
+            await notify(`TCE-CE: pesquisando ${term.toLowerCase()} (${report.pages} página(s) obtidas)`);
+            try {
+              for (let page = 1; page <= MAX_TCE_PAGES_PER_TERM; page++) {
+                if (sourceSignal.aborted) throw new Error('Tempo máximo da fonte atingido.');
+                const url = `${TCE_ORIGIN}/index.php/licitacao/abertas${page > 1 ? `/page/${page}` : ''}`;
+                const response = await fetcher(url, {
+                  method: 'POST', body: new URLSearchParams({ proc: '', obj: term, mun: '0', periodo: '' }),
+                  signal: AbortSignal.any([sourceSignal, AbortSignal.timeout(PAGE_TIMEOUT_MS)]),
+                  headers: { 'User-Agent': 'LicitaGestao/1.0 (consulta publica de editais)' }, redirect: 'error'
+                });
+                const parsed = parseTce(await read(response));
+                items.push(...parsed.items);
+                report.pages++; report.records += parsed.items.length;
+                if (page >= parsed.pages) break;
+                if (page === MAX_TCE_PAGES_PER_TERM) {
+                  report.complete = false;
+                  report.message = 'Limite de páginas do TCE-CE por termo atingido; a pesquisa pode ser parcial.';
+                }
+              }
+            } catch (error) {
+              report.complete = false;
+              // Erros isolados não impedem que as demais palavras-chave sejam consultadas.
+              report.message = `${term}: ${sourceError(error)}`;
+              if (sourceSignal.aborted) break;
+            }
+          }
+        });
+        await Promise.all(workers);
+        if (sourceSignal.aborted) throw new Error('Tempo máximo da fonte atingido.');
       }
-    } catch (err) { report.complete = false; report.message = err instanceof Error && !/abort/i.test(err.message) ? err.message : 'Fonte indisponível ou consulta interrompida pelo limite de tempo.'; }
-  }
-  return { items, reports };
+    } catch (error) {
+      report.complete = false;
+      report.message = sourceError(error);
+    } finally {
+      await notify(`${source === 'PNCP' ? 'PNCP' : 'TCE-CE'}: ${report.pages} página(s), ${report.records} registro(s) — ${report.complete ? 'concluído' : 'parcial'}`);
+    }
+    return items;
+  }));
+  return { items: collected.flat(), reports };
 }
 export function validSourceLink(url: string) {
   const safe = safeUrl(url); if (!safe) return false;
