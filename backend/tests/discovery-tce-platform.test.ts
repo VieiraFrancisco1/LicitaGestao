@@ -39,6 +39,10 @@ describe('identificação avançada da plataforma nos detalhes do TCE-CE', () =>
     expect(identifyTcePlatform(html)?.platformName).toBe('Licitanet');
     expect(identifyTcePlatform('<p>Local: Prefeitura</p><h3>Forma de Publicação</h3><p>Especificação: PNCP</p><h3>Órgãos</h3>')).toBeNull();
   });
+  it('não escolhe arbitrariamente entre plataformas distintas publicadas', () => {
+    const html = '<p>Local: Prefeitura</p><h3>Forma de Publicação</h3><p>Especificação: BLL Compras</p><p>Especificação: M2A Compras</p><h3>Órgãos</h3>';
+    expect(identifyTcePlatform(html)).toBeNull();
+  });
   it('não confunde nome da plataforma citado no objeto com local de disputa', () => {
     const html = '<p>Objeto: fornecimento de licenças da plataforma M2A Compras</p><p>Local: sala de reunião</p><h3>Forma de Publicação</h3><p>Especificação: Diário Oficial</p><h3>Órgãos</h3>';
     expect(identifyTcePlatform(html)).toBeNull();
