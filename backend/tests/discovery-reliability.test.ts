@@ -24,6 +24,22 @@ describe('consulta pública resiliente', () => {
     expect(progress.some((text) => text.includes('PNCP'))).toBe(true);
   });
 
+
+  it('lê primeiro a listagem geral do TCE-CE e não depende apenas da pesquisa por palavra-chave', async () => {
+    const firstPage = '<table><tr><th>Valor Estimado (R$)</th></tr>' +
+      '<tr><td><a href="/index.php/licitacao/detalhes/proc/276308/licit/190844">CE-01/2026-SMS</a></td>' +
+      '<td>ALTO SANTO</td><td>CONTRATAÇÃO DE EMPRESA ESPECIALIZADA EM ENGENHARIA PARA EXECUÇÃO DA REFORMA DO HOSPITAL</td>' +
+      '<td>28/10/2026</td><td>13/11/2026</td><td></td><td>5.151.556,24</td></tr></table>';
+    const emptySearch = '<table><tr><th>Valor Estimado (R$)</th></tr></table>';
+    const fetcher = vi.fn(async (url: unknown, options?: RequestInit) => new Response(
+      String(url).endsWith('/licitacao/abertas') && options?.method === 'GET' ? firstPage : emptySearch
+    ));
+    const result = await collectSources(['TCE'], fetcher as unknown as typeof fetch, date);
+    expect(fetcher.mock.calls[0]?.[1]?.method).toBe('GET');
+    expect(result.items.some((item) => item.municipality === 'ALTO SANTO' && item.estimatedValue === 5151556.24 && item.sessionDate === '2026-11-13')).toBe(true);
+    expect(result.reports[0]?.records).toBeGreaterThan(0);
+  });
+
   it('a falha do PNCP não impede o retorno de resultados do TCE-CE', async () => {
     const fetcher = vi.fn(async (url: unknown) => {
       if (String(url).includes('pncp.gov.br')) throw new Error('PNCP temporariamente indisponível');

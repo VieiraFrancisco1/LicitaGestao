@@ -148,8 +148,38 @@ export async function collectSources(
         }
         if (sourceSignal.aborted) throw new Error('Tempo máximo da fonte atingido.');
       } else {
-        // Pesquisa textual ampla com concorrência limitada e uma janela de tempo própria.
-        // Os termos são deduplicados posteriormente pelo identificador da publicação.
+        // Prioriza a listagem geral de abertas do TCE-CE: ela contém oportunidades
+        // que podem não aparecer nas páginas limitadas das buscas por palavra-chave.
+        // A listagem é somente pública e não exige acesso de jurisdicionado.
+        await notify('TCE-CE: consultando a lista geral de licitações abertas');
+        try {
+          for (let page = 1; page <= 2; page++) {
+            if (sourceSignal.aborted) throw new Error('Tempo máximo da fonte atingido.');
+            const url = `${TCE_ORIGIN}/index.php/licitacao/abertas${page > 1 ? `/page/${page}` : ''}`;
+            const response = await fetcher(url, {
+              method: 'GET',
+              signal: AbortSignal.any([sourceSignal, AbortSignal.timeout(PAGE_TIMEOUT_MS)]),
+              headers: { 'User-Agent': 'LicitaGestao/1.0 (consulta publica de editais)' },
+              redirect: 'error'
+            });
+            const parsed = parseTce(await read(response));
+            items.push(...parsed.items);
+            report.pages++;
+            report.records += parsed.items.length;
+            await notify(`TCE-CE: listagem geral, ${report.records} registro(s) obtido(s)`);
+            if (page >= parsed.pages) break;
+            if (page === 2 && parsed.pages > 2) {
+              report.complete = false;
+              report.message = 'Listagem geral limitada às primeiras páginas; consultas por objeto complementam a pesquisa.';
+            }
+          }
+        } catch (error) {
+          // As pesquisas por palavra-chave continuam mesmo se a listagem geral falhar.
+          report.complete = false;
+          report.message = `Listagem geral: ${sourceError(error)}`;
+        }
+        // Pesquisas complementares por assunto, com concorrência limitada.
+        // A deduplicação por identificadores ocorre após a coleta de ambas as formas.
         let cursor = 0;
         const workers = Array.from({ length: 3 }, async () => {
           while (cursor < TCE_TERMS.length && !sourceSignal.aborted) {

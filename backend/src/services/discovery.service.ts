@@ -132,8 +132,14 @@ async function executeScan(runId: string, auth: AuthScope, settings: DiscoverySe
     const warnings = collection.reports.filter((r) => !r.complete).map((r) => `${r.source === 'TCE' ? 'TCE-CE' : r.source}: ${r.message}`);
     if (collection.reports.every((r) => r.pages === 0 && !r.complete)) throw new AppError('As fontes não responderam. Os resultados anteriores foram preservados.', 503);
     await prisma.discoveryRun.update({ where: { id: runId }, data: { progress: 'Classificando e organizando os resultados', reports: json(collection.reports) } });
-    const candidates = deduplicate(collection.items).filter((item) => matches(item, settings));
-    await prisma.discoveryRun.updateMany({ where: { id: runId, organizationId, status: 'RUNNING' }, data: { progress: `Classificando ${candidates.length} oportunidades` } });
+    const uniqueCandidates = deduplicate(collection.items);
+    const candidates = uniqueCandidates.filter((item) => matches(item, settings));
+    if (!candidates.length) {
+      warnings.push(uniqueCandidates.length
+        ? `${uniqueCandidates.length} registro(s) público(s) foram coletados, mas nenhum correspondeu a todos os filtros (período, valor, município e tipos de obra). A busca pode estar incompleta quando houver aviso da fonte.`
+        : 'Nenhum registro pôde ser interpretado nas fontes consultadas. A busca pode estar incompleta.');
+    }
+    await prisma.discoveryRun.updateMany({ where: { id: runId, organizationId, status: 'RUNNING' }, data: { progress: `Coletados ${uniqueCandidates.length} registro(s); ${candidates.length} atendem aos filtros` } });
     const reviewed = await reviewWithAi(candidates, settings);
     // Metadados de editais PNCP são coletados automaticamente, limitados para não
     // consumir toda a janela de busca. Os arquivos são baixados sob demanda.
@@ -164,7 +170,7 @@ async function executeScan(runId: string, auth: AuthScope, settings: DiscoverySe
     }).map((row) => row.id);
     if (absent.length) await prisma.discoveryOpportunity.updateMany({ where: { id: { in: absent }, organizationId }, data: { active: false } });
     if (addedCount) await prisma.userNotification.create({ data: { userId: auth.userId, title: 'Novas licitações no Ceará', message: `${addedCount} nova(s) oportunidade(s) correspondem aos filtros da sua busca.`, link: '/oportunidades' } });
-    await prisma.discoveryRun.update({ where: { id: runId }, data: { status: warnings.length ? 'PARTIAL' : 'COMPLETED', progress: 'Busca concluída', reports: json(collection.reports), warnings, addedCount, finishedAt: new Date() } });
+    await prisma.discoveryRun.update({ where: { id: runId }, data: { status: warnings.length ? 'PARTIAL' : 'COMPLETED', progress: `Busca concluída: ${reviewed.items.length} oportunidade(s) elegíveis de ${uniqueCandidates.length} registro(s)`, reports: json(collection.reports), warnings, addedCount, finishedAt: new Date() } });
   } catch (error) {
     await prisma.discoveryRun.update({ where: { id: runId }, data: { status: 'FAILED', progress: 'Não foi possível concluir a busca', warnings: [error instanceof AppError ? error.message : 'Falha ao consultar as fontes. Tente novamente.'], finishedAt: new Date() } });
   }
