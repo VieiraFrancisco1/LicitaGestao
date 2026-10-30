@@ -14,7 +14,7 @@ export const categoryNames = {
   ESCOLAS: 'Escolas', CEI: 'CEI', CONSTRUCAO: 'Construção'
 } as const;
 export type Category = keyof typeof categoryNames;
-export type Source = 'PNCP' | 'TCE';
+export type Source = 'PNCP' | 'TCE' | 'PORTAL';
 export type Platform = 'BLL' | 'M2A' | 'LICITAMAIS' | 'COMPRASGOV' | 'PORTALCOMPRAS' | 'LICITANET' | 'BBMNET' | 'OUTRAS' | 'NAO_INFORMADA';
 export type Candidate = {
   key: string; sourceKeys: string[]; sources: Array<{ source: Source; url: string }>;
@@ -139,7 +139,7 @@ export function matches(item: Candidate, settings: DiscoverySettings, now = new 
     && (!settings.sessionFrom || item.sessionDate >= settings.sessionFrom)
     && (settings.sessionTo ? item.sessionDate <= settings.sessionTo : item.sessionDate <= todayCE(new Date(now.getTime() + 90 * 86400000)))
     && (!settings.platforms.length || settings.platforms.includes(platformKey(item.platformName))) && item.categories.length > 0 && (settings.categories.includes('OBRAS_GERAIS') || item.categories.some((c) => settings.categories.includes(c))) &&
-    item.sources.some((s) => settings.sources.includes(s.source)) &&
+    item.sources.some((s) => s.source === 'PORTAL' || settings.sources.includes(s.source as 'PNCP' | 'TCE')) &&
     (item.estimatedValue === null ? settings.includeUnknownValue : item.estimatedValue > settings.minValue) &&
     (!settings.municipality || normalize(item.municipality).includes(normalize(settings.municipality))) &&
     (!settings.keywords || normalize(settings.keywords).split(' ').every((word) => normalize(item.object).includes(word)));

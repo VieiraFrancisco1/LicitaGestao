@@ -9,6 +9,7 @@ import { categoryNames, deduplicate, discoverySettings, fingerprint, matches, pl
 import { collectSources, validSourceLink, type Collection } from './discovery-sources.js';
 import { enrichPncpDocuments } from './discovery-documents.js';
 import { mergeOfficialEdict, readOfficialEdict } from './discovery-edital.js';
+import { searchAuthenticatedPlatforms } from './platform-discovery.js';
 
 const json = (value: unknown) => JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
 export function discoveryScope(auth: AuthScope) {
@@ -98,7 +99,7 @@ export async function checkOpportunityPhase(id: string, auth: AuthScope) {
   if (platformKey(item.platformName) !== 'M2A') throw new AppError('A fase inversa será consultada apenas na M2A.', 422);
   throw new AppError('A consulta de fase inversa na M2A ainda depende da ativação do conector autorizado.', 501);
 }
-export async function startDiscoveryScan(auth: AuthScope, input?: DiscoverySettings) {
+export async function startDiscoveryScan(auth: AuthScope, input?: DiscoverySettings, manual = true) {
   const organizationId = discoveryScope(auth);
   const settings = input ? await saveDiscoverySettings(input, auth) : (await getDiscoveryStatus(auth)).settings;
   // Execuções abandonadas por um reinício são liberadas. Cada coleta tem limite de 4 minutos.
@@ -113,13 +114,19 @@ export async function startDiscoveryScan(auth: AuthScope, input?: DiscoverySetti
     throw error;
   }
   await prisma.discoveryProfile.updateMany({ where: { userId: auth.userId, organizationId }, data: { lastRunAt: new Date() } });
-  void executeScan(run.id, auth, settings).catch(() => console.error('Falha ao finalizar busca de oportunidades.'));
+  void executeScan(run.id, auth, settings, manual).catch(() => console.error('Falha ao finalizar busca de oportunidades.'));
   return run;
 }
-async function executeScan(runId: string, auth: AuthScope, settings: DiscoverySettings) {
+async function executeScan(runId: string, auth: AuthScope, settings: DiscoverySettings, manual: boolean) {
   const organizationId = requireOrganizationId(auth);
   try {
     let lastProgressAt = 0;
+    // Conexões autenticadas só começam com clique explícito em Agente de busca.
+    // O monitoramento agendado permanece limitado às fontes públicas.
+    const portalPromise = manual ? searchAuthenticatedPlatforms(auth, settings, async (msg) => {
+      await prisma.discoveryRun.updateMany({ where: { id: runId, organizationId, status: 'RUNNING' }, data: { progress: msg.slice(0, 190) } });
+    }).catch(() => ({ items: [], warnings: ['Falha na navegação autenticada; fontes públicas preservadas.'], attempts: [] }))
+      : Promise.resolve({ items: [], warnings: [] as string[], attempts: [] });
     const collection = await publicCollection(settings.sources, settings.sessionTo, async (progress) => {
       const now = Date.now();
       if (now - lastProgressAt < 2200 && !/concluído|parcial/i.test(progress)) return;
@@ -129,14 +136,20 @@ async function executeScan(runId: string, auth: AuthScope, settings: DiscoverySe
         data: { progress: progress.slice(0, 190) }
       });
     });
-    const warnings = collection.reports.filter((r) => !r.complete).map((r) => `${r.source === 'TCE' ? 'TCE-CE' : r.source}: ${r.message}`);
-    if (collection.reports.every((r) => r.pages === 0 && !r.complete)) throw new AppError('As fontes não responderam. Os resultados anteriores foram preservados.', 503);
-    await prisma.discoveryRun.update({ where: { id: runId }, data: { progress: 'Classificando e organizando os resultados', reports: json(collection.reports) } });
-    const uniqueCandidates = deduplicate(collection.items);
+    const portal = await portalPromise;
+    const reports = [...collection.reports, ...portal.attempts.map((attempt) => ({
+      source: 'PORTAL' as const, pages: attempt.found ? 1 : 0, records: attempt.found,
+      complete: attempt.result.startsWith('Registros'),
+      message: `${attempt.name}: ${attempt.result}`
+    }))];
+    const warnings = [...collection.reports.filter((r) => !r.complete).map((r) => `${r.source === 'TCE' ? 'TCE-CE' : r.source}: ${r.message}`), ...portal.warnings];
+    if (!portal.items.length && collection.reports.every((r) => r.pages === 0 && !r.complete)) throw new AppError('As fontes não responderam. Os resultados anteriores foram preservados.', 503);
+    await prisma.discoveryRun.update({ where: { id: runId }, data: { progress: 'Classificando e organizando os resultados', reports: json(reports) } });
+    const uniqueCandidates = deduplicate([...collection.items, ...portal.items]);
     const candidates = uniqueCandidates.filter((item) => matches(item, settings));
     if (!candidates.length) {
       warnings.push(uniqueCandidates.length
-        ? `${uniqueCandidates.length} registro(s) público(s) foram coletados, mas nenhum correspondeu a todos os filtros (período, valor, município e tipos de obra). A busca pode estar incompleta quando houver aviso da fonte.`
+        ? `${uniqueCandidates.length} registro(s) foram coletados, mas nenhum correspondeu a todos os filtros (período, valor, município e tipos de obra). A busca pode estar incompleta quando houver aviso da fonte.`
         : 'Nenhum registro pôde ser interpretado nas fontes consultadas. A busca pode estar incompleta.');
     }
     await prisma.discoveryRun.updateMany({ where: { id: runId, organizationId, status: 'RUNNING' }, data: { progress: `Coletados ${uniqueCandidates.length} registro(s); ${candidates.length} atendem aos filtros` } });
@@ -162,7 +175,7 @@ async function executeScan(runId: string, auth: AuthScope, settings: DiscoverySe
     }
     // Só retira uma publicação ausente quando TODAS as suas fontes foram consultadas integralmente.
     const completeSources = new Set(collection.reports.filter((r) => r.complete).map((r) => r.source));
-    const seen = new Set(collection.items.flatMap((item) => item.sourceKeys));
+    const seen = new Set([...collection.items, ...portal.items].flatMap((item) => item.sourceKeys));
     const old = await prisma.discoveryOpportunity.findMany({ where: { organizationId, active: true }, select: { id: true, data: true, sourceKeys: true } });
     const absent = old.filter((row) => {
       const data = row.data as unknown as Candidate;
@@ -170,7 +183,7 @@ async function executeScan(runId: string, auth: AuthScope, settings: DiscoverySe
     }).map((row) => row.id);
     if (absent.length) await prisma.discoveryOpportunity.updateMany({ where: { id: { in: absent }, organizationId }, data: { active: false } });
     if (addedCount) await prisma.userNotification.create({ data: { userId: auth.userId, title: 'Novas licitações no Ceará', message: `${addedCount} nova(s) oportunidade(s) correspondem aos filtros da sua busca.`, link: '/oportunidades' } });
-    await prisma.discoveryRun.update({ where: { id: runId }, data: { status: warnings.length ? 'PARTIAL' : 'COMPLETED', progress: `Busca concluída: ${reviewed.items.length} oportunidade(s) elegíveis de ${uniqueCandidates.length} registro(s)`, reports: json(collection.reports), warnings, addedCount, finishedAt: new Date() } });
+    await prisma.discoveryRun.update({ where: { id: runId }, data: { status: warnings.length ? 'PARTIAL' : 'COMPLETED', progress: `Busca concluída: ${reviewed.items.length} oportunidade(s) elegíveis de ${uniqueCandidates.length} registro(s)`, reports: json(reports), warnings, addedCount, finishedAt: new Date() } });
   } catch (error) {
     await prisma.discoveryRun.update({ where: { id: runId }, data: { status: 'FAILED', progress: 'Não foi possível concluir a busca', warnings: [error instanceof AppError ? error.message : 'Falha ao consultar as fontes. Tente novamente.'], finishedAt: new Date() } });
   }
@@ -184,7 +197,7 @@ export async function pollDiscoveryProfiles() {
       if (!organizationHasPaidAccess(profile.organization) || profile.user.role === 'EMPRESA') continue;
       const settings = discoverySettings.safeParse(profile.settings); if (!settings.success) continue;
       if (profile.lastRunAt && Date.now() - profile.lastRunAt.getTime() < settings.data.intervalHours * 3600000) continue;
-      await startDiscoveryScan({ userId: profile.user.id, role: profile.user.role, companyId: profile.user.companyId, organizationId: profile.organizationId }).catch(() => undefined);
+      await startDiscoveryScan({ userId: profile.user.id, role: profile.user.role, companyId: profile.user.companyId, organizationId: profile.organizationId }, undefined, false).catch(() => undefined);
     }
   } finally { polling = false; }
 }

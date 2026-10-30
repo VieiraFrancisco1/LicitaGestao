@@ -228,5 +228,5 @@ export async function collectSources(
 export function validSourceLink(url: string) {
   const safe = safeUrl(url); if (!safe) return false;
   const u = new URL(safe);
-  return (u.hostname === 'pncp.gov.br' && u.pathname.startsWith('/app/editais/')) || (u.hostname === 'municipios-licitacoes.tce.ce.gov.br' && /^\/index.php\/licitacao\/detalhes\/proc\/\d+\/licit\/\d+$/.test(u.pathname));
+  return (u.hostname === 'pncp.gov.br' && u.pathname.startsWith('/app/editais/')) || (u.hostname === 'municipios-licitacoes.tce.ce.gov.br' && /^\/index.php\/licitacao\/detalhes\/proc\/\d+\/licit\/\d+$/.test(u.pathname)) || (u.hostname === 'compras.m2atecnologia.com.br' && u.pathname.startsWith('/processos/')) || (['licitamaisbrasil.com.br', 'www.licitamaisbrasil.com.br'].includes(u.hostname) && /^\/(licitac|edital|process|certam)/i.test(u.pathname));
 }
