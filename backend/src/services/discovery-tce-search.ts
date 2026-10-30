@@ -70,12 +70,13 @@ export async function lookupTcePublic(query: string, fetcher: typeof fetch = fet
   }));
   const all = deduplicate([...first.items, ...pages.flat()]);
   const needle = normalize(value).replace(/[^a-z0-9]/g, '');
-  const matches = all.filter((item) => {
+  const filtered = all.filter((item) => {
     if (isExcludedMunicipality(item.municipality) || !isConstruction(item.object)) return false;
     if (!isNumber) return normalize(item.municipality).trim() === normalize(value);
     return normalize(item.reference).replace(/[^a-z0-9]/g, '').includes(needle)
       || normalize(item.processNumber).replace(/[^a-z0-9]/g, '').includes(needle);
-  }).slice(0, MAX_RESULTS);
+  });
+  const matches = filtered.slice(0, MAX_RESULTS);
   let detailsFailed = 0;
   let index = 0;
   const enriched = [...matches];
@@ -89,9 +90,11 @@ export async function lookupTcePublic(query: string, fetcher: typeof fetch = fet
   return {
     items: enriched,
     pagesChecked: maxPage,
-    partial: first.pages > maxPage || failed > 0 || all.length > MAX_RESULTS || detailsFailed > 0,
+    partial: first.pages > maxPage || failed > 0 || filtered.length > MAX_RESULTS || matches.length > MAX_DETAILS || detailsFailed > 0,
     notice: failed ? `${failed} página(s) do TCE não responderam.`
       : first.pages > maxPage ? `Foram consultadas ${maxPage} de ${first.pages} páginas. A pesquisa pode ser parcial.`
+      : filtered.length > MAX_RESULTS ? `Foram exibidos ${MAX_RESULTS} de ${filtered.length} registros. Refine o número ou município.`
+      : matches.length > MAX_DETAILS ? `Somente ${MAX_DETAILS} das ${matches.length} licitações receberam análise detalhada. As demais podem estar sem plataforma.`
       : detailsFailed ? `Alguns detalhamentos não responderam (${detailsFailed}).` : ''
   };
 }
