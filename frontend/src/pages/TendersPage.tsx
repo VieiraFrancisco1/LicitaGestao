@@ -6,6 +6,7 @@ import {
   FileText,
   FilterX,
   FolderOpen,
+  Calculator,
   Link2,
   ListChecks,
   Pencil,
@@ -20,6 +21,7 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react
 import { Link, useLocation } from 'react-router-dom';
 import { CompanyBrandMark } from '../components/CompanyBrand';
 import { Modal } from '../components/Modal';
+import { TenderDiscountModal } from './TenderDiscountModal';
 import { ConfirmTenderDelete } from '../components/ConfirmTenderDelete';
 import { useAuth } from '../contexts/AuthContext';
 import { api, errorMessage } from '../services/api';
@@ -131,6 +133,7 @@ export function TendersPage({
   const [viewingCompanies, setViewingCompanies] = useState<Tender | null>(null);
   const [linksTender, setLinksTender] = useState<Tender | null>(null);
   const [deletingTender, setDeletingTender] = useState<Tender | null>(null);
+  const [discountTender, setDiscountTender] = useState<Tender | null>(null);
 
   const selectedCompanyId = fixedCompanyId ?? (companyScopeId || undefined);
   const selectedCompany = companies.find((company) => company.id === selectedCompanyId) ?? null;
@@ -549,7 +552,7 @@ export function TendersPage({
                 <th>Data</th>
                 <th>Objeto</th>
                 <th>Validade</th>
-                <th>Valor e plataforma</th>
+                <th>Valor</th>
                 <th>{companyMode ? 'Anexação' : 'Empresas'}</th>
                 <th>Planilha</th>
                 <th>Ações</th>
@@ -605,7 +608,7 @@ export function TendersPage({
                           )}
                         </div>
                       </td>
-                      <td className="tender-date-cell"><strong>{formatDate(tender.sessionDate)}</strong></td>
+                      <td className="tender-date-cell"><strong>{formatDate(tender.sessionDate)}</strong><small className="tender-date-platform">{tender.platform?.name || "Sem plataforma"}</small></td>
                       <td className="object-cell organized-object-cell"><strong>{tender.object}</strong></td>
                       <td className="tender-validity-cell">
                         <strong>{tender.proposalValidityDays ?? '—'} dias</strong>
@@ -614,7 +617,18 @@ export function TendersPage({
                       </td>
                       <td className="tender-value-platform-cell">
                         <strong>{formatCurrency(tender.estimatedValue)}</strong>
-                        <small>{tender.platform?.name || 'Sem plataforma'}</small>
+                        {companyMode && selectedCompanyId && selectedBid && (
+                          <>
+                            {tender.companyDiscount?.discountPercentage != null && (
+                              <span className="tender-company-discount-pill">
+                                Desconto: {Number(tender.companyDiscount.discountPercentage).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%
+                              </span>
+                            )}
+                            <button type="button" className="tender-company-discount-button" onClick={() => setDiscountTender(tender)}>
+                              <Calculator size={13} /> Desconto
+                            </button>
+                          </>
+                        )}
                       </td>
                       <td className="companies-cell organized-companies-cell">
                         <div className="tender-participant-actions">
@@ -737,6 +751,10 @@ export function TendersPage({
         )}
       </section>
 
+      {discountTender && selectedCompanyId && (
+        <TenderDiscountModal tender={discountTender} companyId={selectedCompanyId}
+          onClose={() => setDiscountTender(null)} onSaved={() => void load()} />
+      )}
       {associating && (
         <AssociationModal
           tender={associating}
